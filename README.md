@@ -1,50 +1,17 @@
-# Welcome to your Expo app 👋
+# Calvin GeoCaching
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Our team is building a Calvin geocaching and collectathon app that transforms campus into an interactive adventure. Students can explore by collecting virtual tokens at GPS locations tied to landmarks, buildings, and hidden spots, or by solving puzzles that unlock new coordinates. Users can also create their own landmarks and custom scavenger hunts, allowing the community to design challenges for others and share unique experiences. A map-based interface, digital gallery (“Calvin-dex”), and rewards such as badges, streaks, and leaderboards will encourage discovery, problem-solving, and friendly competition.
 
-## Get started
+While apps like Pokémon GO or general geocaching platforms provide broad, global experiences, they lack customization for local environments and persistent community engagement. Traditional scavenger hunt apps often offer only one-off experiences. Our app fills this gap by combining location-based gameplay, puzzle-solving, and community-generated content tailored to campus life. Beyond Calvin, the platform could scale to schools, museums, and local communities, supporting orientation activities, tourism, and interactive cultural events.
 
-1. Install dependencies
+## Team Members
+- Kwame Adubofour  
+- Levi Cooper  
+- Jacob Foote  
+- Sebastian Grabill  
+- Samuel Ntadom  
 
-   ```bash
-   npm install
-   ```
+## Repositories
+[Client](https://github.com/calvin-cs262-fall2025-teamB/Client)
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+[Service](https://github.com/calvin-cs262-fall2025-teamB/Service)

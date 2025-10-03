@@ -1,12 +1,7 @@
-import { Text, View, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import { Text, View, StyleSheet, ScrollView } from "react-native";
 import { router } from "expo-router";
 
 export default function Profile() {
-  const handleBackPress = () => {
-    // Navigate back to home screen
-    router.push("/");
-  };
-
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
@@ -18,10 +13,6 @@ export default function Profile() {
             {/* This box will hold images or icons */}
           </View>
         </View>
-        
-        <TouchableOpacity style={styles.button} onPress={handleBackPress}>
-          <Text style={styles.buttonText}>Back to Home</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -64,22 +55,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-  },
-  button: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "600",
   },
 });

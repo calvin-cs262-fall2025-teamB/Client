@@ -1,12 +1,6 @@
 import { Text, View, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
-import { router } from "expo-router";
 
 export default function Start() {
-  const handleBackPress = () => {
-    // Navigate back to home screen
-    router.push("/");
-  };
-
   const handleLandmarkPress = (landmarkNumber: number) => {
     console.log(`Landmark ${landmarkNumber} button pressed`);
     // You can add navigation to specific landmark screens here later
@@ -29,10 +23,6 @@ export default function Start() {
             </TouchableOpacity>
           ))}
         </View>
-        
-        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-          <Text style={styles.backButtonText}>Back to Home</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -71,23 +61,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   landmarkButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  backButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  backButtonText: {
     color: "white",
     fontSize: 18,
     fontWeight: "600",
