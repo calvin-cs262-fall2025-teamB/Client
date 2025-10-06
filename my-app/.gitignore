@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+#Personal
+Sam's_Notebook
+
 # Expo
 .expo/
 dist/
