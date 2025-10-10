@@ -27,6 +27,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="adventurePageTemplate"
+        options={{
+          title: "Adventure",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="compass" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
