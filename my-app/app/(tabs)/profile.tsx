@@ -1,19 +1,39 @@
-import { Text, View, StyleSheet, ScrollView } from "react-native";
+import { Text, View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from "expo-router";
 
+import CompletedAdventuresSection from '@/components/profile/CompletedAdventuresButtons'
+
 export default function Profile() {
+  // Static data that will be replaced with dynamic data
+  const statsData = [
+    'Total Tokens: 0',
+    'Adventures Completed: 0', 
+    'Adventure Upvotes: 0',
+    'Completion Rate: 0%'
+  ];
+  
   return (
     <ScrollView style={styles.container}>
+      {/* Profile Header */}
       <View style={styles.content}>
-        <Text style={styles.title}>Profile</Text>
-        
-        <View style={styles.landmarksContainer}>
-          <Text style={styles.landmarksTitle}>Landmarks</Text>
-          <View style={styles.landmarksBox}>
-            {/* This box will hold images or icons */}
-          </View>
+        <Text style={styles.title}>Profile Name</Text>
+      </View>
+
+      {/* Stats Section */}
+      <View style={styles.content}>
+        <Text style={styles.sectionTitle}>Stats</Text>
+        <View style={styles.statsContainer}>
+          {statsData.map((stat, index) => (
+            <View key={index} style={styles.statItem}>
+              <Text style={styles.statText}>{stat}</Text>
+            </View>
+          ))}
         </View>
       </View>
+
+      {/* Completed Adventures Section */}
+      <CompletedAdventuresSection />
+
     </ScrollView>
   );
 }
@@ -34,26 +54,30 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 30,
   },
-  landmarksContainer: {
-    marginBottom: 30,
-  },
-  landmarksTitle: {
+  sectionTitle: {
     fontSize: 24,
-    fontWeight: "600",
+    fontWeight: "bold",
     color: "#333",
-    marginBottom: 15,
+    textAlign: "center",
+    marginBottom: 20,
   },
-  landmarksBox: {
-    backgroundColor: "white",
+  statsContainer: {
+    backgroundColor: "#fff",
     borderRadius: 10,
-    padding: 20,
-    minHeight: 200,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+    padding: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statItem: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  statText: {
+    fontSize: 16,
+    color: "#555",
   },
 });
