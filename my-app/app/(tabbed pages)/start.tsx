@@ -1,37 +1,21 @@
-import { Text, View, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
-import { useRouter } from "expo-router";
 import Button from "@/components/home/Button";
+import { useRouter } from "expo-router";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function Start() {
   const router = useRouter();
 
-  const handleCreatorPress = () => {
-    router.push("/creator");
-  };
-  const handleLandmarkPress = (landmarkNumber: number) => {
-    console.log(`Landmark ${landmarkNumber} button pressed`);
-    // You can add navigation to specific landmark screens here later
-    // router.push(`/landmark${landmarkNumber}`);
-  };
+  const handleCreateRegion = () => router.push("/creator/region");
+  const handleCreateAdventure = () => router.push("/creator/adventure");
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Start</Text>
-        
-        <View style={styles.landmarkButtonsContainer}>
-          {[1, 2, 3, 4, 5].map((number) => (
-            <TouchableOpacity 
-              key={number}
-              style={styles.landmarkButton} 
-              onPress={() => handleLandmarkPress(number)}
-            >
-              <Text style={styles.landmarkButtonText}>Landmark {number}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={{ marginTop: 20 }}>
-          <Button theme="primary" label="Creator" onPress={handleCreatorPress} />
+        <Text style={styles.title}>Create</Text>
+
+        <View style={styles.buttonWrapper}>
+          <Button theme="primary" label="Create Region" onPress={handleCreateRegion} />
+          <Button theme="primary" label="Create Adventure" onPress={handleCreateAdventure} />
         </View>
       </View>
     </ScrollView>
@@ -54,25 +38,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 30,
   },
-  landmarkButtonsContainer: {
-    marginBottom: 30,
+  buttonWrapper: {
     gap: 15,
-  },
-  landmarkButton: {
-    backgroundColor: "#34C759",
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  landmarkButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "600",
+    marginTop: 10,
   },
 });
