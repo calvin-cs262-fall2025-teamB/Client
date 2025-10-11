@@ -59,11 +59,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
     largeContainer: {
-        maxWidth: 360,
+        maxWidth: 320,
     },
     largeButton: {
-        paddingVertical: 22,
-        paddingHorizontal: 38,
-        borderRadius: 22,
+        paddingVertical: 18,
+        paddingHorizontal: 32,
+        borderRadius: 20,
     },
 });
