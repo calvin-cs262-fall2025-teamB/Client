@@ -22,7 +22,7 @@ export default function Creator() {
               </View>
               <View style={styles.actionRow}>
                 <Button size="large" theme="primary" label="Create Adventure" onPress={handleCreateAdventure} />
-                <Pressable style={styles.infoButton} onPress={() => Alert.alert('Adventure', 'An adventure is a guided sequence of landmarks inside a region, typically with tasks or descriptions for users to follow.') }>
+                <Pressable style={styles.infoButton} onPress={() => Alert.alert('Adventure', 'An adventure is a guided sequence of tokens to collect inside a region, with tasks or descriptions for users to follow.') }>
                   <Ionicons name="information-circle-outline" size={26} color="#666" />
                 </Pressable>
               </View>
