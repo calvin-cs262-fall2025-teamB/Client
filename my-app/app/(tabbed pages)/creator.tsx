@@ -1,6 +1,6 @@
 import Button from "@/components/home/Button";
 import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 export default function Creator() {
   const router = useRouter();
@@ -11,11 +11,11 @@ export default function Creator() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Create</Text>
-
-        <View style={styles.buttonWrapper}>
-          <Button theme="primary" label="Create Region" onPress={handleCreateRegion} />
-          <Button theme="primary" label="Create Adventure" onPress={handleCreateAdventure} />
+        <View style={styles.centered}>
+          <View style={styles.buttonWrapper}>
+            <Button size="large" theme="primary" label="Create Region" onPress={handleCreateRegion} />
+            <Button size="large" theme="primary" label="Create Adventure" onPress={handleCreateAdventure} />
+          </View>
         </View>
       </View>
     </ScrollView>
@@ -39,7 +39,14 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   buttonWrapper: {
-    gap: 15,
+    gap: 18,
     marginTop: 10,
+    width: "100%",
+    maxWidth: 420,
+    alignItems: "center",
+  },
+  centered: {
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

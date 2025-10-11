@@ -24,7 +24,7 @@ export default function Index() {
 
       <View style={styles.buttonContainer}>
         <Button theme="primary" label="Profile" onPress={handleProfilePress} />
-        <Button theme="primary" label="Creator" onPress={handleStartPress} />
+        <Button theme="primary" label="Creation Menu" onPress={handleStartPress} />
         <Button theme="primary" label="Map" onPress={handleMapPress} />
       </View>
     </View>
