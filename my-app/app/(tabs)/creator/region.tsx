@@ -1,11 +1,33 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import Button from "@/components/home/Button";
 
 export default function CreateRegion() {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create Region</Text>
-      <TextInput placeholder="Region name" style={styles.input} />
-      <TextInput placeholder="Description" style={[styles.input, { height: 100 }]} multiline />
+      <TextInput
+        placeholder="Region name"
+        style={styles.input}
+        value={name}
+        onChangeText={setName}
+      />
+      <TextInput
+        placeholder="Description"
+        style={[styles.input, { height: 100 }]}
+        multiline
+        value={description}
+        onChangeText={setDescription}
+      />
+
+      <View style={{ marginTop: 12 }}>
+        <Button theme="primary" label="Back" onPress={() => router.back()} />
+      </View>
     </View>
   );
 }

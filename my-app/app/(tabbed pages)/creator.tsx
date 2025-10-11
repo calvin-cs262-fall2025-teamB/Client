@@ -2,7 +2,7 @@ import Button from "@/components/home/Button";
 import { useRouter } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-export default function Start() {
+export default function Creator() {
   const router = useRouter();
 
   const handleCreateRegion = () => router.push("/creator/region");
