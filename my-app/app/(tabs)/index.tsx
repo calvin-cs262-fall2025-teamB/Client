@@ -10,8 +10,8 @@ export default function Index() {
     router.push("/profile");
   };
 
-  const handleStartPress = () => {
-    router.push("/start");
+  const handleCreatorPress = () => {
+    router.push("/creator");
   };
 
   const handleMapPress = () => {
@@ -24,7 +24,7 @@ export default function Index() {
 
       <View style={styles.buttonContainer}>
   <Button theme="primary" label="Profile" onPress={handleProfilePress} />
-  <Button theme="primary" label="Create" onPress={handleStartPress} />
+  <Button theme="primary" label="Create" onPress={handleCreatorPress} />
   <Button theme="primary" label="Map" onPress={handleMapPress} />
       </View>
     </View>
