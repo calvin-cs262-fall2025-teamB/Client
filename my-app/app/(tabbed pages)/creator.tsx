@@ -1,6 +1,7 @@
 import Button from "@/components/home/Button";
 import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View, Alert, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function Creator() {
   const router = useRouter();
@@ -13,8 +14,18 @@ export default function Creator() {
       <View style={styles.content}>
         <View style={styles.centered}>
           <View style={styles.buttonWrapper}>
-            <Button size="large" theme="primary" label="Create Region" onPress={handleCreateRegion} />
-            <Button size="large" theme="primary" label="Create Adventure" onPress={handleCreateAdventure} />
+              <View style={styles.actionRow}>
+                <Button size="large" theme="primary" label="Create Region" onPress={handleCreateRegion} />
+                <Pressable style={styles.infoButton} onPress={() => Alert.alert('Region', 'A region is a defined area composed of landmarks (points of interest), essentially a template map where your adventure will take place.') }>
+                  <Ionicons name="information-circle-outline" size={26} color="#666" />
+                </Pressable>
+              </View>
+              <View style={styles.actionRow}>
+                <Button size="large" theme="primary" label="Create Adventure" onPress={handleCreateAdventure} />
+                <Pressable style={styles.infoButton} onPress={() => Alert.alert('Adventure', 'An adventure is a guided sequence of landmarks inside a region, typically with tasks or descriptions for users to follow.') }>
+                  <Ionicons name="information-circle-outline" size={26} color="#666" />
+                </Pressable>
+              </View>
           </View>
         </View>
       </View>
@@ -48,5 +59,21 @@ const styles = StyleSheet.create({
   centered: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  infoButton: {
+    marginLeft: 6,
+    padding: 6,
+  },
+  hintText: {
+    color: "#666",
+    fontSize: 13,
+    marginTop: 6,
+    textAlign: "center",
+    maxWidth: 420,
   },
 });

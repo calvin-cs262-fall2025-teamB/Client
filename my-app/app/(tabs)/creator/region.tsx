@@ -1,8 +1,8 @@
-import { StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import Button from "@/components/home/Button";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CreateRegion() {
   const router = useRouter();
@@ -12,24 +12,27 @@ export default function CreateRegion() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.title}>Create Region</Text>
-      <TextInput
-        placeholder="Region name"
-        style={styles.input}
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        placeholder="Description"
-        style={[styles.input, { height: 100 }]}
-        multiline
-        value={description}
-        onChangeText={setDescription}
-      />
+        <View style={styles.topBar}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={20} color="#25292e" />
+            <Text style={styles.backText}>Back</Text>
+          </Pressable>
+        </View>
 
-        <View style={{ marginTop: 12 }}>
-        <Button theme="primary" label="Back" onPress={() => router.back()} />
-      </View>
+        <Text style={styles.title}>Create Region</Text>
+        <TextInput
+          placeholder="Region name"
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+        />
+        <TextInput
+          placeholder="Description"
+          style={[styles.input, { height: 100 }]}
+          multiline
+          value={description}
+          onChangeText={setDescription}
+        />
       </View>
     </SafeAreaView>
   );
@@ -57,5 +60,20 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
+  },
+  topBar: {
+    width: "100%",
+    marginBottom: 8,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 4,
+  },
+  backText: {
+    fontSize: 16,
+    color: "#25292e",
+    marginLeft: 4,
   },
 });
