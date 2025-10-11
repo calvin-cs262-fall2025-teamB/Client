@@ -1,2 +1,5 @@
-// Re-export the login screen as the root index route so the app opens to login
-export { default } from "./(pages)/login";
+import Authenticate from "./(start pages)/login";
+
+export default function App() {
+  return <Authenticate />;
+}

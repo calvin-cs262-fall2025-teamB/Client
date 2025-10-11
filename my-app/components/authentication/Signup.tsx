@@ -1,8 +1,7 @@
 //TODO: install tailwind and use it for styling
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator, // Acts as a spinner while waiting for login
   Alert,
   Button,
   KeyboardAvoidingView,
@@ -16,27 +15,37 @@ import {
 //Custom libraries
 import { useAuth } from "../../contexts/AuthContext";
 
-export default function Login() {
+export default function Signup() {
   const router = useRouter();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const { login, isAuthenticated, isLoading, setIsLoading } = useAuth();
+  const [confirmedPassword, seConfirmedtPassword] = useState("");
+  const { signup, isAuthenticated, setIsLoading } = useAuth();
   // console.log("Authentication status:", isAuthenticated);
+
+  let fullName = "";
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace("/home");
+      router.replace("../home");
     }
   }, [isAuthenticated]);
 
   const handleSubmit = async () => {
-    if (email && password) {
+    if (password !== confirmedPassword) {
+      Alert.alert("Validation", "Passwords do not match.");
+      return;
+    }
+
+    if (email && password && firstName && lastName) {
       setIsLoading(true);
       try {
-        login(email, password);
+        fullName = firstName + " " + lastName;
+        signup(fullName, email, password);
       } catch (err: any) {
-        Alert.alert("Login failed", err.message || "Unknown error");
+        Alert.alert("Signup failed", err.message || "Unknown error");
       } finally {
         setIsLoading(false);
       }
@@ -51,15 +60,46 @@ export default function Login() {
       style={styles.container}
     >
       <View style={styles.form}>
+        <Text style={styles.label}>First Name</Text>
+
+        <TextInput
+          value={firstName}
+          onChangeText={setFirstName}
+          keyboardType="default"
+          autoCapitalize="none"
+          autoComplete="name-given"
+          placeholder="John"
+          style={styles.input}
+          returnKeyType="next"
+          onSubmitEditing={() => {
+            // Focus password next — you can use refs for nicer UX
+          }}
+        />
+        <Text style={styles.label}>Last Name</Text>
+        <TextInput
+          value={lastName}
+          onChangeText={setLastName}
+          keyboardType="default"
+          autoCapitalize="none"
+          autoComplete="name-family"
+          placeholder="Doe"
+          style={styles.input}
+          returnKeyType="next"
+        />
+
         <Text style={styles.label}>Email</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
           placeholder="you@example.com"
-          autoComplete={"email"}
           style={styles.input}
           returnKeyType="next"
-          onSubmitEditing={() => {}}
+          onSubmitEditing={() => {
+            // Focus password next — you can use refs for nicer UX
+          }}
         />
 
         <Text style={styles.label}>Password</Text>
@@ -69,23 +109,24 @@ export default function Login() {
           secureTextEntry
           placeholder="••••••••"
           style={styles.input}
-          returnKeyType="go"
+          returnKeyType="next"
+        />
+
+        <Text style={styles.label}>Re-Enter Password</Text>
+        <TextInput
+          value={confirmedPassword}
+          onChangeText={seConfirmedtPassword}
+          secureTextEntry
+          placeholder="••••••••"
+          style={styles.input}
+          returnKeyType="next"
           onSubmitEditing={handleSubmit}
         />
 
-        {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 12 }} />
-        ) : (
-          <Button title="Login" onPress={handleSubmit} />
-        )}
+        <Button title="Sign up" onPress={handleSubmit} />
+
         <View style={styles.authenticationHelp}>
           <Text style={styles.authenticationHelpText}>Help</Text>
-          <View style={{ gap: 2 }}>
-            <Link href="/signin" style={styles.authenticationHelpText}>
-              Sign in
-            </Link>
-            <Text style={styles.authenticationHelpText}>Forgot password?</Text>
-          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -104,7 +145,7 @@ const styles = StyleSheet.create({
   },
   form: {
     width: "85%",
-    flexBasis: "50%", //takes in pixels as numbers, but percentages as strings. flexbasis instead of height to allow for flexbox resizing
+    flexBasis: "75%", //takes in pixels as numbers, but percentages as strings. flexbasis instead of height to allow for flexbox resizing
     borderRadius: 12,
     paddingRight: 20,
     paddingLeft: 20,
