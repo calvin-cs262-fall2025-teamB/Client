@@ -1,1 +1,0 @@
-//AuthContext manages authentication data
