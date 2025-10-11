@@ -1,6 +1,13 @@
 import { Text, View, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import { useRouter } from "expo-router";
+import Button from "@/components/home/Button";
 
 export default function Start() {
+  const router = useRouter();
+
+  const handleCreatorPress = () => {
+    router.push("/creator");
+  };
   const handleLandmarkPress = (landmarkNumber: number) => {
     console.log(`Landmark ${landmarkNumber} button pressed`);
     // You can add navigation to specific landmark screens here later
@@ -22,6 +29,9 @@ export default function Start() {
               <Text style={styles.landmarkButtonText}>Landmark {number}</Text>
             </TouchableOpacity>
           ))}
+        </View>
+        <View style={{ marginTop: 20 }}>
+          <Button theme="primary" label="Creator" onPress={handleCreatorPress} />
         </View>
       </View>
     </ScrollView>

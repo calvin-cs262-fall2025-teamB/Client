@@ -1,31 +1,25 @@
-import { Text, View, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-
 import Button from "@/components/home/Button";
 
-export default function Index() {
+export default function CreatorIndex() {
   const router = useRouter();
 
-  const handleProfilePress = () => {
-    router.push("/profile");
+  const handleCreateRegion = () => {
+    router.push("/creator/region");
   };
 
-  const handleStartPress = () => {
-    router.push("/creator");
-  };
-
-  const handleMapPress = () => {
-    router.push("/map");
+  const handleCreateAdventure = () => {
+    router.push("/creator/adventure");
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>The Four Beautiful Guys!</Text>
+      <Text style={styles.title}>Create</Text>
 
       <View style={styles.buttonContainer}>
-        <Button theme="primary" label="Profile" onPress={handleProfilePress} />
-        <Button theme="primary" label="Start" onPress={handleStartPress} />
-        <Button theme="primary" label="Map" onPress={handleMapPress} />
+        <Button theme="primary" label="Create Region" onPress={handleCreateRegion} />
+        <Button theme="primary" label="Create Adventure" onPress={handleCreateAdventure} />
       </View>
     </View>
   );
@@ -52,4 +46,3 @@ const styles = StyleSheet.create({
     gap: 15,
   },
 });
-
