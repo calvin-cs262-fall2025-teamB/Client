@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, Alert } from "react-native";
+// 1. Import Vibration
+import { View, StyleSheet, ActivityIndicator, Alert, Vibration } from "react-native"; 
 import MapView, { Marker, LatLng, MapPressEvent, UrlTile } from "react-native-maps";
 import * as Location from "expo-location";
 
-// 1. Update the 'tokens' state type to include a name
+// 2. Update the Token interface to include visibility
 interface Token {
   id: number;
   coord: LatLng;
   name: string;
+  isVisible: boolean; 
 }
 
 export default function MapScreen() {
@@ -36,20 +38,24 @@ export default function MapScreen() {
         },
         (pos) => {
           setLocation(pos);
-          checkProximity(pos.coords);
+          // Pass the 'tokens' state directly to checkProximity
+          // to ensure it has the latest list
+          setTokens(currentTokens => {
+            // We run checkProximity *inside* the setTokens callback
+            // to make sure we are comparing against the most recent state.
+            return checkProximity(pos.coords, currentTokens);
+          });
         }
       );
 
       return () => subscription.remove();
     })();
-  }, [tokens]); // Add 'tokens' as a dependency so checkProximity uses the latest list
+  }, []); // We can remove 'tokens' from dependency array because we handle it in the callback
 
-  // 2. --- handle map press to add a named token ---
+  // --- handle map press to add a named token ---
   const handleMapPress = (event: MapPressEvent) => {
     const newCoord = event.nativeEvent.coordinate;
 
-    // NOTE: Alert.prompt is iOS-only.
-    // For a cross-platform solution, you would build a custom input modal.
     Alert.prompt(
       "Add Token",
       "Enter a name for this new token:",
@@ -66,6 +72,7 @@ export default function MapScreen() {
                 id: Date.now(),
                 coord: newCoord,
                 name: tokenName,
+                isVisible: false, // 3. Set to invisible by default
               };
               setTokens((prev) => [...prev, newToken]);
             }
@@ -73,15 +80,15 @@ export default function MapScreen() {
         },
       ],
       "plain-text",
-      "New Token" // Default text in the prompt
+      "New Token" 
     );
   };
 
-  // 3. --- New function to handle pressing a marker ---
+  // --- New function to handle pressing a marker ---
   const handleMarkerPress = (token: Token) => {
     Alert.alert(
-      `Remove ${token.name}`, // Title
-      "Are you sure you want to remove this token?", // Message
+      `Remove ${token.name}`, 
+      "Are you sure you want to remove this token?", 
       [
         {
           text: "Cancel",
@@ -90,33 +97,57 @@ export default function MapScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => removeToken(token.id), // Call removeToken on press
+          onPress: () => removeToken(token.id), 
         },
       ]
     );
   };
 
-  // 4. --- New function to filter out the token ---
+  // --- New function to filter out the token ---
   const removeToken = (idToRemove: number) => {
     setTokens((prev) => prev.filter((token) => token.id !== idToRemove));
   };
 
-  // --- check if user is near a token ---
-  const checkProximity = (userCoords: Location.LocationObjectCoords) => {
-    for (const token of tokens) {
-      const distance = getDistance(userCoords, token.coord);
-      if (distance < 20) {
-        // Updated alert to use the token's name
-        Alert.alert("Nearby Token!", `You’re within 20m of ${token.name}`);
-        // In a real app, you'd add logic to prevent this from spamming
+  // 4. --- Updated checkProximity function ---
+  const checkProximity = (userCoords: Location.LocationObjectCoords, currentTokens: Token[]): Token[] => {
+    let tokenFound = false;
+
+    // We use .map to return a new array
+    const updatedTokens = currentTokens.map(token => {
+      // If it's already visible, skip the check
+      if (token.isVisible) {
+        return token;
       }
-    }
+      
+      const distance = getDistance(userCoords, token.coord);
+
+      // Check if user is close AND the token is not yet visible
+      if (distance < 20 && !token.isVisible) {
+        tokenFound = true; // Flag that we found one
+        
+        // Vibrate the phone!
+        Vibration.vibrate(100); // 100ms vibration
+        
+        // Alert the user
+        Alert.alert("Token Found!", `You discovered ${token.name}!`);
+        
+        // Return a *new* token object with isVisible set to true
+        return { ...token, isVisible: true };
+      }
+      
+      // If not in range, return the token unchanged
+      return token;
+    });
+
+    // If we found a new token, return the new array.
+    // Otherwise, return the original array to prevent a re-render.
+    return tokenFound ? updatedTokens : currentTokens;
   };
+
 
   // --- haversine distance formula (in meters) ---
   const getDistance = (a: Location.LocationObjectCoords, b: LatLng) => {
     const R = 6371e3;
-    // ... (rest of your function) ...
     const φ1 = (a.latitude * Math.PI) / 180;
     const φ2 = (b.latitude * Math.PI) / 180;
     const Δφ = ((b.latitude - a.latitude) * Math.PI) / 180;
@@ -136,7 +167,6 @@ export default function MapScreen() {
   };
 
   if (loading || !location) {
-    // ... (loading component) ...
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -162,13 +192,14 @@ export default function MapScreen() {
         maximumZ={19}
       />
 
-      {tokens.map((token) => (
+      {/* 5. Only map over tokens that are visible */}
+      {tokens.filter(token => token.isVisible).map((token) => (
         <Marker
           key={token.id}
           coordinate={token.coord}
-          title={token.name} // 5. Use the token's name as the title
+          title={token.name} 
           pinColor="orange"
-          onPress={() => handleMarkerPress(token)} // 6. Add onPress to the marker
+          onPress={() => handleMarkerPress(token)} 
         />
       ))}
     </MapView>
