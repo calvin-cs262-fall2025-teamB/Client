@@ -70,6 +70,8 @@ export default function HomePage() {
   const adventures = MOCK_ADVENTURES;
   const isLoading = false;
 
+  const handleStartPress = () => {
+    router.push("/creator");
   const filteredAdventures = adventures.filter(adv =>
     adv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     adv.summary.toLowerCase().includes(searchQuery.toLowerCase())
@@ -89,6 +91,12 @@ export default function HomePage() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>The Four Beautiful Guys!</Text>
+
+      <View style={styles.buttonContainer}>
+        <Button theme="primary" label="Profile" onPress={handleProfilePress} />
+        <Button theme="primary" label="Creation Menu" onPress={handleStartPress} />
+        <Button theme="primary" label="Map" onPress={handleMapPress} />
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.appTitle}>WayFind</Text>

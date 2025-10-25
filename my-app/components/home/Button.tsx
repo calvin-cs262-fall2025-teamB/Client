@@ -1,21 +1,24 @@
-import { Pressable, StyleSheet, View, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
     label: string;
     theme?: 'primary';
+    size?: 'small' | 'medium' | 'large';
     onPress?: () => void;
 }
 
-export default function Button({ label, theme, onPress }: Props) {
+export default function Button({ label, theme, size = 'medium', onPress }: Props) {
+
     if (theme === 'primary') {
         return (
             <View
                 style = {[
                     styles.buttonContainer,
+                    size === 'large' ? styles.largeContainer : {},
                     {borderWidth: 4, borderColor: '#ffd33d', borderRadius: 18},
                 ]}>
                 <Pressable
-                    style = {[styles.button, { backgroundColor: '#fff' }]}
+                    style = {[styles.button, size === 'large' ? styles.largeButton : {}, { backgroundColor: '#fff' }]}
                     onPress = {onPress}>
                     <Text style = {[styles.buttonText, { color: '#25292e' }]}>{label}</Text>
                 </Pressable>
@@ -55,4 +58,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
+    largeContainer: {
+        maxWidth: 320,
+    },
+    largeButton: {
+        paddingVertical: 18,
+        paddingHorizontal: 32,
+        borderRadius: 20,
+    },
 });
