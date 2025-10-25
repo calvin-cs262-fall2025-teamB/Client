@@ -1,5 +1,7 @@
+import React from 'react';
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { View, Text, StyleSheet } from 'react-native';
 
 export default function TabLayout() {
   return (
@@ -28,6 +30,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => (
+            <View style={[styles.tabAvatar, { backgroundColor: color, width: size + 6, height: size + 6, borderRadius: (size + 6) / 2 }]}>
+              <Text style={styles.tabAvatarText}>LF</Text>
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="creator"
         options={{
           title: "Create",
@@ -48,3 +61,16 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabAvatar: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabAvatarText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+});
+
