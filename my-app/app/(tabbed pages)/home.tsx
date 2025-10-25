@@ -1,7 +1,7 @@
 
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Button } from 'react-native';
 // import { useQuery } from '@tanstack/react-query'; // TODO: Install later
 // import { base44 } from '@/api/base44Client'; // TODO: Set up API client
 
@@ -50,7 +50,7 @@ const MOCK_ADVENTURES = [
 
 export default function HomePage() {
   const router = useRouter();
-  const [selectedAdventure, setSelectedAdventure] = useState(null);
+  const [selectedAdventure, setSelectedAdventure] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -72,6 +72,8 @@ export default function HomePage() {
 
   const handleStartPress = () => {
     router.push("/creator");
+  };
+
   const filteredAdventures = adventures.filter(adv =>
     adv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     adv.summary.toLowerCase().includes(searchQuery.toLowerCase())
@@ -89,14 +91,25 @@ export default function HomePage() {
     alert('Adventure play page coming soon!');
   };
 
+  // Small navigation helpers used by the header buttons
+  const handleProfilePress = () => {
+    // navigate to a profile screen if it exists
+    router.push('/profile');
+  };
+
+  const handleMapPress = () => {
+    router.push('/map');
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>The Four Beautiful Guys!</Text>
 
       <View style={styles.buttonContainer}>
-        <Button theme="primary" label="Profile" onPress={handleProfilePress} />
-        <Button theme="primary" label="Creation Menu" onPress={handleStartPress} />
-        <Button theme="primary" label="Map" onPress={handleMapPress} />
+        <Button title="Profile" onPress={handleProfilePress} />
+        <Button title="Creation Menu" onPress={handleStartPress} />
+        <Button title="Map" onPress={handleMapPress} />
+      </View>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.appTitle}>WayFind</Text>
@@ -216,6 +229,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#16A34A',
     marginBottom: 4,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    color: '#111827',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
