@@ -106,7 +106,9 @@ export default function HomePage() {
       <Text style={styles.title}>The Four Beautiful Guys!</Text>
 
       <View style={styles.buttonContainer}>
-        <Button title="Profile" onPress={handleProfilePress} />
+        <TouchableOpacity style={styles.profileButton} onPress={handleProfilePress}>
+          <Text style={styles.profileInitials}>LF</Text>
+        </TouchableOpacity>
         <Button title="Creation Menu" onPress={handleStartPress} />
         <Button title="Map" onPress={handleMapPress} />
       </View>
@@ -243,6 +245,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingHorizontal: 16,
     marginBottom: 8,
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileInitials: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
   },
   subtitle: {
     fontSize: 14,
