@@ -3,7 +3,7 @@ import pgPromise from 'pg-promise';
 
 // Import types for compile-time checking.
 import type { Request, Response, NextFunction } from 'express';
-import type { Player, PlayerInput } from './player.ts';
+import type { Player, PlayerInput } from './player.js';
 
 // Set up the database
 const db = pgPromise()({
