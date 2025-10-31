@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    paddingTop: 80,
+    paddingTop: 40,
     backgroundColor: "#fff",
   },
   title: {
@@ -70,12 +70,13 @@ const styles = StyleSheet.create({
   topBar: {
     height: 44,
     justifyContent: "center",
+    marginBottom: 8,
   },
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    // gap is not supported across all RN versions; use margin on the text instead
-    // leave layout as row; spacing applied on backText
+    // gap is not supported across all RN versions; use spacing on the text instead
+    paddingVertical: 4,
   },
   backText: {
     fontSize: 16,
