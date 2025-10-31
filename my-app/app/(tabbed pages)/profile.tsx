@@ -1,20 +1,43 @@
-
-import { Text, View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useState } from "react";
+import {
+  Text,
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 
-import CompletedAdventuresSection from '@/components/profile/CompletedAdventuresButtons'
-
+import CompletedAdventuresSection from "@/components/profile/CompletedAdventuresButtons";
 
 export default function Profile() {
+  const [selectedImage, setSelectedImage] = useState<string | undefined>(
+    undefined
+  );
+
+  const pickImageAsync = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      // console.log(result);
+      setSelectedImage(result.assets[0].uri);
+    } else {
+      alert("You did not select any image.");
+    }
+  };
+
   // Static data that will be replaced with dynamic data
   const statsData = [
-
-    'Total Tokens: 0',
-    'Adventures Completed: 0', 
-    'Adventure Upvotes: 0',
-    'Completion Rate: 0%'
+    "Total Tokens: 0",
+    "Adventures Completed: 0",
+    "Adventure Upvotes: 0",
+    "Completion Rate: 0%",
   ];
-  
 
   return (
     <ScrollView style={styles.container}>
@@ -37,8 +60,6 @@ export default function Profile() {
 
       {/* Completed Adventures Section */}
       <CompletedAdventuresSection />
-
-
     </ScrollView>
   );
 }
