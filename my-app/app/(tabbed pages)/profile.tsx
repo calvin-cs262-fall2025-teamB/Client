@@ -1,17 +1,23 @@
-import { Text, View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  Text,
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { router } from "expo-router";
 
-import CompletedAdventuresSection from '@/components/profile/CompletedAdventuresButtons'
+import CompletedAdventuresSection from "@/components/profile/CompletedAdventuresButtons";
 
 export default function Profile() {
   // Static data that will be replaced with dynamic data
   const statsData = [
-    'Total Tokens: 0',
-    'Adventures Completed: 0', 
-    'Adventure Upvotes: 0',
-    'Completion Rate: 0%'
+    "Total Tokens: 0",
+    "Adventures Completed: 0",
+    "Adventure Upvotes: 0",
+    "Completion Rate: 0%",
   ];
-  
+
   return (
     <ScrollView style={styles.container}>
       {/* Profile Header */}
@@ -33,7 +39,6 @@ export default function Profile() {
 
       {/* Completed Adventures Section */}
       <CompletedAdventuresSection />
-
     </ScrollView>
   );
 }

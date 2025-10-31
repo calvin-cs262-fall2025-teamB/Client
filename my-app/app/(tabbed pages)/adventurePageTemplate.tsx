@@ -1,4 +1,12 @@
-import { Text, View, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
 
@@ -18,7 +26,7 @@ interface Adventure {
 export default function AdventurePageTemplate() {
   const router = useRouter();
   const { adventureId } = useLocalSearchParams();
-  
+
   // State for adventure data
   const [adventure, setAdventure] = useState<Adventure | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,33 +37,34 @@ export default function AdventurePageTemplate() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // TODO: Replace with actual API call
       // const response = await fetch(`/api/adventures/${adventureId}`);
       // const data = await response.json();
-      
+
       // Mock data for now - replace with actual database call
-      const mockAdventure: Adventure = {
-        id: Array.isArray(adventureId) ? adventureId[0] : (adventureId || "1"),
+      let mockAdventure: Adventure = {
+        id: Array.isArray(adventureId) ? adventureId[0] : adventureId || "1",
         title: "Downtown Explorer Adventure",
-        description: "Discover the hidden gems of downtown! This adventure will take you through historic buildings, local cafes, and secret spots that only locals know about. Complete challenges, collect tokens, and learn about the rich history of our city center.",
-        image: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
+        description:
+          "Discover the hidden gems of downtown! This adventure will take you through historic buildings, local cafes, and secret spots that only locals know about. Complete challenges, collect tokens, and learn about the rich history of our city center.",
+        image:
+          "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
         difficulty: "Easy",
         estimatedTime: "45-60 minutes",
         rewards: "50 tokens",
         isCompleted: false,
-        isUnlocked: true
+        isUnlocked: true,
       };
-      
+
       // Simulate network delay
       setTimeout(() => {
         setAdventure(mockAdventure);
         setLoading(false);
       }, 1000);
-      
     } catch (err) {
-      console.error('Error fetching adventure:', err);
-      setError('Failed to load adventure data');
+      console.error("Error fetching adventure:", err);
+      setError("Failed to load adventure data");
       setLoading(false);
     }
   };
@@ -67,10 +76,10 @@ export default function AdventurePageTemplate() {
 
   const handlePlayPress = () => {
     if (!adventure?.isUnlocked) {
-      console.log('Adventure is locked');
+      console.log("Adventure is locked");
       return;
     }
-    
+
     console.log(`Starting adventure: ${adventure.title}`);
     // TODO: Navigate to adventure gameplay
     // router.push(`/adventure/${adventure.id}/play`);
@@ -94,7 +103,7 @@ export default function AdventurePageTemplate() {
   if (error || !adventure) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error || 'Adventure not found'}</Text>
+        <Text style={styles.errorText}>{error || "Adventure not found"}</Text>
         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -106,12 +115,13 @@ export default function AdventurePageTemplate() {
     <ScrollView style={styles.container}>
       {/* Adventure Content Container */}
       <View style={styles.contentContainer}>
-        
         {/* Title Section */}
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{adventure.title}</Text>
           <View style={styles.metaInfo}>
-            <Text style={styles.metaText}>Difficulty: {adventure.difficulty}</Text>
+            <Text style={styles.metaText}>
+              Difficulty: {adventure.difficulty}
+            </Text>
             <Text style={styles.metaText}>Time: {adventure.estimatedTime}</Text>
             <Text style={styles.metaText}>Rewards: {adventure.rewards}</Text>
           </View>
@@ -119,7 +129,7 @@ export default function AdventurePageTemplate() {
 
         {/* Image Section */}
         <View style={styles.imageContainer}>
-          <Image 
+          <Image
             source={{ uri: adventure.image }}
             style={styles.adventureImage}
             resizeMode="cover"
@@ -139,20 +149,25 @@ export default function AdventurePageTemplate() {
 
         {/* Play Button Section */}
         <View style={styles.playButtonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
-              styles.playButton, 
-              !adventure.isUnlocked && styles.playButtonDisabled
+              styles.playButton,
+              !adventure.isUnlocked && styles.playButtonDisabled,
             ]}
             onPress={handlePlayPress}
             disabled={!adventure.isUnlocked}
           >
-            <Text style={[
-              styles.playButtonText,
-              !adventure.isUnlocked && styles.playButtonTextDisabled
-            ]}>
-              {adventure.isCompleted ? 'Play Again' : 
-               adventure.isUnlocked ? 'Start Adventure' : 'Locked'}
+            <Text
+              style={[
+                styles.playButtonText,
+                !adventure.isUnlocked && styles.playButtonTextDisabled,
+              ]}
+            >
+              {adventure.isCompleted
+                ? "Play Again"
+                : adventure.isUnlocked
+                ? "Start Adventure"
+                : "Locked"}
             </Text>
           </TouchableOpacity>
         </View>
