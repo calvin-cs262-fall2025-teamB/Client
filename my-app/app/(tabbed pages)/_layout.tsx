@@ -32,6 +32,15 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="creator"
+          options={{
+            title: "Create",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="add" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="adventurePageTemplate"
           options={{
             title: "Adventure",
