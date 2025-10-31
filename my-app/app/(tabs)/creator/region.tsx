@@ -30,6 +30,9 @@ export default function CreateRegion() {
           value={name}
           onChangeText={setName}
           returnKeyType="done"
+          onFocus={() => console.log('[CreateRegion] name onFocus')}
+          onBlur={() => console.log('[CreateRegion] name onBlur')}
+          onKeyPress={(e) => console.log('[CreateRegion] name onKeyPress', e.nativeEvent.key)}
         />
         <TextInput
           placeholder="Description"
