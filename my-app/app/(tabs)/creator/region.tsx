@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CreateRegion() {
@@ -11,7 +11,11 @@ export default function CreateRegion() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
         <View style={styles.topBar}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={20} color="#25292e" />
@@ -25,15 +29,17 @@ export default function CreateRegion() {
           style={styles.input}
           value={name}
           onChangeText={setName}
+          returnKeyType="done"
         />
         <TextInput
           placeholder="Description"
-          style={[styles.input, { height: 100 }]}
+          style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
           multiline
           value={description}
           onChangeText={setDescription}
+          textAlignVertical="top"
         />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -68,12 +74,12 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    // gap is not supported across all RN versions; use spacing on the text instead
     paddingVertical: 4,
   },
   backText: {
     fontSize: 16,
     color: "#25292e",
-    marginLeft: 4,
+    marginLeft: 8,
   },
 });
