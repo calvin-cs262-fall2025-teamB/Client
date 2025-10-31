@@ -1,7 +1,7 @@
 
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Button } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 // import { useQuery } from '@tanstack/react-query'; // TODO: Install later
 // import { base44 } from '@/api/base44Client'; // TODO: Set up API client
 
@@ -106,9 +106,17 @@ export default function HomePage() {
       <Text style={styles.title}>The Four Beautiful Guys!</Text>
 
       <View style={styles.buttonContainer}>
-        <Button title="Profile" onPress={handleProfilePress} />
-        <Button title="Creation Menu" onPress={handleStartPress} />
-        <Button title="Map" onPress={handleMapPress} />
+        <TouchableOpacity style={styles.avatarButton} onPress={handleProfilePress} accessibilityLabel="Profile">
+          <Text style={styles.avatarInitials}>LF</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={handleStartPress} accessibilityLabel="Creation Menu">
+          <Text style={styles.primaryButtonText}>Creation Menu</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.secondaryButton} onPress={handleMapPress} accessibilityLabel="Map">
+          <Text style={styles.secondaryButtonText}>Map</Text>
+        </TouchableOpacity>
       </View>
       {/* Header */}
       <View style={styles.header}>
@@ -240,9 +248,63 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  avatarButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  avatarInitials: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  primaryButton: {
+    backgroundColor: '#16A34A',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    minWidth: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  secondaryButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    minWidth: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: '#374151',
+    fontSize: 13,
+    fontWeight: '600',
   },
   
   
