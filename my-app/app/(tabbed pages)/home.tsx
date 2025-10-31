@@ -1,5 +1,5 @@
-import { Text, View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
 
 import Button from "@/components/home/Button";
 
@@ -10,8 +10,8 @@ export default function Index() {
     router.push("/profile");
   };
 
-  const handleStartPress = () => {
-    router.push("/start");
+  const handleCreatorPress = () => {
+    router.push("/creator");
   };
 
   const handleMapPress = () => {
@@ -24,7 +24,7 @@ export default function Index() {
 
       <View style={styles.buttonContainer}>
         <Button theme="primary" label="Profile" onPress={handleProfilePress} />
-        <Button theme="primary" label="Start" onPress={handleStartPress} />
+        <Button theme="primary" label="Create" onPress={handleCreatorPress} />
         <Button theme="primary" label="Map" onPress={handleMapPress} />
       </View>
     </View>
@@ -52,4 +52,3 @@ const styles = StyleSheet.create({
     gap: 15,
   },
 });
-
