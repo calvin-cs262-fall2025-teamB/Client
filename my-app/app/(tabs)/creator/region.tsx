@@ -1,13 +1,27 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import Button from "@/components/home/Button";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CreateRegion() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+
+  const handleCreate = () => {
+    Alert.alert(
+      "Not implemented",
+      "This feature hasn't been implemented yet.",
+      [
+        {
+          text: "OK",
+          onPress: () => router.push("/creator"),
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -42,6 +56,9 @@ export default function CreateRegion() {
           onChangeText={setDescription}
           textAlignVertical="top"
         />
+        <View style={{ marginTop: 8 }}>
+          <Button size="large" theme="primary" label="Create" onPress={handleCreate} />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
