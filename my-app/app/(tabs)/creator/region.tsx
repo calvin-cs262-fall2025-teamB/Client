@@ -56,8 +56,13 @@ export default function CreateRegion() {
           onChangeText={setDescription}
           textAlignVertical="top"
         />
-        <View style={{ marginTop: 8 }}>
-          <Button size="large" theme="primary" label="Create" onPress={handleCreate} />
+        <View style={styles.actionsRow}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Button size="large" theme="primary" label="Create" onPress={handleCreate} />
+          </View>
+          <Pressable style={[styles.cancelButton, { flex: 1 }]} onPress={() => router.push("/creator") }>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -101,5 +106,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#25292e",
     marginLeft: 8,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  cancelButton: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    color: '#25292e',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
