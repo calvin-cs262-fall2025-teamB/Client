@@ -2,6 +2,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 // import { useQuery } from '@tanstack/react-query'; // TODO: Install later
 // import { base44 } from '@/api/base44Client'; // TODO: Set up API client
 
@@ -48,9 +49,11 @@ const MOCK_ADVENTURES = [
   }
 ];
 
+type Adventure = typeof MOCK_ADVENTURES[number];
+
 export default function HomePage() {
   const router = useRouter();
-  const [selectedAdventure, setSelectedAdventure] = useState<any | null>(null);
+  const [selectedAdventure, setSelectedAdventure] = useState<Adventure | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -79,7 +82,7 @@ export default function HomePage() {
     adv.summary.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAdventurePress = (adventure) => {
+  const handleAdventurePress = (adventure: Adventure) => {
     setSelectedAdventure(adventure);
     setIsModalOpen(true);
   };
@@ -107,7 +110,7 @@ export default function HomePage() {
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.avatarButton} onPress={handleProfilePress} accessibilityLabel="Profile">
-          <Text style={styles.avatarInitials}>LF</Text>
+          <Ionicons name="person" size={20} color="#111827" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.primaryButton} onPress={handleStartPress} accessibilityLabel="Creation Menu">
@@ -266,11 +269,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  avatarInitials: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-  },
+  
   primaryButton: {
     backgroundColor: '#16A34A',
     paddingVertical: 10,

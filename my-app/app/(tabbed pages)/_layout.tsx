@@ -35,7 +35,7 @@ export default function TabLayout() {
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
             <View style={[styles.tabAvatar, { backgroundColor: color, width: size + 6, height: size + 6, borderRadius: (size + 6) / 2 }]}>
-              <Text style={styles.tabAvatarText}>LF</Text>
+              <Ionicons name="person" size={Math.max(12, size - 2)} color="#FFFFFF" />
             </View>
           ),
         }}
