@@ -1,17 +1,27 @@
-import { TouchableOpacity, StyleSheet, View, Text } from 'react-native';
-
+import { TouchableOpacity, StyleSheet, View, Text } from "react-native";
+//Colors
+const primaryColor = "#34c759";
+const primaryColorLight = "#aeeabd";
+const primaryColorGrey = "#bebec3";
+const primaryColorGreyDark = "#8e8e93";
+const primaryColorDark = "#041007";
+const backgroundColorLight = "#EFFBF2";
 
 export default function CompletedAdventuresSection() {
   // Adventure data that will eventually come from database
   const completedAdventures = [
-    { id: 1, title: 'Downtown Explorer', completed: true },
-    { id: 2, title: 'Historic District Tour', completed: true },
-    { id: 3, title: 'Waterfront Adventure', completed: true },
-    { id: 4, title: 'Campus Quest', completed: false },
-    { id: 5, title: 'Park Discovery', completed: true },
+    { id: 1, title: "Downtown Explorer", completed: true },
+    { id: 2, title: "Historic District Tour", completed: true },
+    { id: 3, title: "Waterfront Adventure", completed: true },
+    { id: 4, title: "Campus Quest", completed: false },
+    { id: 5, title: "Park Discovery", completed: true },
   ];
-  
-  const handleAdventurePress = (adventure: { id: number; title: string; completed: boolean }) => {
+
+  const handleAdventurePress = (adventure: {
+    id: number;
+    title: string;
+    completed: boolean;
+  }) => {
     console.log(`Selected adventure: ${adventure.title}`);
     // TODO: Navigate to adventure details or replay
     // router.push(`/adventure/${adventure.id}`);
@@ -26,14 +36,20 @@ export default function CompletedAdventuresSection() {
             key={adventure.id}
             style={[
               styles.adventureButton,
-              adventure.completed ? styles.completedButton : styles.incompleteButton
+              adventure.completed
+                ? styles.completedButton
+                : styles.incompleteButton,
             ]}
             onPress={() => handleAdventurePress(adventure)}
           >
-            <Text style={[
-              styles.adventureButtonText,
-              adventure.completed ? styles.completedText : styles.incompleteText
-            ]}>
+            <Text
+              style={[
+                styles.adventureButtonText,
+                adventure.completed
+                  ? styles.completedText
+                  : styles.incompleteText,
+              ]}
+            >
               {adventure.title}
             </Text>
           </TouchableOpacity>
@@ -43,7 +59,6 @@ export default function CompletedAdventuresSection() {
   );
 }
 
-
 const styles = StyleSheet.create({
   content: {
     padding: 20,
@@ -51,17 +66,17 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
-    marginBottom: 20,
+    fontWeight: 500,
+    color: "primaryColorDark",
+    textAlign: "left",
+    marginBottom: 10,
   },
   adventuresContainer: {
-    gap: 10,
+    gap: 2,
   },
   adventureButton: {
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -69,18 +84,19 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   completedButton: {
-    backgroundColor: "#34C759", // Green for completed
+    backgroundColor: primaryColorGreyDark, // Green for completed
   },
   incompleteButton: {
-    backgroundColor: "#FF9500", // Orange for incomplete
+    backgroundColor: primaryColorGrey, // Orange for incomplete
   },
   adventureButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    textAlign: "center",
+    textAlign: "left",
+    color: primaryColorDark,
   },
   completedText: {
-    color: "#fff",
+    color: primaryColorLight,
   },
   incompleteText: {
     color: "#fff",
