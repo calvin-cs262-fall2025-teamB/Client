@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    paddingTop: 80,
+    paddingTop: 40,
     backgroundColor: "#fff",
   },
   title: {
@@ -62,13 +62,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   topBar: {
-    height: 44,
-    justifyContent: "center",
+    width: "100%",
+    marginBottom: 8,
   },
   backButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    paddingVertical: 4,
   },
   backText: {
     fontSize: 16,
