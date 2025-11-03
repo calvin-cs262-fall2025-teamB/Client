@@ -10,6 +10,7 @@ const initialState = {
 };
 
 function reducer(state, action) {
+  console.log(action.payload);
   switch (action.type) {
     case "signup":
       return {
@@ -50,8 +51,10 @@ function AuthProvider({ children }) {
     dispatch({ type: "signup", payload: { user: fullName, email, password } });
   }
   function login(email, password) {
-    if (email === FAKE_USER.email && password === FAKE_USER.password)
-      dispatch({ type: "login", payload: FAKE_USER });
+    //TODO: undo comment
+    // if (email === FAKE_USER.email && password === FAKE_USER.password)
+    //   dispatch({ type: "login", payload: FAKE_USER });
+    dispatch({ type: "login", payload: "Beautiful BOYS" });
   }
   function logout() {
     dispatch({ type: "logout" });

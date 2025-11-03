@@ -1,4 +1,10 @@
-import { Text, View, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import {
+  Text,
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 
 export default function Start() {
   const handleLandmarkPress = (landmarkNumber: number) => {
@@ -11,12 +17,12 @@ export default function Start() {
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>Start</Text>
-        
+
         <View style={styles.landmarkButtonsContainer}>
           {[1, 2, 3, 4, 5].map((number) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={number}
-              style={styles.landmarkButton} 
+              style={styles.landmarkButton}
               onPress={() => handleLandmarkPress(number)}
             >
               <Text style={styles.landmarkButtonText}>Landmark {number}</Text>

@@ -31,7 +31,11 @@ export default function Login() {
   }, [isAuthenticated]);
 
   const handleSubmit = async () => {
-    if (email && password) {
+    //TODO: undo comment
+    // if (email && password) {
+    const e = "seb@gmail";
+    const p = "password123";
+    if (e && p) {
       setIsLoading(true);
       try {
         login(email, password);
