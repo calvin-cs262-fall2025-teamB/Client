@@ -65,7 +65,6 @@ export default function Profile() {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Profile Header */}
       <View style={styles.profileContent}>
         <ImageHolder
           imgSource={PlaceholderImage}
