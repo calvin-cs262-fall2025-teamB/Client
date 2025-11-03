@@ -31,7 +31,6 @@ export default function Login() {
   }, [isAuthenticated]);
 
   const handleSubmit = async () => {
-    //Please don't change this code back
     if (email && password) {
       setIsLoading(true);
       try {
