@@ -6,5 +6,10 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "components/authentication/Login.tex"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "components/authentication/Login.tex",
+    "contexts/AuthContext.jsx"
+  ]
 }

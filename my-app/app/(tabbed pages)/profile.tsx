@@ -6,18 +6,38 @@ import { useAuth } from "@/contexts/AuthContext";
 
 //Components
 import { Text, View, StyleSheet, ScrollView } from "react-native";
-import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import CompletedAdventuresSection from "@/components/profile/CompletedAdventuresButtons";
 import ImageHolder from "@/components/profile/ImageHolder";
+import DisplayList from "@/components/reusable/displayList";
 import Button from "@/components/home/Button";
+
+//Icons
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import AntDesign from "@expo/vector-icons/AntDesign";
+
+//Colors
+const primaryColor = "#34c759";
+const primaryColorLight = "#aeeabd";
+const primaryColorDark = "#041007";
+const backgroundColorLight = "#EFFBF2";
+
+//TODO:
+/**
+ * 1. Create templates for all the pages after finishing ptofile
+ * 2. Create Context APIS for all the pages
+ * 3. Start working on the create page
+ * 4. Create color scheme
+ */
 
 export default function Profile() {
   const { user } = useAuth();
 
-  //TODO: Go through image selecting code.
+  //TODO: Go through image selecting code -- lowest priority
   const [selectedImage, setSelectedImage] = useState<string | undefined>(
     undefined
   );
+  const [showStats, setShowStats] = useState(false);
+
   const PlaceholderImage = require("@/assets/images/icon.png");
 
   const pickImageAsync = async () => {
@@ -45,7 +65,6 @@ export default function Profile() {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Profile Header */}
       <View style={styles.profileContent}>
         <ImageHolder
           imgSource={PlaceholderImage}
@@ -60,24 +79,50 @@ export default function Profile() {
         />
         {/* TODO: figure out why 'user' displays nothing */}
         <View style={styles.profileEditContainer}>
-          <Text style={styles.profileName}>{user || "Jack Scoone"}</Text>
-          <FontAwesome6 name="edit" size={24} color="black" />
+          <Text style={styles.profileName}>{user || "Beautiful Boys"}</Text>
+          <FontAwesome6
+            name="edit"
+            size={24}
+            // Make bold
+            color={primaryColor}
+          />
         </View>
       </View>
-
-      {/* Stats Section */}
+      {/* Stats Section */}(
       <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Stats</Text>
-        <View style={styles.statsContainer}>
-          {statsData.map((stat, index) => (
-            <View key={index} style={styles.statItem}>
-              <Text style={styles.statText}>{stat}</Text>
-            </View>
-          ))}
+        <View style={styles.statsTitleContainer}>
+          <Text style={styles.statText}>Stats</Text>
+          {!showStats ? (
+            <AntDesign
+              name="down"
+              size={16}
+              color={primaryColor}
+              onPress={() => setShowStats(!showStats)}
+            />
+          ) : (
+            <AntDesign
+              name="line"
+              size={16}
+              color={primaryColor}
+              onPress={() => setShowStats(!showStats)}
+            />
+          )}
         </View>
-      </View>
 
-      {/* Completed Adventures Section */}
+        {/* TODO: Figure out how to hide stats withoutdistorting the screen */}
+        {showStats && (
+          <View style={styles.statsContainer}>
+            {statsData.map((stat, index) => (
+              <View key={index} style={styles.statItem}>
+                <Text style={styles.statText}>{stat}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+        {/*TDOD:  Fix DisplatList */}
+        {/* {showStats ? DisplayList({ items: statsData }) : <View />} */}
+      </View>
+      ){/* Completed Adventures Section */}
       <CompletedAdventuresSection />
     </ScrollView>
   );
@@ -86,7 +131,7 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: backgroundColorLight,
   },
   content: {
     padding: 20,
@@ -95,7 +140,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#333",
+    color: primaryColorDark,
   },
   profileEditContainer: {
     flexDirection: "row",
@@ -130,8 +175,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  statText: {
-    fontSize: 16,
-    color: "#555",
+  statText: { fontSize: 16, fontWeight: "bold", color: "#555" },
+  statsTitleContainer: {
+    backgroundColor: primaryColorLight,
+    padding: 10,
+    borderRadius: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
   },
 });
