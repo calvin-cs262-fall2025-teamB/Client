@@ -1,4 +1,6 @@
 //TODO: install tailwind and use it for styling
+// TODO: Replace the link to Sign in with a sin2@calvin.edu
+//TODO: Make Help Page. Authentication Page. Forgot Password
 import { Link, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {

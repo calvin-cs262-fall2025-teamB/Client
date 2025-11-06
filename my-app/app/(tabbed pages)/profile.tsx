@@ -24,6 +24,7 @@ import themes from "@/assets/utils/themes";
  * 2. Create Context APIS for all the pages
  * 3. Start working on the create page
  * 4. Create color scheme
+ * 5. Separate completed adventures from incomplete ones
  */
 
 export default function Profile() {
@@ -70,17 +71,24 @@ export default function Profile() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.profileContent}>
-        <ImageHolder
-          imgSource={PlaceholderImage}
-          selectedImage={selectedImage}
-        />
+        <View style={{ position: "relative" }}>
+          <ImageHolder
+            imgSource={PlaceholderImage}
+            selectedImage={selectedImage}
+          />
 
-        <FontAwesome6
-          onPress={pickImageAsync}
-          name="camera"
-          size={24}
-          color={themes.primaryColor}
-        />
+          <FontAwesome6
+            onPress={pickImageAsync}
+            name="camera"
+            size={36}
+            color={themes.primaryColorGreyDark}
+            style={{
+              position: "absolute",
+              bottom: 0, // floating-point values allowed
+              right: 15,
+            }}
+          />
+        </View>
 
         <View
           style={
@@ -106,7 +114,7 @@ export default function Profile() {
             name={isEditing ? "check" : "edit"}
             size={24}
             // Make bold
-            color={themes.primaryColor}
+            color={themes.primaryColorDark}
             onPress={() => {
               setIsEditing(!isEditing);
             }}
@@ -134,15 +142,7 @@ export default function Profile() {
           )}
         </View>
 
-        {showStats && (
-          <View style={styles.statsContainer}>
-            {statsData.map((stat, index) => (
-              <View key={index} style={styles.statItem}>
-                <Text>{stat}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {showStats && <DisplayList fontSize={18} items={statsData} />}
       </View>
       )
       <CompletedAdventuresSection />
@@ -193,16 +193,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
   },
-  statsContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
+
   statItem: {
     paddingVertical: 8,
     borderBottomWidth: 1,
