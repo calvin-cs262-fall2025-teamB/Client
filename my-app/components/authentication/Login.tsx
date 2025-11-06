@@ -16,6 +16,9 @@ import {
 //Custom libraries
 import { useAuth } from "../../contexts/AuthContext";
 
+//Components
+import AppTitle from "../reusable/AppTitle";
+
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -46,49 +49,54 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.select({ ios: "padding", android: undefined })}
-      style={styles.container}
-    >
-      <View style={styles.form}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          autoComplete={"email"}
-          style={styles.input}
-          returnKeyType="next"
-          onSubmitEditing={() => {}}
-        />
+    <>
+      <KeyboardAvoidingView
+        behavior={Platform.select({ ios: "padding", android: undefined })}
+        style={styles.container}
+      >
+        <View style={styles.form}>
+          <AppTitle />
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            autoComplete={"email"}
+            style={styles.input}
+            returnKeyType="next"
+            onSubmitEditing={() => {}}
+          />
 
-        <Text style={styles.label}>Password</Text>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="••••••••"
-          style={styles.input}
-          returnKeyType="go"
-          onSubmitEditing={handleSubmit}
-        />
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="••••••••"
+            style={styles.input}
+            returnKeyType="go"
+            onSubmitEditing={handleSubmit}
+          />
 
-        {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 12 }} />
-        ) : (
-          <Button title="Login" onPress={handleSubmit} />
-        )}
-        <View style={styles.authenticationHelp}>
-          <Text style={styles.authenticationHelpText}>Help</Text>
-          <View style={{ gap: 2 }}>
-            <Link href="/signin" style={styles.authenticationHelpText}>
-              Sign in
-            </Link>
-            <Text style={styles.authenticationHelpText}>Forgot password?</Text>
+          {isLoading ? (
+            <ActivityIndicator style={{ marginTop: 12 }} />
+          ) : (
+            <Button title="Login" onPress={handleSubmit} />
+          )}
+          <View style={styles.authenticationHelp}>
+            <Text style={styles.authenticationHelpText}>Help</Text>
+            <View style={{ gap: 2 }}>
+              <Link href="/signin" style={styles.authenticationHelpText}>
+                Sign in
+              </Link>
+              <Text style={styles.authenticationHelpText}>
+                Forgot password?
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 
