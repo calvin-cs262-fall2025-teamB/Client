@@ -189,7 +189,11 @@ export default function HomePage() {
 
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => setIsModalOpen(false)}
+              onPress={() => {
+                setIsModalOpen(false);
+                //NOTE: Sam's addition to navigate to Adventure page. You can remove this and implement it however you want. I was Just testing something
+                router.replace("/adventurePage");
+              }}
             >
               <Text style={styles.closeButtonText}>Close</Text>
             </TouchableOpacity>

@@ -1,11 +1,6 @@
 import { TouchableOpacity, StyleSheet, View, Text } from "react-native";
+import themes from "../../assets/utils/themes";
 //Colors
-const primaryColor = "#34c759";
-const primaryColorLight = "#aeeabd";
-const primaryColorGrey = "#bebec3";
-const primaryColorGreyDark = "#8e8e93";
-const primaryColorDark = "#041007";
-const backgroundColorLight = "#EFFBF2";
 
 export default function CompletedAdventuresSection() {
   // Adventure data that will eventually come from database
@@ -77,28 +72,28 @@ const styles = StyleSheet.create({
   adventureButton: {
     padding: 15,
     borderRadius: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    //  shadow instead of box-shadow
+    shadowColor: "#03030356",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   completedButton: {
-    backgroundColor: primaryColorGreyDark, // Green for completed
+    backgroundColor: themes.backgroundColorLight, // Green for completed
   },
   incompleteButton: {
-    backgroundColor: primaryColorGrey, // Orange for incomplete
+    backgroundColor: themes.primaryColorGreyDark, // Orange for incomplete
   },
   adventureButtonText: {
     fontSize: 16,
     fontWeight: "600",
     textAlign: "left",
-    color: primaryColorDark,
+    color: themes.primaryColorDark,
   },
   completedText: {
-    color: primaryColorLight,
+    color: themes.primaryColor,
   },
   incompleteText: {
-    color: "#fff",
+    color: themes.textColorLight,
   },
 });

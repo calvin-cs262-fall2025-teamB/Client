@@ -2,11 +2,9 @@ import { Stack } from "expo-router";
 
 export default function RootLayout() {
   return (
-    //this sets first page to index.tsx
+    //TODO: figure out how to add the back button
     <Stack>
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="signin" options={{ headerShown: false }} />
-      <Stack.Screen name="about" options={{ headerShown: false }} />
+      <Stack.Screen name="adventurePage" options={{ headerShown: false }} />
     </Stack>
   );
 }

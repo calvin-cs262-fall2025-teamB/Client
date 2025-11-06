@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import themes from "@/assets/utils/themes";
 
 //TODO
 export default function TabLayout() {
@@ -7,7 +8,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        tabBarActiveTintColor: "#007AFF",
+        tabBarActiveTintColor: themes.primaryColor,
       }}
     >
       <Tabs.Screen
@@ -37,19 +38,14 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="adventurePageTemplate"
-        options={{
-          title: "Adventure",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="compass" size={size} color={color} />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name="profile"
         options={{
           title: "profile",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
         }}
       />
     </Tabs>
