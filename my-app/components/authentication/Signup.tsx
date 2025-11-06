@@ -15,6 +15,11 @@ import {
 //Custom libraries
 import { useAuth } from "../../contexts/AuthContext";
 
+//Components
+import AppTitle from "../reusable/AppTitle";
+
+// TODO: Options to let you go back ti login from sign up
+
 export default function Signup() {
   const router = useRouter();
   const [firstName, setFirstName] = useState("");
@@ -60,8 +65,8 @@ export default function Signup() {
       style={styles.container}
     >
       <View style={styles.form}>
+        <AppTitle />
         <Text style={styles.label}>First Name</Text>
-
         <TextInput
           value={firstName}
           onChangeText={setFirstName}

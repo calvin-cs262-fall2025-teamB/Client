@@ -5,7 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "@/contexts/AuthContext";
 
 //Components
-import { Text, View, StyleSheet, ScrollView } from "react-native";
+import { Text, View, StyleSheet, ScrollView, TextInput } from "react-native";
 import CompletedAdventuresSection from "@/components/profile/CompletedAdventuresButtons";
 import ImageHolder from "@/components/profile/ImageHolder";
 import DisplayList from "@/components/reusable/displayList";
@@ -16,10 +16,7 @@ import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import AntDesign from "@expo/vector-icons/AntDesign";
 
 //Colors
-const primaryColor = "#34c759";
-const primaryColorLight = "#aeeabd";
-const primaryColorDark = "#041007";
-const backgroundColorLight = "#EFFBF2";
+import themes from "@/assets/utils/themes";
 
 //TODO:
 /**
@@ -30,14 +27,16 @@ const backgroundColorLight = "#EFFBF2";
  */
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, editUsername } = useAuth();
+
+  const [showStats, setShowStats] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempEditName, setTempEditName] = useState(user);
 
   //TODO: Go through image selecting code -- lowest priority
   const [selectedImage, setSelectedImage] = useState<string | undefined>(
     undefined
   );
-  const [showStats, setShowStats] = useState(false);
-
   const PlaceholderImage = require("@/assets/images/icon.png");
 
   const pickImageAsync = async () => {
@@ -62,6 +61,11 @@ export default function Profile() {
     "Adventure Upvotes: 0",
     "Completion Rate: 0%",
   ];
+  /* TODO: use floating point to ajust the camera icons position */
+  /* TODO: figure out why 'user' displays nothing */
+  /* TODO: Figure out how to hide stats withoutdistorting the screen */
+  /*TDOD:  Fix DisplatList */
+  /* {showStats ? DisplayList({ items: statsData }) : <View />} */
 
   return (
     <ScrollView style={styles.container}>
@@ -70,21 +74,42 @@ export default function Profile() {
           imgSource={PlaceholderImage}
           selectedImage={selectedImage}
         />
-        {/* TODO: use floating point to ajust the camera icons position */}
+
         <FontAwesome6
           onPress={pickImageAsync}
           name="camera"
           size={24}
-          color="black"
+          color={themes.primaryColor}
         />
-        {/* TODO: figure out why 'user' displays nothing */}
-        <View style={styles.profileEditContainer}>
-          <Text style={styles.profileName}>{user || "Beautiful Boys"}</Text>
+
+        <View
+          style={
+            isEditing
+              ? styles.profileEditContainer__editing
+              : styles.profileEditContainer
+          }
+        >
+          <TextInput
+            style={styles.profileName}
+            value={tempEditName}
+            editable={isEditing}
+            onChangeText={(text) => {
+              setTempEditName(text);
+            }}
+            onSubmitEditing={() => {
+              editUsername(tempEditName);
+              setIsEditing(false);
+            }}
+            returnKeyType="done"
+          />
           <FontAwesome6
-            name="edit"
+            name={isEditing ? "check" : "edit"}
             size={24}
             // Make bold
-            color={primaryColor}
+            color={themes.primaryColor}
+            onPress={() => {
+              setIsEditing(!isEditing);
+            }}
           />
         </View>
       </View>
@@ -96,33 +121,30 @@ export default function Profile() {
             <AntDesign
               name="down"
               size={16}
-              color={primaryColor}
+              color={themes.textColorLight}
               onPress={() => setShowStats(!showStats)}
             />
           ) : (
             <AntDesign
               name="line"
               size={16}
-              color={primaryColor}
+              color={themes.textColorLight}
               onPress={() => setShowStats(!showStats)}
             />
           )}
         </View>
 
-        {/* TODO: Figure out how to hide stats withoutdistorting the screen */}
         {showStats && (
           <View style={styles.statsContainer}>
             {statsData.map((stat, index) => (
               <View key={index} style={styles.statItem}>
-                <Text style={styles.statText}>{stat}</Text>
+                <Text>{stat}</Text>
               </View>
             ))}
           </View>
         )}
-        {/*TDOD:  Fix DisplatList */}
-        {/* {showStats ? DisplayList({ items: statsData }) : <View />} */}
       </View>
-      ){/* Completed Adventures Section */}
+      )
       <CompletedAdventuresSection />
     </ScrollView>
   );
@@ -131,7 +153,7 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColorLight,
+    backgroundColor: themes.backgroundColorLight,
   },
   content: {
     padding: 20,
@@ -140,13 +162,24 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: "bold",
-    color: primaryColorDark,
+    color: themes.primaryColorDark,
   },
   profileEditContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 25,
+    marginTop: 10,
+  },
+  profileEditContainer__editing: {
+    backgroundColor: themes.primaryColorLight,
+    padding: 8,
+    borderRadius: 8,
+    width: "75%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
     marginTop: 10,
   },
   profileContent: {
@@ -175,10 +208,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  statText: { fontSize: 16, fontWeight: "bold", color: "#555" },
+  statText: { fontSize: 16, fontWeight: "bold", color: themes.textColorLight },
   statsTitleContainer: {
-    backgroundColor: primaryColorLight,
-    padding: 10,
+    backgroundColor: themes.primaryColor,
+    padding: 15,
     borderRadius: 8,
     flexDirection: "row",
     justifyContent: "space-between",
