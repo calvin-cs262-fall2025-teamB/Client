@@ -1,16 +1,45 @@
 import { TouchableOpacity, StyleSheet, View, Text } from "react-native";
+import { FontAwesome6 } from "@expo/vector-icons";
 import themes from "../../assets/utils/themes";
-//Colors
 
 export default function CompletedAdventuresSection() {
-  // Adventure data that will eventually come from database
+  // ============================================================================
+  // MOCK DATA - Replace with actual PostgreSQL data via Azure API
+  // ============================================================================
+  // TODO: Fetch user's adventures from Azure backend
+  // Expected API endpoint: GET https://your-app.azurewebsites.net/api/users/{userId}/adventures
+  // Expected PostgreSQL query:
+  // SELECT
+  //   a.id,
+  //   a.title,
+  //   ua.completed,
+  //   ua.tokens_earned as tokens,
+  //   ua.progress_percentage as progress
+  // FROM user_adventures ua
+  // JOIN adventures a ON ua.adventure_id = a.id
+  // WHERE ua.user_id = $1
+  // ORDER BY ua.last_updated DESC;
+  //
+  // Implementation example:
+  // const { data: completedAdventures, isLoading } = useQuery({
+  //   queryKey: ['userAdventures', user?.id],
+  //   queryFn: async () => {
+  //     const response = await fetch(
+  //       `https://your-app.azurewebsites.net/api/users/${user.id}/adventures`,
+  //       { headers: { 'Authorization': `Bearer ${authToken}` } }
+  //     );
+  //     return response.json();
+  //   }
+  // });
+
   const completedAdventures = [
-    { id: 1, title: "Downtown Explorer", completed: true },
-    { id: 2, title: "Historic District Tour", completed: true },
-    { id: 3, title: "Waterfront Adventure", completed: true },
-    { id: 4, title: "Campus Quest", completed: false },
-    { id: 5, title: "Park Discovery", completed: true },
+    { id: 1, title: "Downtown Explorer", completed: true, tokens: 25 },
+    { id: 2, title: "Historic District Tour", completed: true, tokens: 30 },
+    { id: 3, title: "Waterfront Adventure", completed: true, tokens: 20 },
+    { id: 4, title: "Campus Quest", completed: false, progress: 60 },
+    { id: 5, title: "Park Discovery", completed: true, tokens: 15 },
   ];
+  // ============================================================================
 
   const handleAdventurePress = (adventure: {
     id: number;
@@ -18,35 +47,85 @@ export default function CompletedAdventuresSection() {
     completed: boolean;
   }) => {
     console.log(`Selected adventure: ${adventure.title}`);
-    // TODO: Navigate to adventure details or replay
-    // router.push(`/adventure/${adventure.id}`);
+    // TODO: Navigate to adventure details or replay page
+    // router.push(`/adventurePage?adventureId=${adventure.id}`);
   };
 
   return (
-    <View style={styles.content}>
-      <Text style={styles.sectionTitle}>Completed Adventures</Text>
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>My Adventures</Text>
       <View style={styles.adventuresContainer}>
         {completedAdventures.map((adventure) => (
           <TouchableOpacity
             key={adventure.id}
             style={[
-              styles.adventureButton,
-              adventure.completed
-                ? styles.completedButton
-                : styles.incompleteButton,
+              styles.adventureCard,
+              !adventure.completed && styles.incompleteCard,
             ]}
             onPress={() => handleAdventurePress(adventure)}
+            activeOpacity={0.7}
           >
-            <Text
-              style={[
-                styles.adventureButtonText,
-                adventure.completed
-                  ? styles.completedText
-                  : styles.incompleteText,
-              ]}
-            >
-              {adventure.title}
-            </Text>
+            <View style={styles.cardContent}>
+              {/* Icon */}
+              <View
+                style={[
+                  styles.iconContainer,
+                  adventure.completed
+                    ? styles.completedIconBg
+                    : styles.incompleteIconBg,
+                ]}
+              >
+                <Text style={styles.adventureIcon}>
+                  {adventure.completed ? "🗺️" : "🔒"}
+                </Text>
+              </View>
+
+              {/* Title and Info */}
+              <View style={styles.textContainer}>
+                <Text
+                  style={[
+                    styles.adventureTitle,
+                    !adventure.completed && styles.incompleteTitle,
+                  ]}
+                >
+                  {adventure.title}
+                </Text>
+                {adventure.completed ? (
+                  <View style={styles.rewardContainer}>
+                    <FontAwesome6
+                      name="coins"
+                      size={14}
+                      color="#FFD700"
+                      solid
+                    />
+                    <Text style={styles.rewardText}>
+                      {adventure.tokens} tokens earned
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.progressContainer}>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          { width: `${adventure.progress || 0}%` },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.progressText}>
+                      {adventure.progress || 0}% complete
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Status Badge */}
+              {adventure.completed && (
+                <View style={styles.completedBadge}>
+                  <FontAwesome6 name="check" size={16} color="#fff" />
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -55,45 +134,102 @@ export default function CompletedAdventuresSection() {
 }
 
 const styles = StyleSheet.create({
-  content: {
+  section: {
     padding: 20,
-    paddingTop: 60, // Extra padding to move title to top
+    paddingTop: 16,
   },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: 500,
-    color: "primaryColorDark",
-    textAlign: "left",
-    marginBottom: 10,
+    fontSize: 20,
+    fontWeight: "bold",
+    color: themes.primaryColorDark,
+    marginBottom: 16,
   },
   adventuresContainer: {
-    gap: 2,
+    gap: 12,
   },
-  adventureButton: {
-    padding: 15,
-    borderRadius: 2,
-    //  shadow instead of box-shadow
-    shadowColor: "#03030356",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+  adventureCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: "hidden",
   },
-  completedButton: {
-    backgroundColor: themes.backgroundColorLight, // Green for completed
+  incompleteCard: {
+    backgroundColor: "#f9f9f9",
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+    borderStyle: "dashed",
   },
-  incompleteButton: {
-    backgroundColor: themes.primaryColorGreyDark, // Orange for incomplete
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 12,
   },
-  adventureButtonText: {
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  completedIconBg: {
+    backgroundColor: themes.primaryColorLight,
+  },
+  incompleteIconBg: {
+    backgroundColor: "#f0f0f0",
+  },
+  adventureIcon: {
+    fontSize: 28,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  adventureTitle: {
     fontSize: 16,
     fontWeight: "600",
-    textAlign: "left",
     color: themes.primaryColorDark,
+    marginBottom: 4,
   },
-  completedText: {
-    color: themes.primaryColor,
+  incompleteTitle: {
+    color: themes.primaryColorGreyDark,
   },
-  incompleteText: {
-    color: themes.textColorLight,
+  rewardContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  rewardText: {
+    fontSize: 13,
+    color: themes.primaryColorGreyDark,
+  },
+  progressContainer: {
+    gap: 4,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: themes.primaryColor,
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 12,
+    color: themes.primaryColorGreyDark,
+  },
+  completedBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: themes.primaryColor,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

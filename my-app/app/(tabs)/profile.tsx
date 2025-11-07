@@ -1,43 +1,37 @@
-//Methods
-import { useState } from "react";
-import { router } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "@/contexts/AuthContext";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-//Components
-import { Text, View, StyleSheet, ScrollView, TextInput } from "react-native";
+// Components
 import CompletedAdventuresSection from "@/components/profile/CompletedAdventuresButtons";
 import ImageHolder from "@/components/profile/ImageHolder";
-import DisplayList from "@/components/reusable/displayList";
-import Button from "@/components/home/Button";
+import ProgressRing from "@/components/profile/ProgressRing";
+import StatCard from "@/components/profile/StatCard";
 
-//Icons
+// Icons
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
-import AntDesign from "@expo/vector-icons/AntDesign";
 
-//Colors
+// Colors
 import themes from "@/assets/utils/themes";
-
-//TODO:
-/**
- * 1. Create templates for all the pages after finishing ptofile
- * 2. Create Context APIS for all the pages
- * 3. Start working on the create page
- * 4. Create color scheme
- * 5. Separate completed adventures from incomplete ones
- */
 
 export default function Profile() {
   const { user, editUsername } = useAuth();
 
-  const [showStats, setShowStats] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [tempEditName, setTempEditName] = useState(user);
-
-  //TODO: Go through image selecting code -- lowest priority
   const [selectedImage, setSelectedImage] = useState<string | undefined>(
     undefined
   );
+
   const PlaceholderImage = require("@/assets/images/icon.png");
 
   const pickImageAsync = async () => {
@@ -48,104 +42,209 @@ export default function Profile() {
     });
 
     if (!result.canceled) {
-      // console.log(result);
       setSelectedImage(result.assets[0].uri);
+
+      // TODO: Upload image to Azure storage and update user profile
+      // Example implementation:
+      // const formData = new FormData();
+      // formData.append('profileImage', { uri: result.assets[0].uri, type: 'image/jpeg', name: 'profile.jpg' });
+      // await fetch('https://your-azure-endpoint.azurewebsites.net/api/users/profile/image', {
+      //   method: 'POST',
+      //   body: formData,
+      //   headers: { 'Authorization': `Bearer ${authToken}` }
+      // });
     } else {
       alert("You did not select any image.");
     }
   };
 
-  // Static data that will be replaced with dynamic data
-  const statsData = [
-    "Total Tokens: 0",
-    "Adventures Completed: 0",
-    "Adventure Upvotes: 0",
-    "Completion Rate: 0%",
-  ];
-  /* TODO: use floating point to ajust the camera icons position */
-  /* TODO: figure out why 'user' displays nothing */
-  /* TODO: Figure out how to hide stats withoutdistorting the screen */
-  /*TDOD:  Fix DisplatList */
-  /* {showStats ? DisplayList({ items: statsData }) : <View />} */
+  // ============================================================================
+  // MOCK DATA - Replace with actual PostgreSQL data via Azure API
+  // ============================================================================
+  // TODO: Fetch user stats from Azure backend
+  // Expected API endpoint: GET https://your-app.azurewebsites.net/api/users/{userId}/stats
+  // Expected response shape:
+  // {
+  //   totalTokens: number,
+  //   adventuresCompleted: number,
+  //   adventuresTotal: number,
+  //   upvotes: number,
+  //   completionRate: number
+  // }
+  //
+  // Implementation example:
+  // const { data: userStats, isLoading } = useQuery({
+  //   queryKey: ['userStats', user?.id],
+  //   queryFn: async () => {
+  //     const response = await fetch(`https://your-app.azurewebsites.net/api/users/${user.id}/stats`);
+  //     return response.json();
+  //   }
+  // });
+
+  const userStats = {
+    totalTokens: 125,
+    adventuresCompleted: 8,
+    adventuresTotal: 12,
+    upvotes: 42,
+    completionRate: 67, // percentage
+  };
+  // ============================================================================
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.profileContent}>
-        <View style={{ position: "relative" }}>
-          <ImageHolder
-            imgSource={PlaceholderImage}
-            selectedImage={selectedImage}
-          />
-
-          <FontAwesome6
-            onPress={pickImageAsync}
-            name="camera"
-            size={36}
-            color={themes.primaryColorGreyDark}
-            style={{
-              position: "absolute",
-              bottom: 0, // floating-point values allowed
-              right: 15,
-            }}
-          />
-        </View>
-
-        <View
-          style={
-            isEditing
-              ? styles.profileEditContainer__editing
-              : styles.profileEditContainer
-          }
-        >
-          <TextInput
-            style={styles.profileName}
-            value={tempEditName}
-            editable={isEditing}
-            onChangeText={(text) => {
-              setTempEditName(text);
-            }}
-            onSubmitEditing={() => {
-              editUsername(tempEditName);
-              setIsEditing(false);
-            }}
-            returnKeyType="done"
-          />
-          <FontAwesome6
-            name={isEditing ? "check" : "edit"}
-            size={24}
-            // Make bold
-            color={themes.primaryColorDark}
-            onPress={() => {
-              setIsEditing(!isEditing);
-            }}
-          />
-        </View>
-      </View>
-      {/* Stats Section */}(
-      <View style={styles.content}>
-        <View style={styles.statsTitleContainer}>
-          <Text style={styles.statText}>Stats</Text>
-          {!showStats ? (
-            <AntDesign
-              name="down"
-              size={16}
-              color={themes.textColorLight}
-              onPress={() => setShowStats(!showStats)}
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={["#34c759", "#4ed964", "#e4f5e8"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.gradientHeader}
+      >
+        {/* Profile Image */}
+        <View style={styles.imageSection}>
+          <View style={styles.imageWrapper}>
+            <ImageHolder
+              imgSource={PlaceholderImage}
+              selectedImage={selectedImage}
             />
+            <TouchableOpacity
+              onPress={pickImageAsync}
+              style={styles.cameraButton}
+            >
+              <FontAwesome6
+                name="camera"
+                size={20}
+                color={themes.backgroundColorLight}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Username Section */}
+        <View style={styles.usernameSection}>
+          {isEditing ? (
+            <View style={styles.editContainer}>
+              <TextInput
+                style={styles.usernameInput}
+                value={tempEditName}
+                onChangeText={setTempEditName}
+                onSubmitEditing={() => {
+                  editUsername(tempEditName);
+                  setIsEditing(false);
+                }}
+                returnKeyType="done"
+                autoFocus
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  editUsername(tempEditName);
+                  setIsEditing(false);
+                }}
+              >
+                <FontAwesome6 name="check" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
           ) : (
-            <AntDesign
-              name="line"
-              size={16}
-              color={themes.textColorLight}
-              onPress={() => setShowStats(!showStats)}
-            />
+            <TouchableOpacity
+              style={styles.usernameDisplay}
+              onPress={() => setIsEditing(true)}
+            >
+              <Text style={styles.username}>{user || "Guest"}</Text>
+              <FontAwesome6 name="edit" size={16} color="#fff" />
+            </TouchableOpacity>
           )}
         </View>
 
-        {showStats && <DisplayList fontSize={18} items={statsData} />}
+        {/* Quick Stats Badges */}
+        <View style={styles.quickStatsContainer}>
+          <View style={styles.quickStatBadge}>
+            <Text style={styles.quickStatIcon}>🪙</Text>
+            <Text style={styles.quickStatValue}>{userStats.totalTokens}</Text>
+            <Text style={styles.quickStatLabel}>Tokens</Text>
+          </View>
+
+          <View style={styles.quickStatBadge}>
+            <Text style={styles.quickStatIcon}>🗺️</Text>
+            <Text style={styles.quickStatValue}>
+              {userStats.adventuresCompleted}
+            </Text>
+            <Text style={styles.quickStatLabel}>Adventures</Text>
+          </View>
+
+          <View style={styles.quickStatBadge}>
+            <Text style={styles.quickStatIcon}>👍</Text>
+            <Text style={styles.quickStatValue}>{userStats.upvotes}</Text>
+            <Text style={styles.quickStatLabel}>Upvotes</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* Progress Section */}
+      <View style={styles.progressSection}>
+        <Text style={styles.sectionTitle}>Progress Overview</Text>
+        <View style={styles.progressContainer}>
+          <ProgressRing
+            percentage={userStats.completionRate}
+            size={120}
+            strokeWidth={10}
+            color={themes.primaryColor}
+            label="Complete"
+          />
+          <View style={styles.progressStats}>
+            <Text style={styles.progressText}>
+              <Text style={styles.progressBold}>
+                {userStats.adventuresCompleted}
+              </Text>{" "}
+              of {userStats.adventuresTotal} adventures completed
+            </Text>
+            <Text style={styles.progressSubtext}>
+              Keep exploring to unlock more rewards!
+            </Text>
+          </View>
+        </View>
       </View>
-      )
+
+      {/* Detailed Stats Cards */}
+      <View style={styles.statsSection}>
+        <Text style={styles.sectionTitle}>Detailed Statistics</Text>
+        <View style={styles.statsGrid}>
+          <StatCard
+            icon="coins"
+            iconFamily="fontawesome"
+            value={userStats.totalTokens}
+            label="Total Tokens"
+            color="#FFD700"
+          />
+          <StatCard
+            icon="map-location-dot"
+            iconFamily="fontawesome"
+            value={userStats.adventuresCompleted}
+            label="Completed"
+            color="#34c759"
+          />
+        </View>
+        <View style={styles.statsGrid}>
+          <StatCard
+            icon="trophy"
+            iconFamily="fontawesome"
+            value={userStats.upvotes}
+            label="Upvotes"
+            color="#FF9500"
+          />
+          <StatCard
+            icon="fire"
+            iconFamily="fontawesome"
+            value={`${userStats.completionRate}%`}
+            label="Completion"
+            color="#FF3B30"
+          />
+        </View>
+      </View>
+
+      {/* Completed Adventures */}
       <CompletedAdventuresSection />
+
+      {/* Bottom Padding */}
+      <View style={styles.bottomPadding} />
     </ScrollView>
   );
 }
@@ -153,60 +252,156 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: themes.backgroundColorLight,
+    backgroundColor: "#f5f5f5",
   },
-  content: {
-    padding: 20,
-    paddingTop: 60, // Extra padding to move title to top
+  gradientHeader: {
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  profileName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: themes.primaryColorDark,
-  },
-  profileEditContainer: {
-    flexDirection: "row",
+  imageSection: {
     alignItems: "center",
-    justifyContent: "center",
-    gap: 25,
-    marginTop: 10,
+    marginBottom: 16,
   },
-  profileEditContainer__editing: {
-    backgroundColor: themes.primaryColorLight,
-    padding: 8,
-    borderRadius: 8,
-    width: "75%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-
-    marginTop: 10,
+  imageWrapper: {
+    position: "relative",
   },
-  profileContent: {
+  cameraButton: {
+    position: "absolute",
+    bottom: 5,
+    right: 5,
+    backgroundColor: themes.primaryColor,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 3,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
+  usernameSection: {
+    alignItems: "center",
     marginBottom: 20,
   },
-
-  statItem: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  statText: { fontSize: 16, fontWeight: "bold", color: themes.textColorLight },
-  statsTitleContainer: {
-    backgroundColor: themes.primaryColor,
-    padding: 15,
-    borderRadius: 8,
+  usernameDisplay: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    gap: 8,
+  },
+  username: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  editContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 12,
+  },
+  usernameInput: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#fff",
+    minWidth: 150,
+  },
+  quickStatsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    gap: 12,
+  },
+  quickStatBadge: {
+    flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  quickStatIcon: {
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  quickStatValue: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.1)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  quickStatLabel: {
+    fontSize: 11,
+    color: "#fff",
+    opacity: 0.9,
+    marginTop: 2,
+  },
+  progressSection: {
+    padding: 20,
+    backgroundColor: "#fff",
+    marginTop: 20,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: themes.primaryColorDark,
+    marginBottom: 16,
+  },
+  progressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 20,
+  },
+  progressStats: {
+    flex: 1,
+  },
+  progressText: {
+    fontSize: 16,
+    color: themes.primaryColorDark,
+    marginBottom: 8,
+  },
+  progressBold: {
+    fontWeight: "bold",
+    color: themes.primaryColor,
+    fontSize: 18,
+  },
+  progressSubtext: {
+    fontSize: 14,
+    color: themes.primaryColorGreyDark,
+    fontStyle: "italic",
+  },
+  statsSection: {
+    padding: 20,
+    paddingTop: 16,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  bottomPadding: {
+    height: 40,
   },
 });
