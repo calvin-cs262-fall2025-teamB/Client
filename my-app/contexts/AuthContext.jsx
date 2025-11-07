@@ -6,12 +6,18 @@ const initialState = {
   user: null,
   email: null,
   password: null,
+  // TODO: figure out how to store image urls
+  image: null,
   isAuthenticated: false,
 };
 
 function reducer(state, action) {
   console.log(action.payload);
   switch (action.type) {
+    case "edit/username":
+      return { ...state, user: action.payload };
+    case "edit/image":
+      return { ...state, image: action.payload };
     case "signup":
       return {
         ...state,
@@ -45,16 +51,103 @@ function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { user, isAuthenticated } = state;
   const [isLoading, setIsLoading] = useState(false);
-  //   console.log("Auth State:", state);
 
   function signup(fullName, email, password) {
+    // ============================================================================
+    // TODO: Replace with Azure API call to PostgreSQL backend
+    // ============================================================================
+    // Expected API endpoint: POST https://your-app.azurewebsites.net/api/auth/signup
+    // Expected PostgreSQL table: users
+    // Expected columns: id, full_name, email, password_hash, created_at, updated_at
+    //
+    // Implementation example:
+    // const response = await fetch('https://your-app.azurewebsites.net/api/auth/signup', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ fullName, email, password })
+    // });
+    // const data = await response.json();
+    // if (data.success) {
+    //   dispatch({ type: "signup", payload: { user: data.user, email, password } });
+    // }
+    // ============================================================================
     dispatch({ type: "signup", payload: { user: fullName, email, password } });
   }
+
   function login(email, password) {
-    //TODO: undo comment
-    // if (email === FAKE_USER.email && password === FAKE_USER.password)
-    //   dispatch({ type: "login", payload: FAKE_USER });
-    dispatch({ type: "login", payload: "Beautiful BOYS" });
+    // ============================================================================
+    // TODO: Replace with Azure API call to PostgreSQL backend
+    // ============================================================================
+    // Expected API endpoint: POST https://your-app.azurewebsites.net/api/auth/login
+    // Expected PostgreSQL query:
+    // SELECT id, full_name, email, profile_image_url
+    // FROM users
+    // WHERE email = $1 AND password_hash = crypt($2, password_hash);
+    //
+    // Implementation example:
+    // const response = await fetch('https://your-app.azurewebsites.net/api/auth/login', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ email, password })
+    // });
+    // const data = await response.json();
+    // if (data.success) {
+    //   // Store auth token in secure storage
+    //   await SecureStore.setItemAsync('authToken', data.token);
+    //   dispatch({ type: "login", payload: data.user.full_name });
+    // }
+    // ============================================================================
+
+    // TEMPORARY: Extract username from email for demo purposes
+    const username = email.split('@')[0];
+    dispatch({ type: "login", payload: username });
+  }
+
+  function editUsername(newUsername) {
+    // ============================================================================
+    // TODO: Update username via Azure API call to PostgreSQL backend
+    // ============================================================================
+    // Expected API endpoint: PATCH https://your-app.azurewebsites.net/api/users/{userId}
+    // Expected PostgreSQL query:
+    // UPDATE users SET full_name = $1, updated_at = NOW() WHERE id = $2;
+    //
+    // Implementation example:
+    // await fetch(`https://your-app.azurewebsites.net/api/users/${userId}`, {
+    //   method: 'PATCH',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${authToken}`
+    //   },
+    //   body: JSON.stringify({ fullName: newUsername })
+    // });
+    // ============================================================================
+    dispatch({ type: "edit/username", payload: newUsername });
+  }
+
+  function editImage(imageURL) {
+    // ============================================================================
+    // TODO: Upload image to Azure Blob Storage and update user profile
+    // ============================================================================
+    // Expected Azure Blob Storage container: profile-images
+    // Expected API endpoint: POST https://your-app.azurewebsites.net/api/users/{userId}/image
+    // Expected PostgreSQL query:
+    // UPDATE users SET profile_image_url = $1, updated_at = NOW() WHERE id = $2;
+    //
+    // Implementation example:
+    // 1. Upload to Azure Blob Storage
+    // const blobUrl = await uploadToAzureBlob(imageURL);
+    //
+    // 2. Update user profile in PostgreSQL
+    // await fetch(`https://your-app.azurewebsites.net/api/users/${userId}/image`, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${authToken}`
+    //   },
+    //   body: JSON.stringify({ imageUrl: blobUrl })
+    // });
+    // ============================================================================
+    dispatch({ type: "edit/image", payload: imageURL });
   }
   function logout() {
     dispatch({ type: "logout" });
@@ -65,6 +158,8 @@ function AuthProvider({ children }) {
         user,
         isAuthenticated,
         login,
+        editUsername,
+        editImage,
         logout,
         signup,
         isLoading,
@@ -78,6 +173,7 @@ function AuthProvider({ children }) {
 
 function useAuth() {
   const context = useContext(AuthContext);
+
   if (context === undefined)
     throw new Error("Context was used outside the AuthProvider");
   return context;
