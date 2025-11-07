@@ -1,6 +1,13 @@
+import themes from "@/assets/utils/themes";
+import DifficultyBadge from "@/components/home/DifficultyBadge";
+import FilterChip from "@/components/home/FilterChip";
+import MapPlaceholder from "@/components/home/MapPlaceholder";
+import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,11 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { FontAwesome6 } from "@expo/vector-icons";
-import MapPlaceholder from "@/components/home/MapPlaceholder";
-import FilterChip from "@/components/home/FilterChip";
-import DifficultyBadge from "@/components/home/DifficultyBadge";
-import themes from "@/assets/utils/themes";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Type definitions
 interface Adventure {
@@ -159,6 +162,7 @@ const MOCK_ADVENTURES: Adventure[] = [
 
 export default function HomePage() {
   const router = useRouter();
+  const { getAuthToken } = useAuth();
   const [selectedAdventure, setSelectedAdventure] = useState<Adventure | null>(
     null
   );
@@ -172,8 +176,81 @@ export default function HomePage() {
   const [selectedDuration, setSelectedDuration] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
-  const adventures = MOCK_ADVENTURES;
-  const isLoading = false;
+  // API state
+  const [adventures, setAdventures] = useState<Adventure[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch adventures from Azure API
+  const fetchAdventures = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const authToken = await getAuthToken();
+      if (!authToken) {
+        throw new Error('No authentication token found. Please log in.');
+      }
+
+      const response = await fetch(
+        'https://cs262beautifulguys.azurewebsites.net/api/adventures?status=published',
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Transform API response to match Adventure interface if needed
+      const transformedAdventures: Adventure[] = data.map((item: any) => ({
+        id: item.id.toString(),
+        title: item.title,
+        summary: item.summary || item.description || '',
+        description: item.description,
+        image_url: item.image_url,
+        region: {
+          id: item.region_id?.toString() || '1',
+          name: item.region_name || 'Unknown Region',
+          center: {
+            lat: item.center_lat || 42.9301,
+            lng: item.center_lng || -85.5883,
+          },
+        },
+        tokenCount: item.token_count || 0,
+        difficulty: item.difficulty || 'Medium',
+        estimatedTime: item.estimated_time || '30 min',
+        status: item.status || 'published',
+      }));
+
+      setAdventures(transformedAdventures);
+    } catch (err) {
+      console.error('Error fetching adventures:', err);
+      setError('Failed to load adventures');
+      
+      // Fallback to mock data in development
+      if (__DEV__) {
+        console.log('API failed, falling back to mock data...');
+        setAdventures(MOCK_ADVENTURES);
+      } else {
+        Alert.alert('Error', 'Failed to load adventures. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load adventures on component mount
+  useEffect(() => {
+    fetchAdventures();
+  }, []);
 
   // Get unique regions for filter
   const regions = Array.from(
@@ -354,12 +431,23 @@ export default function HomePage() {
         contentContainerStyle={styles.scrollContent}
       >
         {isLoading ? (
-          // Loading skeleton
-          <>
-            <View style={[styles.card, styles.skeleton]} />
-            <View style={[styles.card, styles.skeleton]} />
-            <View style={[styles.card, styles.skeleton]} />
-          </>
+          // Loading state
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Loading adventures...</Text>
+          </View>
+        ) : error ? (
+          // Error state
+          <View style={styles.errorContainer}>
+            <FontAwesome6 name="triangle-exclamation" size={48} color="#FF3B30" />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={fetchAdventures}
+            >
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
         ) : filteredAdventures.length === 0 ? (
           <View style={styles.emptyState}>
             <FontAwesome6 name="map-location-dot" size={48} color="#D1D5DB" />
@@ -797,6 +885,43 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: "#6B7280",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#FF3B30",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
   },
