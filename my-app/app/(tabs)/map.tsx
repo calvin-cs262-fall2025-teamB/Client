@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   View,
   StyleSheet,
   ActivityIndicator,
   Alert,
   Vibration,
+  PanResponder,
+  GestureResponderEvent,
 } from "react-native";
 import MapView, {
   Marker,
@@ -15,86 +17,80 @@ import MapView, {
 } from "react-native-maps";
 import * as Location from "expo-location";
 
-// 1. Update Token interface to include 'hasVibrated'
-interface Token {
+// --- Local mock types and data function ---
+type Token = {
   id: number;
-  coord: LatLng;
   name: string;
+  coord: LatLng;
   isVisible: boolean;
   hasVibrated: boolean;
-}
-
-interface AdventureRegion {
-  center: LatLng;
-  radius: number;
-}
-
-// 2. Update the fake API to include 'hasVibrated: false'
-const fetchAdventureData = (
-  adventureId: string
-): Promise<{ region: AdventureRegion; tokens: Token[] }> => {
-  console.log(`Fetching data for adventure: ${adventureId}...`);
-
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const data = {
-        region: {
-          center: { latitude: 42.9634, longitude: -85.6681 },
-          radius: 500, // meters
-        },
-        tokens: [
-          {
-            id: 1001,
-            name: "The Hidden Fountain",
-            coord: { latitude: 42.9635, longitude: -85.6682 },
-            isVisible: false,
-            hasVibrated: false,
-          },
-          {
-            id: 1002,
-            name: "Old Oak Tree",
-            coord: { latitude: 42.963, longitude: -85.6675 },
-            isVisible: false,
-            hasVibrated: false,
-          },
-          {
-            id: 1003,
-            name: "River's Edge Cache",
-            coord: { latitude: 42.964, longitude: -85.669 },
-            isVisible: false,
-            hasVibrated: false,
-          },
-        ],
-      };
-      resolve(data);
-    }, 1500);
-  });
 };
 
-export default function MapScreen() {
-  const [location, setLocation] = useState<Location.LocationObject | null>(
-    null
-  );
-  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+type AdventureRegion = {
+  center: LatLng;
+  radius: number;
+};
 
+async function fetchAdventureData(adventureId: string): Promise<{
+  region: AdventureRegion;
+  tokens: Token[];
+}> {
+  // Mock region and token data
+  const mockRegion: AdventureRegion = {
+    center: { latitude: 37.7749, longitude: -122.4194 },
+    radius: 300, // meters
+  };
+
+  const mockTokens: Token[] = [
+    {
+      id: 1,
+      name: "Golden Gate Token",
+      coord: { latitude: 37.806, longitude: -122.475 },
+      isVisible: true,
+      hasVibrated: false,
+    },
+    {
+      id: 2,
+      name: "Hidden Treasure",
+      coord: { latitude: 37.77, longitude: -122.42 },
+      isVisible: false,
+      hasVibrated: false,
+    },
+  ];
+
+  // Simulate network delay
+  return new Promise((resolve) =>
+    setTimeout(() => resolve({ region: mockRegion, tokens: mockTokens }), 1000)
+  );
+}
+
+// --- Main component ---
+export default function MapScreen() {
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [tokens, setTokens] = useState<Token[]>([]);
-  const [adventureRegion, setAdventureRegion] =
-    useState<AdventureRegion | null>(null);
+  const [adventureRegion, setAdventureRegion] = useState<AdventureRegion | null>(
+    null
+  );
 
-  // --- Fetches the user's location ---
+  const [bubbleCenter, setBubbleCenter] = useState<LatLng | null>(null);
+  const [bubbleRadius, setBubbleRadius] = useState<number>(0);
+
+  const mapRef = useRef<MapView>(null);
+
+  // --- Location tracking ---
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Permission Denied", "Location access is required.");
         setIsLoadingLocation(false);
         return;
       }
 
-      let current = await Location.getCurrentPositionAsync({});
+      const current = await Location.getCurrentPositionAsync({});
       setLocation(current);
-
       setIsLoadingLocation(false);
 
       const subscription = await Location.watchPositionAsync(
@@ -103,163 +99,128 @@ export default function MapScreen() {
           timeInterval: 2000,
           distanceInterval: 1,
         },
-        (pos) => {
-          setLocation(pos);
-          setTokens((currentTokens) =>
-            checkProximity(pos.coords, currentTokens)
-          );
-        }
+        (pos) => setLocation(pos)
       );
 
       return () => subscription.remove();
     })();
   }, []);
 
-  // --- Fetches the adventure data ---
+  // --- Adventure data loading ---
   useEffect(() => {
     const currentAdventureId = "adv_123";
-
     fetchAdventureData(currentAdventureId)
       .then((data) => {
         setAdventureRegion(data.region);
         setTokens(data.tokens);
       })
-      .catch((err) => {
-        console.error(err);
-        Alert.alert("Error", "Could not load adventure data.");
-      })
-      .finally(() => {
-        setIsLoadingData(false);
-      });
+      .catch(() => Alert.alert("Error", "Could not load adventure data."))
+      .finally(() => setIsLoadingData(false));
   }, []);
 
-  // 3. --- Updated handleMapPress to ask for visibility ---
+  // --- Handle adding new tokens ---
   const handleMapPress = (event: MapPressEvent) => {
     const newCoord = event.nativeEvent.coordinate;
-
-    // First, ask for the name
     Alert.prompt("Add Custom Token", "Enter a name:", (tokenName) => {
-      if (!tokenName) return; // User cancelled name
-
-      // Next, ask for visibility
-      Alert.alert(
-        "Set Visibility",
-        "Should this token be visible immediately?",
-        [
-          {
-            text: "Visible",
-            onPress: () => createToken(tokenName, newCoord, true),
-          },
-          {
-            text: "Hidden",
-            onPress: () => createToken(tokenName, newCoord, false),
-          },
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-        ]
-      );
+      if (!tokenName) return;
+      Alert.alert("Set Visibility", "Should this token be visible immediately?", [
+        {
+          text: "Visible",
+          onPress: () => createToken(tokenName, newCoord, true),
+        },
+        {
+          text: "Hidden",
+          onPress: () => createToken(tokenName, newCoord, false),
+        },
+        { text: "Cancel", style: "cancel" },
+      ]);
     });
   };
 
-  // 4. --- Helper function to create the new token ---
   const createToken = (name: string, coord: LatLng, isVisible: boolean) => {
-    // --- TODO: This should be an API call to save the token ---
-    Alert.alert("TODO", "This would save the token to your database.");
-
     const tempToken: Token = {
       id: Date.now(),
       coord: coord,
       name: name,
-      isVisible: isVisible, // Use the user's choice
-      hasVibrated: false, // Always start as 'false'
+      isVisible: isVisible,
+      hasVibrated: false,
     };
     setTokens((prev) => [...prev, tempToken]);
   };
 
-  // --- handleMarkerPress (sends a DELETE request) ---
   const handleMarkerPress = (token: Token) => {
-    Alert.alert(
-      `Remove ${token.name}`,
-      "Are you sure you want to remove this token?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            // --- TODO: Send DELETE request to your API ---
-            Alert.alert(
-              "TODO",
-              `This would delete token ${token.id} from your database.`
-            );
-            removeToken(token.id);
-          },
-        },
-      ]
-    );
+    Alert.alert(`Remove ${token.name}`, "Are you sure you want to remove this?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => removeToken(token.id),
+      },
+    ]);
   };
 
   const removeToken = (idToRemove: number) => {
-    setTokens((prev) => prev.filter((token) => token.id !== idToRemove));
+    setTokens((prev) => prev.filter((t) => t.id !== idToRemove));
   };
 
-  // 5. --- Updated checkProximity logic ---
-  const checkProximity = (
-    userCoords: Location.LocationObjectCoords,
-    currentTokens: Token[]
-  ): Token[] => {
-    let tokenFound = false;
-    const updatedTokens = currentTokens.map((token) => {
-      const distance = getDistance(userCoords, token.coord);
+  // --- Two-finger PanResponder for bubble drawing ---
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
 
-      // Check if user is close AND it hasn't vibrated before
-      if (distance < 20 && !token.hasVibrated) {
-        tokenFound = true;
-        Vibration.vibrate(100); // Vibrate!
+      onPanResponderMove: (evt: GestureResponderEvent) => {
+        const touches = evt.nativeEvent.touches;
+        if (touches.length === 2) {
+          const [t1, t2] = touches;
+          if (!mapRef.current) return;
 
-        // Show a different alert if it was hidden vs. already visible
-        if (!token.isVisible) {
-          Alert.alert("Token Found!", `You discovered ${token.name}!`);
-        } else {
-          Alert.alert("Token Nearby!", `You're close to ${token.name}!`);
+          const coord1 = mapRef.current.coordinateForPoint({
+            x: t1.pageX,
+            y: t1.pageY,
+          });
+          const coord2 = mapRef.current.coordinateForPoint({
+            x: t2.pageX,
+            y: t2.pageY,
+          });
+
+          Promise.all([coord1, coord2]).then(([c1, c2]) => {
+            const center: LatLng = {
+              latitude: (c1.latitude + c2.latitude) / 2,
+              longitude: (c1.longitude + c2.longitude) / 2,
+            };
+
+            const R = 6371e3;
+            const φ1 = (c1.latitude * Math.PI) / 180;
+            const φ2 = (c2.latitude * Math.PI) / 180;
+            const Δφ = ((c2.latitude - c1.latitude) * Math.PI) / 180;
+            const Δλ = ((c2.longitude - c1.longitude) * Math.PI) / 180;
+            const a =
+              Math.sin(Δφ / 2) ** 2 +
+              Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c;
+
+            setBubbleCenter(center);
+            setBubbleRadius(distance / 2);
+          });
         }
+      },
 
-        // Return new token state:
-        // It's now permanently visible and marked as vibrated
-        return { ...token, isVisible: true, hasVibrated: true };
-      }
+      onPanResponderRelease: () => {
+        // Keep bubble permanently
+        if (bubbleCenter && bubbleRadius > 0) {
+          const newRegion: AdventureRegion = {
+            center: bubbleCenter,
+            radius: bubbleRadius,
+          };
+          setAdventureRegion(newRegion);
+        }
+      },
+    })
+  ).current;
 
-      // Otherwise, return the token unchanged
-      return token;
-    });
-
-    return tokenFound ? updatedTokens : currentTokens;
-  };
-
-  // --- getDistance (no change) ---
-  const getDistance = (a: Location.LocationObjectCoords, b: LatLng) => {
-    const R = 6371e3;
-    const φ1 = (a.latitude * Math.PI) / 180;
-    const φ2 = (b.latitude * Math.PI) / 180;
-    const Δφ = ((b.latitude - a.latitude) * Math.PI) / 180;
-    const Δλ = ((b.longitude - a.longitude) * Math.PI) / 180;
-
-    const sinΔφ = Math.sin(Δφ / 2);
-    const sinΔλ = Math.sin(Δλ / 2);
-    const c =
-      2 *
-      Math.atan2(
-        Math.sqrt(sinΔφ * sinΔφ + Math.cos(φ1) * Math.cos(φ2) * sinΔλ * sinΔλ),
-        Math.sqrt(
-          1 - (sinΔφ * sinΔφ + Math.cos(φ1) * Math.cos(φ2) * sinΔλ * sinΔλ)
-        )
-      );
-    return R * c;
-  };
-
-  // --- Loading check (no change) ---
+  // --- Loading screen ---
   if (isLoadingLocation || isLoadingData || !location || !adventureRegion) {
     return (
       <View style={styles.loadingContainer}>
@@ -268,48 +229,61 @@ export default function MapScreen() {
     );
   }
 
+  // --- Map ---
   return (
-    <MapView
-      style={styles.map}
-      showsUserLocation={true}
-      followsUserLocation={true}
-      onPress={handleMapPress}
-      initialRegion={{
-        latitude: adventureRegion.center.latitude,
-        longitude: adventureRegion.center.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }}
-    >
-      <UrlTile
-        urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        maximumZ={19}
-      />
+    <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        showsUserLocation={true}
+        followsUserLocation={true}
+        onPress={handleMapPress}
+        initialRegion={{
+          latitude: adventureRegion.center.latitude,
+          longitude: adventureRegion.center.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+      >
+        <UrlTile
+          urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maximumZ={19}
+        />
 
-      <Circle
-        center={adventureRegion.center}
-        radius={adventureRegion.radius}
-        strokeWidth={2}
-        strokeColor="rgba(0, 122, 255, 0.5)"
-        fillColor="rgba(0, 122, 255, 0.1)"
-      />
+        {/* Adventure region */}
+        <Circle
+          center={adventureRegion.center}
+          radius={adventureRegion.radius}
+          strokeWidth={3}
+          strokeColor="rgba(255,0,0,1)"
+          fillColor="rgba(255,0,0,0.4)"
+        />
 
-      {/* This filter is still correct. It will render tokens that
-        are user-set to 'isVisible: true' AND tokens that
-        have been discovered (which sets isVisible: true).
-      */}
-      {tokens
-        .filter((token) => token.isVisible)
-        .map((token) => (
-          <Marker
-            key={token.id}
-            coordinate={token.coord}
-            title={token.name}
-            pinColor="orange"
-            onPress={() => handleMarkerPress(token)}
+        {/* Live bubble drawing */}
+        {bubbleCenter && (
+          <Circle
+            center={bubbleCenter}
+            radius={bubbleRadius}
+            strokeWidth={2}
+            strokeColor="rgba(139,0,0,1)"
+            fillColor="rgba(139,0,0,0.5)"
           />
-        ))}
-    </MapView>
+        )}
+
+        {/* Tokens */}
+        {tokens
+          .filter((t) => t.isVisible)
+          .map((t) => (
+            <Marker
+              key={t.id}
+              coordinate={t.coord}
+              title={t.name}
+              pinColor="orange"
+              onPress={() => handleMarkerPress(t)}
+            />
+          ))}
+      </MapView>
+    </View>
   );
 }
 
@@ -317,3 +291,4 @@ const styles = StyleSheet.create({
   map: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
+
