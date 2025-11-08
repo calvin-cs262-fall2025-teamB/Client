@@ -26,7 +26,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const { login, isAuthenticated, isLoading, setIsLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, setIsLoading, debugLogin } = useAuth();
   // console.log("Authentication status:", isAuthenticated);
 
   useEffect(() => {
@@ -47,6 +47,14 @@ export default function Login() {
       }
     } else {
       Alert.alert("Validation", "Please enter email and password.");
+    }
+  };
+
+  const handleDebugLogin = async () => {
+    try {
+      await debugLogin();
+    } catch (err: any) {
+      Alert.alert("Debug login failed", err.message || "Unknown error");
     }
   };
 
@@ -85,6 +93,19 @@ export default function Login() {
           ) : (
             <Button title="Login" onPress={handleSubmit} />
           )}
+
+          {/* Debug button - only visible in development */}
+          {__DEV__ && (
+            <View style={styles.debugSection}>
+              <Text style={styles.debugLabel}>Development Only:</Text>
+              <Button 
+                title="🚀 Debug Login (Skip Auth)" 
+                onPress={handleDebugLogin}
+                color="#FF6B35"
+              />
+            </View>
+          )}
+
           <View style={styles.authenticationHelp}>
             <Text style={styles.authenticationHelpText}>Help</Text>
             <View style={{ gap: 2 }}>
@@ -141,5 +162,20 @@ const styles = StyleSheet.create({
   authenticationHelpText: {
     fontSize: 12,
     color: "blue",
+  },
+  debugSection: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: "#FFF4E6",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FFB366",
+    alignItems: "center",
+  },
+  debugLabel: {
+    fontSize: 12,
+    color: "#CC5500",
+    fontWeight: "600",
+    marginBottom: 8,
   },
 });
