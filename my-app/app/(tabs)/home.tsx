@@ -15,8 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../contexts/AuthContext";
-
 // Type definitions
 interface Adventure {
   id: string;
@@ -36,40 +34,7 @@ interface Adventure {
 }
 
 // ============================================================================
-// MOCK DATA - Replace with actual PostgreSQL data via Azure API
-// ============================================================================
-// TODO: Fetch published adventures from Azure backend
-// Expected API endpoint: GET https://your-app.azurewebsites.net/api/adventures?status=published
-// Expected PostgreSQL query:
-// SELECT
-//   a.id,
-//   a.title,
-//   a.summary,
-//   a.description,
-//   a.image_url,
-//   a.difficulty,
-//   a.estimated_time,
-//   r.id as region_id,
-//   r.name as region_name,
-//   r.center_lat,
-//   r.center_lng,
-//   COUNT(t.id) as token_count,
-//   a.status
-// FROM adventures a
-// JOIN regions r ON a.region_id = r.id
-// LEFT JOIN tokens t ON t.adventure_id = a.id
-// WHERE a.status = 'published'
-// GROUP BY a.id, r.id
-// ORDER BY a.created_at DESC;
-//
-// Implementation example:
-// const { data: adventures = [], isLoading } = useQuery({
-//   queryKey: ['adventures'],
-//   queryFn: async () => {
-//     const response = await fetch('https://your-app.azurewebsites.net/api/adventures?status=published');
-//     return response.json();
-//   }
-// });
+// MOCK DATA - Fallback for if Azure Web Service fetch fails
 // ============================================================================
 const MOCK_ADVENTURES: Adventure[] = [
   {
@@ -162,7 +127,6 @@ const MOCK_ADVENTURES: Adventure[] = [
 
 export default function HomePage() {
   const router = useRouter();
-  const { getAuthToken } = useAuth();
   const [selectedAdventure, setSelectedAdventure] = useState<Adventure | null>(
     null
   );
@@ -187,17 +151,11 @@ export default function HomePage() {
       setIsLoading(true);
       setError(null);
 
-      const authToken = await getAuthToken();
-      if (!authToken) {
-        throw new Error('No authentication token found. Please log in.');
-      }
-
       const response = await fetch(
-        'https://cs262beautifulguys.azurewebsites.net/api/adventures?status=published',
+        'https://cs262lab09-bqekb7ezfnhxctc7.canadacentral-01.azurewebsites.net/adventures',
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json',
           },
         }
@@ -208,26 +166,27 @@ export default function HomePage() {
       }
 
       const data = await response.json();
+      console.log('API Response:', data);
       
-      // Transform API response to match Adventure interface if needed
+      // Transform API response to match Adventure interface
       const transformedAdventures: Adventure[] = data.map((item: any) => ({
         id: item.id.toString(),
-        title: item.title,
-        summary: item.summary || item.description || '',
-        description: item.description,
-        image_url: item.image_url,
+        title: item.name, // API uses 'name' field
+        summary: item.name, // Use name as summary since no separate summary field
+        description: item.name, // Use name as description fallback
+        image_url: null, // No image_url in current API response
         region: {
-          id: item.region_id?.toString() || '1',
-          name: item.region_name || 'Unknown Region',
+          id: item.regionid?.toString() || '1',
+          name: `Region ${item.regionid}`, // Create region name from ID
           center: {
-            lat: item.center_lat || 42.9301,
-            lng: item.center_lng || -85.5883,
+            lat: item.location?.x || 42.9301, // Use location.x as latitude
+            lng: item.location?.y || -85.5883, // Use location.y as longitude
           },
         },
-        tokenCount: item.token_count || 0,
-        difficulty: item.difficulty || 'Medium',
-        estimatedTime: item.estimated_time || '30 min',
-        status: item.status || 'published',
+        tokenCount: item.numtokens || 0,
+        difficulty: 'Medium', // Default since not in API response
+        estimatedTime: '30 min', // Default since not in API response
+        status: 'published', // Default since not in API response
       }));
 
       setAdventures(transformedAdventures);
