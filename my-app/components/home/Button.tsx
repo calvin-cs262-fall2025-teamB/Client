@@ -1,3 +1,4 @@
+import themes from '@/assets/utils/themes';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
@@ -15,7 +16,7 @@ export default function Button({ label, theme, size = 'medium', onPress }: Props
                 style = {[
                     styles.buttonContainer,
                     size === 'large' ? styles.largeContainer : {},
-                    {borderWidth: 4, borderColor: '#ffd33d', borderRadius: 18},
+                    {borderWidth: 1.9, borderColor: themes.primaryColor, borderRadius: 18},
                 ]}>
                 <Pressable
                     style = {[styles.button, size === 'large' ? styles.largeButton : {}, { backgroundColor: '#fff' }]}

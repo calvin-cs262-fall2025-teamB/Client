@@ -1,14 +1,14 @@
 //TODO: Work on the creat experience
 
 import Button from "@/components/home/Button";
-import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, View, Alert, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function Creator() {
   const router = useRouter();
 
-  const handleCreateRegion = () => router.push("/creator/region");
+  const handleCreateRegion = () => router.push("/map");
   const handleCreateAdventure = () => router.push("/creator/adventure");
 
   return (
@@ -65,6 +65,23 @@ export default function Creator() {
           </View>
         </View>
       </View>
+        {/* Guides / Instructions */}
+        <View style={styles.guideContainer}>
+          <Text style={styles.guideTitle}>Quick Guide — Create a Region</Text>
+          <Text style={styles.guideStep}>1) Name the region — enter a clear, unique name first.</Text>
+          <Text style={styles.guideStep}>2) Open the map — center on the area where the region will be.</Text>
+          <Text style={styles.guideStep}>3) Place landmarks — tap the map to drop landmarks (points of interest) around the location.</Text>
+          <Text style={styles.guideStep}>4) Choose other settings — (visibility, access, radius, tags, etc.).</Text>
+          <Text style={styles.guideStep}>5) Create — tap Create. The app will build the region using the landmarks you placed.</Text>
+
+          <Text style={[styles.guideTitle, { marginTop: 18 }]}>Quick Guide — Create an Adventure</Text>
+          <Text style={styles.guideStep}>1) Name the adventure — give it a short, memorable title.</Text>
+          <Text style={styles.guideStep}>2) Pick a region — choose an existing region where this adventure will run.</Text>
+          <Text style={styles.guideStep}>3) Place tokens — drop token locations (the things players find) on the region map.</Text>
+          <Text style={styles.guideStep}>4) Write clues — add a short clue or hint for each token.</Text>
+          <Text style={styles.guideStep}>5) Choose other settings — (difficulty, time limit, rewards, privacy, etc.).</Text>
+          <Text style={styles.guideStep}>6) Create — tap Create to publish the adventure.</Text>
+        </View>
     </ScrollView>
   );
 }
@@ -111,5 +128,25 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textAlign: "center",
     maxWidth: 420,
+  },
+  guideContainer: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#eaeaea",
+  },
+  guideTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#222",
+    marginBottom: 8,
+  },
+  guideStep: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 6,
+    lineHeight: 20,
   },
 });
