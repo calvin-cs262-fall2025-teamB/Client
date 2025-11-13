@@ -1,13 +1,14 @@
+import BackButton from "@/components/reusable/BackButton";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -261,6 +262,7 @@ export default function AdventurePageTemplate() {
     fetchAdventureData();
   }, [adventureId]);
 
+
   const handlePlayPress = () => {
     if (!adventure?.isUnlocked) {
       console.log("Adventure is locked");
@@ -280,6 +282,9 @@ export default function AdventurePageTemplate() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <View style={styles.loadingTopRow}>
+          <BackButton onPress={handleBackPress} />
+        </View>
         <ActivityIndicator size="large" color="#007AFF" />
         <Text style={styles.loadingText}>Loading adventure...</Text>
       </View>
@@ -378,6 +383,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#f5f5f5",
+    position: "relative",
+  },
+  loadingTopRow: {
+    position: "absolute",
+    top: 48,
+    left: 12,
+    zIndex: 10,
   },
   loadingText: {
     marginTop: 10,
