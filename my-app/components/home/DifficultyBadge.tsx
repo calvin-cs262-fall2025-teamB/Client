@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 interface DifficultyBadgeProps {
   difficulty: string;
@@ -54,17 +54,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignSelf: "flex-start",
   },
-  small: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  large: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
   },
   medium: {
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
-  large: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+  small: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   text: {
     fontSize: 11,

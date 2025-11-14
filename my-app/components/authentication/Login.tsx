@@ -103,6 +103,15 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
+  authenticationHelp: {
+    flexDirection: "row",
+    marginTop: 20,
+    justifyContent: "space-between",
+  },
+  authenticationHelpText: {
+    fontSize: 12,
+    color: "blue",
+  },
   container: {
     flex: 1,
     justifyContent: "center",
@@ -131,15 +140,6 @@ const styles = StyleSheet.create({
 
     gap: 8,
   },
-  label: { fontSize: 14, fontWeight: "600" },
   input: { borderWidth: 1, borderColor: "#ddd", padding: 10, borderRadius: 6 },
-  authenticationHelp: {
-    flexDirection: "row",
-    marginTop: 20,
-    justifyContent: "space-between",
-  },
-  authenticationHelpText: {
-    fontSize: 12,
-    color: "blue",
-  },
+  label: { fontSize: 14, fontWeight: "600" },
 });

@@ -2,13 +2,13 @@ import BackButton from "@/components/reusable/BackButton";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 // Define adventure type
@@ -131,8 +131,12 @@ export default function AdventurePageTemplate() {
         },
       ];
 
-      const currentId = Array.isArray(adventureId) ? adventureId[0] : adventureId || "1";
-      const foundAdventure = MOCK_ADVENTURES.find(adv => adv.id === currentId);
+      const currentId = Array.isArray(adventureId)
+        ? adventureId[0]
+        : adventureId || "1";
+      const foundAdventure = MOCK_ADVENTURES.find(
+        (adv) => adv.id === currentId
+      );
 
       if (!foundAdventure) {
         setError("Adventure not found");
@@ -142,7 +146,8 @@ export default function AdventurePageTemplate() {
 
       const mockAdventure: Adventure = {
         ...foundAdventure,
-        image: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
+        image:
+          "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
       };
 
       // Simulate network delay
@@ -161,7 +166,6 @@ export default function AdventurePageTemplate() {
   useEffect(() => {
     fetchAdventureData();
   }, [adventureId]);
-
 
   const handlePlayPress = () => {
     if (!adventure?.isUnlocked) {
@@ -274,82 +278,27 @@ export default function AdventurePageTemplate() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    position: "relative",
-  },
-  loadingTopRow: {
-    position: "absolute",
-    top: 48,
-    left: 12,
-    zIndex: 10,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#666",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#FF3B30",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  contentContainer: {
-    padding: 20,
-    paddingTop: 60,
-  },
-  titleContainer: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  metaInfo: {
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 10,
-    padding: 15,
-    marginTop: 10,
-  },
-  metaText: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 5,
-    textAlign: "center",
-  },
-  imageContainer: {
-    position: "relative",
-    marginBottom: 20,
-    borderRadius: 15,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
   adventureImage: {
     width: "100%",
     height: 250,
     backgroundColor: "#e0e0e0",
+  },
+  backButton: {
+    backgroundColor: "#6c757d",
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  backButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
   completedBadge: {
     position: "absolute",
@@ -364,6 +313,19 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 12,
     fontWeight: "600",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  contentContainer: {
+    padding: 20,
+    paddingTop: 60,
+  },
+  description: {
+    fontSize: 16,
+    color: "#555",
+    lineHeight: 24,
   },
   descriptionContainer: {
     backgroundColor: "white",
@@ -382,13 +344,59 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 12,
   },
-  description: {
-    fontSize: 16,
-    color: "#555",
-    lineHeight: 24,
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    padding: 20,
   },
-  playButtonContainer: {
+  errorText: {
+    fontSize: 16,
+    color: "#FF3B30",
+    textAlign: "center",
     marginBottom: 20,
+  },
+  imageContainer: {
+    position: "relative",
+    marginBottom: 20,
+    borderRadius: 15,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    position: "relative",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
+  },
+  loadingTopRow: {
+    position: "absolute",
+    top: 48,
+    left: 12,
+    zIndex: 10,
+  },
+  metaInfo: {
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 10,
+  },
+  metaText: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 5,
+    textAlign: "center",
   },
   playButton: {
     backgroundColor: "#007AFF",
@@ -402,6 +410,9 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
+  playButtonContainer: {
+    marginBottom: 20,
+  },
   playButtonDisabled: {
     backgroundColor: "#ccc",
   },
@@ -413,21 +424,14 @@ const styles = StyleSheet.create({
   playButtonTextDisabled: {
     color: "#999",
   },
-  backButton: {
-    backgroundColor: "#6c757d",
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 10,
   },
-  backButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
+  titleContainer: {
+    marginBottom: 20,
   },
 });
