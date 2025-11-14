@@ -1,20 +1,20 @@
-import { useEffect, useState, useRef } from "react";
+import * as Location from "expo-location";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
-  StyleSheet,
   ActivityIndicator,
   Alert,
-  TouchableOpacity,
+  StyleSheet,
   Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapView, {
-  Marker,
   LatLng,
   MapPressEvent,
-  UrlTile,
+  Marker,
   Polygon,
+  UrlTile,
 } from "react-native-maps";
-import * as Location from "expo-location";
 
 type Token = {
   id: number;
@@ -66,12 +66,17 @@ async function fetchAdventureData(adventureId: string): Promise<{
   ];
 
   return new Promise((resolve) =>
-    setTimeout(() => resolve({ regions: mockRegions, tokens: mockTokens }), 1000)
+    setTimeout(
+      () => resolve({ regions: mockRegions, tokens: mockTokens }),
+      1000
+    )
   );
 }
 
 export default function MapScreen() {
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [location, setLocation] = useState<Location.LocationObject | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [tokens, setTokens] = useState<Token[]>([]);
   const [regions, setRegions] = useState<AdventureRegion[]>([]);
@@ -128,17 +133,21 @@ export default function MapScreen() {
       // Add token
       Alert.prompt("Add Custom Token", "Enter a name:", (tokenName) => {
         if (!tokenName) return;
-        Alert.alert("Set Visibility", "Should this token be visible immediately?", [
-          {
-            text: "Visible",
-            onPress: () => createToken(tokenName, coord, true),
-          },
-          {
-            text: "Hidden",
-            onPress: () => createToken(tokenName, coord, false),
-          },
-          { text: "Cancel", style: "cancel" },
-        ]);
+        Alert.alert(
+          "Set Visibility",
+          "Should this token be visible immediately?",
+          [
+            {
+              text: "Visible",
+              onPress: () => createToken(tokenName, coord, true),
+            },
+            {
+              text: "Hidden",
+              onPress: () => createToken(tokenName, coord, false),
+            },
+            { text: "Cancel", style: "cancel" },
+          ]
+        );
       });
     }
   };
@@ -146,7 +155,10 @@ export default function MapScreen() {
   // --- Finalize region ---
   const finalizeRegion = () => {
     if (currentPoints.length < 3) {
-      Alert.alert("Incomplete Region", "Add at least 3 points to form a region.");
+      Alert.alert(
+        "Incomplete Region",
+        "Add at least 3 points to form a region."
+      );
       return;
     }
 
@@ -292,15 +304,6 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  map: { flex: 1 },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  controls: {
-    position: "absolute",
-    bottom: 20,
-    alignSelf: "center",
-    flexDirection: "row",
-    gap: 10,
-  },
   button: {
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -311,5 +314,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
   },
+  controls: {
+    position: "absolute",
+    bottom: 20,
+    alignSelf: "center",
+    flexDirection: "row",
+    gap: 10,
+  },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  map: { flex: 1 },
 });
-

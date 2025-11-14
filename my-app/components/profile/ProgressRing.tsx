@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
 interface ProgressRingProps {
@@ -72,22 +72,22 @@ export default function ProgressRing({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: "relative",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   centerContent: {
     position: "absolute",
     justifyContent: "center",
     alignItems: "center",
   },
-  percentageText: {
-    fontWeight: "bold",
-    color: "#041007",
+  container: {
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
   },
   labelText: {
     color: "#8e8e93",
     marginTop: 4,
+  },
+  percentageText: {
+    fontWeight: "bold",
+    color: "#041007",
   },
 });

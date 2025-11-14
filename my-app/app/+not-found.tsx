@@ -20,16 +20,15 @@ export default function NotFoundScreen() {
 }
 
 const styles = StyleSheet.create({
+  button: {
+    fontSize: 20,
+    textDecorationLine: "underline",
+    color: "#fff",
+  },
   container: {
     flex: 1,
     backgroundColor: "#25292e",
     justifyContent: "center",
     alignItems: "center",
-  },
-
-  button: {
-    fontSize: 20,
-    textDecorationLine: "underline",
-    color: "#fff",
   },
 });

@@ -14,8 +14,8 @@ export default function ImageHolder({ imgSource, selectedImage }: Props) {
 
 const styles = StyleSheet.create({
   image: {
-    width: 150,
-    height: 150,
+    width: 100,
+    height: 100,
     borderRadius: "50%",
     alignSelf: "center",
   },

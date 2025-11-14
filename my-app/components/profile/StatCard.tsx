@@ -1,7 +1,7 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { FontAwesome6, AntDesign } from "@expo/vector-icons";
 import themes from "@/assets/utils/themes";
+import { AntDesign, FontAwesome6 } from "@expo/vector-icons";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 interface StatCardProps {
   icon: string;
@@ -55,15 +55,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+  label: {
+    fontSize: 12,
+    color: themes.primaryColorGreyDark,
+    textAlign: "center",
+  },
   value: {
     fontSize: 28,
     fontWeight: "bold",
     color: themes.primaryColorDark,
     marginBottom: 4,
-  },
-  label: {
-    fontSize: 12,
-    color: themes.primaryColorGreyDark,
-    textAlign: "center",
   },
 });

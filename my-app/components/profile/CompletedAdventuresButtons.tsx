@@ -1,5 +1,5 @@
-import { TouchableOpacity, StyleSheet, View, Text } from "react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import themes from "../../assets/utils/themes";
 
 export default function CompletedAdventuresSection() {
@@ -134,19 +134,6 @@ export default function CompletedAdventuresSection() {
 }
 
 const styles = StyleSheet.create({
-  section: {
-    padding: 20,
-    paddingTop: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: themes.primaryColorDark,
-    marginBottom: 16,
-  },
-  adventuresContainer: {
-    gap: 12,
-  },
   adventureCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -157,17 +144,46 @@ const styles = StyleSheet.create({
     elevation: 3,
     overflow: "hidden",
   },
-  incompleteCard: {
-    backgroundColor: "#f9f9f9",
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    borderStyle: "dashed",
+  adventureIcon: {
+    fontSize: 28,
+  },
+  adventuresContainer: {
+    gap: 12,
+  },
+  adventureTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: themes.primaryColorDark,
+    marginBottom: 4,
   },
   cardContent: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
     gap: 12,
+  },
+  completedBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: themes.primaryColor,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  completedIconBg: {
+    backgroundColor: themes.primaryColorLight,
+  },
+  incompleteCard: {
+    backgroundColor: "#f9f9f9",
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+    borderStyle: "dashed",
+  },
+  incompleteIconBg: {
+    backgroundColor: "#f0f0f0",
+  },
+  incompleteTitle: {
+    color: themes.primaryColorGreyDark,
   },
   iconContainer: {
     width: 56,
@@ -176,25 +192,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  completedIconBg: {
-    backgroundColor: themes.primaryColorLight,
+  progressBar: {
+    height: 6,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 3,
+    overflow: "hidden",
   },
-  incompleteIconBg: {
-    backgroundColor: "#f0f0f0",
+  progressContainer: {
+    gap: 4,
   },
-  adventureIcon: {
-    fontSize: 28,
+  progressFill: {
+    height: "100%",
+    backgroundColor: themes.primaryColor,
+    borderRadius: 3,
   },
-  textContainer: {
-    flex: 1,
-  },
-  adventureTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: themes.primaryColorDark,
-    marginBottom: 4,
-  },
-  incompleteTitle: {
+  progressText: {
+    fontSize: 12,
     color: themes.primaryColorGreyDark,
   },
   rewardContainer: {
@@ -206,30 +219,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: themes.primaryColorGreyDark,
   },
-  progressContainer: {
-    gap: 4,
+  section: {
+    padding: 20,
+    paddingTop: 16,
   },
-  progressBar: {
-    height: 6,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 3,
-    overflow: "hidden",
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: themes.primaryColorDark,
+    marginBottom: 16,
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: themes.primaryColor,
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 12,
-    color: themes.primaryColorGreyDark,
-  },
-  completedBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: themes.primaryColor,
-    justifyContent: "center",
-    alignItems: "center",
+  textContainer: {
+    flex: 1,
   },
 });

@@ -4,7 +4,14 @@ import BackButton from "@/components/reusable/BackButton";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 const REGIONS = [
   { id: "calvin", label: "Calvin University Campus" },
@@ -23,11 +30,15 @@ export default function CreateAdventureScreen() {
 
   const handleCreate = () => {
     if (!selectedRegion) {
-      Alert.alert("Select a region", "Please choose a region before creating an adventure.");
+      Alert.alert(
+        "Select a region",
+        "Please choose a region before creating an adventure."
+      );
       return;
     }
 
-    const regionLabel = REGIONS.find((r) => r.id === selectedRegion)?.label ?? "";
+    const regionLabel =
+      REGIONS.find((r) => r.id === selectedRegion)?.label ?? "";
     Alert.alert("Adventure Created (sample)", `Region: ${regionLabel}`);
 
     // For this sample screen we'll simply go back to the creator hub.
@@ -44,14 +55,16 @@ export default function CreateAdventureScreen() {
 
       <Text style={styles.label}>Select Region</Text>
       <View style={styles.dropdownWrapper}>
-        <Pressable
-          style={styles.dropdown}
-          onPress={() => setIsOpen((v) => !v)}
-        >
+        <Pressable style={styles.dropdown} onPress={() => setIsOpen((v) => !v)}>
           <Text style={styles.dropdownText}>
-            {REGIONS.find((r) => r.id === selectedRegion)?.label ?? "Select a region..."}
+            {REGIONS.find((r) => r.id === selectedRegion)?.label ??
+              "Select a region..."}
           </Text>
-          <FontAwesome6 name={isOpen ? "chevron-up" : "chevron-down"} size={18} color={themes.primaryColor} />
+          <FontAwesome6
+            name={isOpen ? "chevron-up" : "chevron-down"}
+            size={18}
+            color={themes.primaryColor}
+          />
         </Pressable>
 
         {isOpen && (
@@ -70,7 +83,12 @@ export default function CreateAdventureScreen() {
       </View>
 
       <View style={styles.createRow}>
-        <Button label="Create" theme="primary" size="large" onPress={handleCreate} />
+        <Button
+          label="Create"
+          theme="primary"
+          size="large"
+          onPress={handleCreate}
+        />
       </View>
     </ScrollView>
   );
@@ -79,10 +97,7 @@ export default function CreateAdventureScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
   content: { padding: 20, paddingTop: 40 },
-  topRow: { alignItems: "flex-start", marginBottom: 8 },
-  title: { fontSize: 24, fontWeight: "bold", color: "#222", marginBottom: 20 },
-  label: { fontSize: 16, color: "#444", marginBottom: 8 },
-  dropdownWrapper: { marginBottom: 20 },
+  createRow: { marginTop: 12, alignItems: "center" },
   dropdown: {
     flexDirection: "row",
     alignItems: "center",
@@ -94,9 +109,16 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb",
   },
   dropdownText: { fontSize: 16, color: "#111" },
-  options: { marginTop: 8, backgroundColor: "#fff", borderRadius: 8, overflow: "hidden" },
+  dropdownWrapper: { marginBottom: 20 },
+  label: { fontSize: 16, color: "#444", marginBottom: 8 },
   option: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#f3f4f6" },
   optionText: { fontSize: 15, color: "#111" },
-  createRow: { marginTop: 12, alignItems: "center" },
-  
+  options: {
+    marginTop: 8,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  title: { fontSize: 24, fontWeight: "bold", color: "#222", marginBottom: 20 },
+  topRow: { alignItems: "flex-start", marginBottom: 8 },
 });
