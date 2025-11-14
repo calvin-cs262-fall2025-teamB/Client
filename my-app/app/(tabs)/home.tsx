@@ -166,7 +166,6 @@ export default function HomePage() {
       }
 
       const data = await response.json();
-      console.log('API Response:', data);
       
       // Transform API response to match Adventure interface
       const transformedAdventures: Adventure[] = data.map((item: any) => ({

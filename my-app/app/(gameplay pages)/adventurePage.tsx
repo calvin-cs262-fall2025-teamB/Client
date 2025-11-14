@@ -10,7 +10,6 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { useAuth } from "../../contexts/AuthContext";
 
 // Define adventure type
 interface Adventure {
@@ -28,234 +27,135 @@ interface Adventure {
 export default function AdventurePageTemplate() {
   const router = useRouter();
   const { adventureId } = useLocalSearchParams();
-  const { getAuthToken } = useAuth(); // Get the function from context
 
   // State for adventure data
   const [adventure, setAdventure] = useState<Adventure | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
-
+  // ============================================================================
+  // Fetch adventure data from database
+  // ============================================================================
   const fetchAdventureData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Get auth token from context
-      const authToken = await getAuthToken();
-      
-      if (!authToken) {
-        throw new Error('No authentication token found. Please log in.');
-      }
+      // ============================================================================
+      // TODO: Replace with actual Azure API call to PostgreSQL backend
+      // ============================================================================
+      // Expected API endpoint: GET https://your-app.azurewebsites.net/api/adventures/{adventureId}
+      // Expected PostgreSQL query:
+      // SELECT
+      //   a.id,
+      //   a.title,
+      //   a.description,
+      //   a.image_url,
+      //   a.difficulty,
+      //   a.estimated_time,
+      //   COUNT(t.id) as token_count,
+      //   COALESCE(ua.completed, false) as is_completed,
+      //   COALESCE(ua.unlocked, true) as is_unlocked
+      // FROM adventures a
+      // LEFT JOIN tokens t ON t.adventure_id = a.id
+      // LEFT JOIN user_adventures ua ON ua.adventure_id = a.id AND ua.user_id = $1
+      // WHERE a.id = $2
+      // GROUP BY a.id, ua.completed, ua.unlocked;
+      //
+      // Implementation example:
+      // const response = await fetch(
+      //   `https://your-app.azurewebsites.net/api/adventures/${adventureId}`,
+      //   { headers: { 'Authorization': `Bearer ${authToken}` } }
+      // );
+      // const data = await response.json();
+      // setAdventure(data);
+      // setLoading(false);
+      // ============================================================================
 
-      const response = await fetch(
-        `https://cs262beautifulguys.azurewebsites.net/api/adventures/${adventureId}`,
+      // MOCK DATA - matching the adventures from home.tsx
+      const MOCK_ADVENTURES = [
         {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+          id: "1",
+          title: "Campus History Tour",
+          description:
+            "Discover the rich history of Calvin University through iconic landmarks. This guided tour will take you through historic buildings, memorable locations, and hidden gems that tell the story of our campus. Learn about the university's founding, significant events, and the people who shaped this institution.",
+          difficulty: "Easy",
+          estimatedTime: "30 min",
+          rewards: "5 tokens",
+          isCompleted: false,
+          isUnlocked: true,
+        },
+        {
+          id: "2",
+          title: "Hidden Art Walk",
+          description:
+            "Find secret art installations scattered across campus. This artistic adventure will guide you to discover beautiful murals, sculptures, and installations that many students walk past every day. Each piece has a story - learn about the artists, the inspiration, and the meaning behind these creative works.",
+          difficulty: "Medium",
+          estimatedTime: "60 min",
+          rewards: "8 tokens",
+          isCompleted: false,
+          isUnlocked: true,
+        },
+        {
+          id: "3",
+          title: "Science Building Quest",
+          description:
+            "Explore the wonders of our science facilities and discover the cutting-edge research happening on campus. Visit laboratories, planetariums, and experimental spaces while learning about groundbreaking discoveries made right here at Calvin. Perfect for curious minds who want to see science in action.",
+          difficulty: "Medium",
+          estimatedTime: "45 min",
+          rewards: "6 tokens",
+          isCompleted: false,
+          isUnlocked: true,
+        },
+        {
+          id: "4",
+          title: "Athletic Heritage Trail",
+          description:
+            "Journey through Calvin's sports history and achievements. Visit iconic sports venues and learn about legendary athletes who made their mark. Experience the pride and tradition of Calvin athletics.",
+          difficulty: "Easy",
+          estimatedTime: "25 min",
+          rewards: "4 tokens",
+          isCompleted: false,
+          isUnlocked: true,
+        },
+        {
+          id: "5",
+          title: "Ecosystem Discovery",
+          description:
+            "A challenging adventure through various ecosystems on campus. Learn about local flora and fauna while collecting tokens at ecological points of interest. Perfect for nature enthusiasts and biology students.",
+          difficulty: "Hard",
+          estimatedTime: "90 min",
+          rewards: "10 tokens",
+          isCompleted: false,
+          isUnlocked: true,
+        },
+      ];
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const currentId = Array.isArray(adventureId) ? adventureId[0] : adventureId || "1";
+      const foundAdventure = MOCK_ADVENTURES.find(adv => adv.id === currentId);
+
+      if (!foundAdventure) {
+        setError("Adventure not found");
+        setLoading(false);
+        return;
       }
 
-      const data = await response.json();
-      
-      // Transform the data to match your Adventure interface if needed
-      const adventure: Adventure = {
-        id: data.id,
-        title: data.title,
-        description: data.description,
-        image: data.image_url || "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
-        difficulty: data.difficulty,
-        estimatedTime: data.estimated_time,
-        rewards: `${data.token_count || 0} tokens`,
-        isCompleted: data.is_completed || false,
-        isUnlocked: data.is_unlocked !== undefined ? data.is_unlocked : true,
+      const mockAdventure: Adventure = {
+        ...foundAdventure,
+        image: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
       };
 
-      setAdventure(adventure);
-      setLoading(false);
-
+      // Simulate network delay
+      setTimeout(() => {
+        setAdventure(mockAdventure);
+        setLoading(false);
+      }, 500);
     } catch (err) {
       console.error("Error fetching adventure:", err);
       setError("Failed to load adventure data");
       setLoading(false);
-      
-      // Fallback to mock data in development
-      if (__DEV__) {
-        console.log("Falling back to mock data...");
-        
-        // Mock data fallback
-        const MOCK_ADVENTURES = [
-          {
-            id: "1",
-            title: "Campus History Tour",
-            description: "Discover the rich history of Calvin University through iconic landmarks. This guided tour will take you through historic buildings, memorable locations, and hidden gems that tell the story of our campus.",
-            difficulty: "Easy",
-            estimatedTime: "30 min",
-            rewards: "5 tokens",
-            isCompleted: false,
-            isUnlocked: true,
-          },
-          {
-            id: "2",
-            title: "Hidden Art Walk",
-            description: "Find secret art installations scattered across campus. This artistic adventure will guide you to discover beautiful murals, sculptures, and installations.",
-            difficulty: "Medium",
-            estimatedTime: "60 min",
-            rewards: "8 tokens",
-            isCompleted: false,
-            isUnlocked: true,
-          }
-        ];
-
-        const currentId = Array.isArray(adventureId) ? adventureId[0] : adventureId || "1";
-        const foundAdventure = MOCK_ADVENTURES.find(adv => adv.id === currentId);
-
-        if (foundAdventure) {
-          const mockAdventure: Adventure = {
-            ...foundAdventure,
-            image: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
-          };
-          setAdventure(mockAdventure);
-          setLoading(false);
-          return;
-        }
-      }
     }
   };
-
-
-  // OLD FETCH //
-  // ============================================================================
-  // Fetch adventure data from database
-  // ============================================================================
-  // const fetchAdventureData = async () => {
-  //   try {
-  //     setLoading(true);
-  //     setError(null);
-
-  //     // ============================================================================
-  //     // TODO: Replace with actual Azure API call to PostgreSQL backend
-  //     // ============================================================================
-  //     // Expected API endpoint: GET https://your-app.azurewebsites.net/api/adventures/{adventureId}
-  //     // Expected PostgreSQL query:
-  //     // SELECT
-  //     //   a.id,
-  //     //   a.title,
-  //     //   a.description,
-  //     //   a.image_url,
-  //     //   a.difficulty,
-  //     //   a.estimated_time,
-  //     //   COUNT(t.id) as token_count,
-  //     //   COALESCE(ua.completed, false) as is_completed,
-  //     //   COALESCE(ua.unlocked, true) as is_unlocked
-  //     // FROM adventures a
-  //     // LEFT JOIN tokens t ON t.adventure_id = a.id
-  //     // LEFT JOIN user_adventures ua ON ua.adventure_id = a.id AND ua.user_id = $1
-  //     // WHERE a.id = $2
-  //     // GROUP BY a.id, ua.completed, ua.unlocked;
-  //     //
-  //     // Implementation example:
-  //     // const response = await fetch(
-  //     //   `https://your-app.azurewebsites.net/api/adventures/${adventureId}`,
-  //     //   { headers: { 'Authorization': `Bearer ${authToken}` } }
-  //     // );
-  //     // const data = await response.json();
-  //     // setAdventure(data);
-  //     // setLoading(false);
-  //     // ============================================================================
-
-  //     // MOCK DATA - matching the adventures from home.tsx
-  //     const MOCK_ADVENTURES = [
-  //       {
-  //         id: "1",
-  //         title: "Campus History Tour",
-  //         description:
-  //           "Discover the rich history of Calvin University through iconic landmarks. This guided tour will take you through historic buildings, memorable locations, and hidden gems that tell the story of our campus. Learn about the university's founding, significant events, and the people who shaped this institution.",
-  //         difficulty: "Easy",
-  //         estimatedTime: "30 min",
-  //         rewards: "5 tokens",
-  //         isCompleted: false,
-  //         isUnlocked: true,
-  //       },
-  //       {
-  //         id: "2",
-  //         title: "Hidden Art Walk",
-  //         description:
-  //           "Find secret art installations scattered across campus. This artistic adventure will guide you to discover beautiful murals, sculptures, and installations that many students walk past every day. Each piece has a story - learn about the artists, the inspiration, and the meaning behind these creative works.",
-  //         difficulty: "Medium",
-  //         estimatedTime: "60 min",
-  //         rewards: "8 tokens",
-  //         isCompleted: false,
-  //         isUnlocked: true,
-  //       },
-  //       {
-  //         id: "3",
-  //         title: "Science Building Quest",
-  //         description:
-  //           "Explore the wonders of our science facilities and discover the cutting-edge research happening on campus. Visit laboratories, planetariums, and experimental spaces while learning about groundbreaking discoveries made right here at Calvin. Perfect for curious minds who want to see science in action.",
-  //         difficulty: "Medium",
-  //         estimatedTime: "45 min",
-  //         rewards: "6 tokens",
-  //         isCompleted: false,
-  //         isUnlocked: true,
-  //       },
-  //       {
-  //         id: "4",
-  //         title: "Athletic Heritage Trail",
-  //         description:
-  //           "Journey through Calvin's sports history and achievements. Visit iconic sports venues and learn about legendary athletes who made their mark. Experience the pride and tradition of Calvin athletics.",
-  //         difficulty: "Easy",
-  //         estimatedTime: "25 min",
-  //         rewards: "4 tokens",
-  //         isCompleted: false,
-  //         isUnlocked: true,
-  //       },
-  //       {
-  //         id: "5",
-  //         title: "Ecosystem Discovery",
-  //         description:
-  //           "A challenging adventure through various ecosystems on campus. Learn about local flora and fauna while collecting tokens at ecological points of interest. Perfect for nature enthusiasts and biology students.",
-  //         difficulty: "Hard",
-  //         estimatedTime: "90 min",
-  //         rewards: "10 tokens",
-  //         isCompleted: false,
-  //         isUnlocked: true,
-  //       },
-  //     ];
-
-  //     const currentId = Array.isArray(adventureId) ? adventureId[0] : adventureId || "1";
-  //     const foundAdventure = MOCK_ADVENTURES.find(adv => adv.id === currentId);
-
-  //     if (!foundAdventure) {
-  //       setError("Adventure not found");
-  //       setLoading(false);
-  //       return;
-  //     }
-
-  //     const mockAdventure: Adventure = {
-  //       ...foundAdventure,
-  //       image: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
-  //     };
-
-  //     // Simulate network delay
-  //     setTimeout(() => {
-  //       setAdventure(mockAdventure);
-  //       setLoading(false);
-  //     }, 500);
-  //   } catch (err) {
-  //     console.error("Error fetching adventure:", err);
-  //     setError("Failed to load adventure data");
-  //     setLoading(false);
-  //   }
-  // };
 
   // Load adventure data on component mount
   useEffect(() => {
