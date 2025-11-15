@@ -9,7 +9,11 @@ type Props = {
   color?: string;
 };
 
-export default function BackButton({ onPress, size = 30, color = themes.primaryColor }: Props) {
+export default function BackButton({
+  onPress,
+  size = 30,
+  color = themes.primaryColor,
+}: Props) {
   return (
     <TouchableOpacity
       accessibilityRole="button"

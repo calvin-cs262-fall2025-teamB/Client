@@ -10,6 +10,7 @@
     "**/*.ts",
     "**/*.tsx",
     "components/authentication/Login.tex",
-    "contexts/AuthContext.jsx"
+    "contexts/AuthContext.jsx",
+    "contexts/HomeContext.jsx"
   ]
 }
