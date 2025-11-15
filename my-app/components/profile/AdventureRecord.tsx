@@ -4,11 +4,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import themes from "../../assets/utils/themes";
 const completedAdventures = [
-  { id: 1, title: "Downtown Explorer", completed: true, tokens: 25 },
-  { id: 2, title: "Historic District Tour", completed: true, tokens: 30 },
-  { id: 3, title: "Waterfront Adventure", completed: true, tokens: 20 },
-  { id: 4, title: "Campus Quest", completed: false, progress: 60 },
-  { id: 5, title: "Park Discovery", completed: true, tokens: 15 },
+  { id: 1, title: "Campus History Tour", completed: true, tokens: 25 },
+  { id: 2, title: "Hidden Art Walk", completed: true, tokens: 30 },
+  { id: 3, title: "Science Building Quest", completed: true, tokens: 20 },
+  { id: 4, title: "Athletic Heritage Trail", completed: false, progress: 60 },
+  { id: 5, title: "Ecosystem Discovery", completed: true, tokens: 15 },
 ];
 
 export default function AdventureRecord() {
@@ -50,7 +50,9 @@ export default function AdventureRecord() {
     completed: boolean;
   }) => {
     // Navigate using expo-router to the AdventureView screen with the adventureId as a query param
-    router.push(`/adventureView?adventureId=${adventure.id}`);
+    router.push(
+      `/adventureView?adventureId=${adventure.id}&completed=${adventure.completed}`
+    );
   };
 
   return (
