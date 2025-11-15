@@ -1,4 +1,5 @@
 // import { useAuth } from "@/contexts/AuthContext"; // unused
+import { ProfileProvider } from "@/contexts/ProfileContext";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
@@ -6,14 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { ProfileProvider } from "@/contexts/ProfileContext";
 
 // Components
-import CompletedAdventuresSection from "@/components/profile/CompletedAdventuresButtons";
+import AdventureRecord from "@/components/profile/AdventureRecord";
 import ImageHolder from "@/components/profile/ImageHolder";
 // ProgressRing component is not used in this file at the moment
 // import ProgressRing from "@/components/profile/ProgressRing";
@@ -26,9 +25,21 @@ import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import themes from "@/assets/utils/themes";
 import ProfileForm from "@/components/profile/ProfileForm";
 
+/*Sign Up
+{
+Full Name: string,
+Email: string,
+Password: encrypted,
+ImageURL: string (optional),
+Adventures: [AdventureID], // the adventures a user has started / finished playing,
+CollectedTokens: number, Associated with adventures completed
+}
+
+
+*/
 export default function Profile() {
   //TODO: use profile context to manage the user's state
-  const [viewingInfo] = useState(false);
+  const [viewingInfo, setViewingInfo] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | undefined>(
     undefined
   );
@@ -92,89 +103,99 @@ export default function Profile() {
   // ============================================================================
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Gradient Header */}
-      <LinearGradient
-        colors={["#4ed964", "#4ed964", "#4ed964"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.gradientHeader}
-      >
-        {/* Profile Image */}
-        <View style={styles.imageSection}>
-          <View style={styles.imageWrapper}>
-            <ImageHolder
-              imgSource={PlaceholderImage}
-              selectedImage={selectedImage}
-            />
-            <TouchableOpacity
-              onPress={pickImageAsync}
-              style={styles.cameraButton}
-            >
-              <FontAwesome6
-                name="camera"
-                size={20}
-                color={themes.backgroundColorLight}
+    <ProfileProvider>
+      <ScrollView style={styles.container}>
+        {/* Gradient Header */}
+        <LinearGradient
+          colors={["#4ed964", "#4ed964", "#4ed964"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.gradientHeader}
+        >
+          {/* Profile Image */}
+          <View style={styles.imageSection}>
+            <View style={styles.imageWrapper}>
+              <ImageHolder
+                imgSource={PlaceholderImage}
+                selectedImage={selectedImage}
               />
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={pickImageAsync}
+                style={styles.cameraButton}
+              >
+                <FontAwesome6
+                  name="camera"
+                  size={20}
+                  color={themes.backgroundColorLight}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
+        </LinearGradient>
+        {/* TODO: Set Hover and active nav*/}
+        <View style={styles.tabs}>
+          <TouchableOpacity
+            onPress={() => setViewingInfo(false)}
+            style={[
+              styles.nav,
+              !viewingInfo ? styles.navActive : styles.navInactive,
+            ]}
+          >
+            <Text onPress={() => setViewingInfo(false)}>My experience</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setViewingInfo(true)}
+            style={[
+              styles.nav,
+              viewingInfo ? styles.navActive : styles.navInactive,
+            ]}
+          >
+            <Text onPress={() => setViewingInfo(true)}>Personal Info</Text>
+          </TouchableOpacity>
         </View>
-      </LinearGradient>
-      <View>
-        <Text>Personal Info</Text>
-        <Text>My experience</Text>
-      </View>
 
-      {viewingInfo ? (
-        <>
-          <View style={styles.statsSection}>
-            <Text style={styles.sectionTitle}>Detailed Statistics</Text>
-            <View style={styles.statsGrid}>
-              <StatCard
-                icon="coins"
-                iconFamily="fontawesome"
-                value={userStats.totalTokens}
-                label="Total Tokens"
-                color="#FFD700"
-              />
-              <StatCard
-                icon="map-location-dot"
-                iconFamily="fontawesome"
-                value={userStats.adventuresCompleted}
-                label="Completed"
-                color="#34c759"
-              />
+        {!viewingInfo ? (
+          <>
+            <View style={styles.statsSection}>
+              <Text style={styles.sectionTitle}>Detailed Statistics</Text>
+              <View style={styles.statsGrid}>
+                <StatCard
+                  icon="coins"
+                  iconFamily="fontawesome"
+                  value={userStats.totalTokens}
+                  label="Total Tokens"
+                  color="#FFD700"
+                />
+                <StatCard
+                  icon="map-location-dot"
+                  iconFamily="fontawesome"
+                  value={userStats.adventuresCompleted}
+                  label="Completed"
+                  color="#34c759"
+                />
+              </View>
+              <View style={styles.statsGrid}>
+                <StatCard
+                  icon="trophy"
+                  iconFamily="fontawesome"
+                  value={userStats.upvotes}
+                  label="Upvotes"
+                  color="#FF9500"
+                />
+              </View>
             </View>
-            <View style={styles.statsGrid}>
-              <StatCard
-                icon="trophy"
-                iconFamily="fontawesome"
-                value={userStats.upvotes}
-                label="Upvotes"
-                color="#FF9500"
-              />
-              <StatCard
-                icon="fire"
-                iconFamily="fontawesome"
-                value={`${userStats.completionRate}%`}
-                label="Completion"
-                color="#FF3B30"
-              />
-            </View>
-          </View>
 
-          {/* Completed Adventures */}
-          <CompletedAdventuresSection />
+            {/* Completed Adventures */}
+            <AdventureRecord />
 
-          {/* Bottom Padding */}
-          <View style={styles.bottomPadding} />
-        </>
-      ) : (
-        <ProfileProvider>
+            {/* Bottom Padding */}
+            <View style={styles.bottomPadding} />
+          </>
+        ) : (
           <ProfileForm />
-        </ProfileProvider>
-      )}
-    </ScrollView>
+        )}
+      </ScrollView>
+    </ProfileProvider>
   );
 }
 
@@ -224,6 +245,22 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     position: "relative",
+  },
+  nav: {
+    // fontSize: 16,
+    padding: 10,
+  },
+  navText: {
+    fontSize: 16,
+  },
+  navActive: {
+    backgroundColor: themes.primaryColor,
+    borderColor: themes.primaryColor,
+    borderRadius: 5,
+    borderStyle: "dashed",
+  },
+  navInactive: {
+    backgroundColor: "transparent",
   },
   progressBold: {
     fontWeight: "bold",
@@ -307,6 +344,12 @@ const styles = StyleSheet.create({
   statsSection: {
     padding: 20,
     paddingTop: 16,
+  },
+  tabs: {
+    flexDirection: "row",
+    marginBottom: 20,
+    marginTop: 20,
+    justifyContent: "space-around",
   },
   username: {
     fontSize: 28,

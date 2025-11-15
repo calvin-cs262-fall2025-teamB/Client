@@ -1,12 +1,32 @@
 import { View, StyleSheet, Text, TextInput } from "react-native";
 import { useState } from "react";
 import themes from "@/assets/utils/themes";
+import { useProfile } from "@/contexts/ProfileContext";
 
 import GreenButton from "@/components/reusable/GreenButton";
+
 export default function ProfileForm() {
   const [fullname, setFullname] = useState<string>("");
   const [email, setEmail] = useState<string>("");
-  const [isEditing, setIsEditing] = useState<boolean>(true);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const { user, email: userEmail, editUsername, editEmail } = useProfile();
+  //   console.log("ProfileForm userEmail:", userEmail);
+
+  function handleSubmit() {
+    if (isEditing) {
+      if (!fullname && !email) {
+        setIsEditing(isEditing ? false : true);
+        return;
+      }
+      if (fullname) editUsername(fullname);
+      if (email) editEmail(email);
+
+      setFullname("");
+      setEmail("");
+    }
+
+    setIsEditing(isEditing ? false : true);
+  }
 
   return (
     <View style={styles.formContainer}>
@@ -15,23 +35,32 @@ export default function ProfileForm() {
           <Text style={styles.formLabel}>Full Name</Text>
           <TextInput
             style={styles.formInput}
-            placeholder="Enter text..."
+            placeholder={user}
             value={fullname}
             onChangeText={setFullname}
             accessibilityLabel="Profile form text input"
+            editable={isEditing}
+            returnKeyType="next"
+            onSubmitEditing={() => {}}
           />
         </View>
         <View>
           <Text style={styles.formLabel}>Email Address</Text>
           <TextInput
             style={styles.formInput}
-            placeholder={email || "@johndoe"}
+            placeholder={userEmail}
             value={email}
             onChangeText={setEmail}
             accessibilityLabel="Profile form email input"
+            editable={isEditing}
+            returnKeyType="go"
+            onSubmitEditing={handleSubmit}
           />
         </View>
-        <GreenButton info={isEditing ? "Submit" : "Edit"} />
+        <GreenButton
+          onPress={handleSubmit}
+          info={isEditing ? "Submit" : "Edit"}
+        />
       </View>
     </View>
   );

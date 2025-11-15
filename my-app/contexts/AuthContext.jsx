@@ -16,8 +16,8 @@ function reducer(state, action) {
   switch (action.type) {
     case "edit/username":
       return { ...state, user: action.payload };
-    case "edit/image":
-      return { ...state, image: action.payload };
+    case "edit/email":
+      return { ...state, email: action.payload };
     case "signup":
       return {
         ...state,
@@ -27,7 +27,12 @@ function reducer(state, action) {
         isAuthenticated: true,
       };
     case "login":
-      return { ...state, user: action.payload, isAuthenticated: true };
+      return {
+        ...state,
+        user: action.payload.username,
+        email: action.payload.email,
+        isAuthenticated: true,
+      };
     case "logout":
       return {
         ...state,
@@ -49,7 +54,7 @@ const FAKE_USER = {
 
 function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { user, isAuthenticated } = state;
+  const { user, email, isAuthenticated } = state;
   const [isLoading, setIsLoading] = useState(false);
 
   function signup(fullName, email, password) {
@@ -100,7 +105,7 @@ function AuthProvider({ children }) {
 
     // TEMPORARY: Extract username from email for demo purposes
     const username = email.split("@")[0];
-    dispatch({ type: "login", payload: username });
+    dispatch({ type: "login", payload: { username, email } });
   }
 
   function editUsername(newUsername) {
@@ -123,8 +128,7 @@ function AuthProvider({ children }) {
     // ============================================================================
     dispatch({ type: "edit/username", payload: newUsername });
   }
-
-  function editImage(imageURL) {
+  function editEmail(newEmail) {
     // ============================================================================
     // TODO: Upload image to Azure Blob Storage and update user profile
     // ============================================================================
@@ -147,8 +151,9 @@ function AuthProvider({ children }) {
     //   body: JSON.stringify({ imageUrl: blobUrl })
     // });
     // ============================================================================
-    dispatch({ type: "edit/image", payload: imageURL });
+    dispatch({ type: "edit/email", payload: newEmail });
   }
+
   function logout() {
     dispatch({ type: "logout" });
   }
@@ -156,10 +161,11 @@ function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        email,
         isAuthenticated,
         login,
         editUsername,
-        editImage,
+        editEmail,
         logout,
         signup,
         isLoading,
