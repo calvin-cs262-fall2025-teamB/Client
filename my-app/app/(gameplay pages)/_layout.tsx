@@ -5,6 +5,7 @@ export default function RootLayout() {
     //TODO: figure out how to add the back button
     <Stack>
       <Stack.Screen name="adventurePage" options={{ headerShown: false }} />
+      <Stack.Screen name="adventureView" options={{ headerShown: false }} />
     </Stack>
   );
 }

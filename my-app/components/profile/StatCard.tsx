@@ -36,8 +36,8 @@ export default function StatCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    padding: 16,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    minHeight: 120,
+    minHeight: 80,
   },
   iconContainer: {
     width: 48,

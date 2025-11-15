@@ -1,8 +1,17 @@
 import { FontAwesome6 } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import themes from "../../assets/utils/themes";
 
-export default function CompletedAdventuresSection() {
+import themes from "../../assets/utils/themes";
+const completedAdventures = [
+  { id: 1, title: "Downtown Explorer", completed: true, tokens: 25 },
+  { id: 2, title: "Historic District Tour", completed: true, tokens: 30 },
+  { id: 3, title: "Waterfront Adventure", completed: true, tokens: 20 },
+  { id: 4, title: "Campus Quest", completed: false, progress: 60 },
+  { id: 5, title: "Park Discovery", completed: true, tokens: 15 },
+];
+
+export default function AdventureRecord() {
   // ============================================================================
   // MOCK DATA - Replace with actual PostgreSQL data via Azure API
   // ============================================================================
@@ -32,23 +41,16 @@ export default function CompletedAdventuresSection() {
   //   }
   // });
 
-  const completedAdventures = [
-    { id: 1, title: "Downtown Explorer", completed: true, tokens: 25 },
-    { id: 2, title: "Historic District Tour", completed: true, tokens: 30 },
-    { id: 3, title: "Waterfront Adventure", completed: true, tokens: 20 },
-    { id: 4, title: "Campus Quest", completed: false, progress: 60 },
-    { id: 5, title: "Park Discovery", completed: true, tokens: 15 },
-  ];
   // ============================================================================
+  const router = useRouter();
 
   const handleAdventurePress = (adventure: {
     id: number;
     title: string;
     completed: boolean;
   }) => {
-    console.log(`Selected adventure: ${adventure.title}`);
-    // TODO: Navigate to adventure details or replay page
-    // router.push(`/adventurePage?adventureId=${adventure.id}`);
+    // Navigate using expo-router to the AdventureView screen with the adventureId as a query param
+    router.push(`/adventureView?adventureId=${adventure.id}`);
   };
 
   return (
@@ -75,9 +77,7 @@ export default function CompletedAdventuresSection() {
                     : styles.incompleteIconBg,
                 ]}
               >
-                <Text style={styles.adventureIcon}>
-                  {adventure.completed ? "🗺️" : "🔒"}
-                </Text>
+                <Text style={styles.adventureIcon}>🗺️</Text>
               </View>
 
               {/* Title and Info */}
@@ -136,7 +136,7 @@ export default function CompletedAdventuresSection() {
 const styles = StyleSheet.create({
   adventureCard: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   adventuresContainer: {
-    gap: 12,
+    gap: 8,
   },
   adventureTitle: {
     fontSize: 16,
