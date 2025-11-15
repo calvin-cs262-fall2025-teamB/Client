@@ -5,16 +5,8 @@ import MapPlaceholder from "@/components/home/MapPlaceholder";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { useHome } from "@/contexts/HomeContext";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 // Type definitions
 interface Adventure {
   id: string;
@@ -140,83 +132,27 @@ export default function HomePage() {
   const [selectedDuration, setSelectedDuration] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
 
-  // API state
-  const [adventures, setAdventures] = useState<Adventure[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch adventures from Azure API
-  const fetchAdventures = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch(
-        'https://cs262lab09-bqekb7ezfnhxctc7.canadacentral-01.azurewebsites.net/adventures',
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Transform API response to match Adventure interface
-      const transformedAdventures: Adventure[] = data.map((item: any) => ({
-        id: item.id.toString(),
-        title: item.name, // API uses 'name' field
-        summary: item.name, // Use name as summary since no separate summary field
-        description: item.name, // Use name as description fallback
-        image_url: null, // No image_url in current API response
-        region: {
-          id: item.regionid?.toString() || '1',
-          name: `Region ${item.regionid}`, // Create region name from ID
-          center: {
-            lat: item.location?.x || 42.9301, // Use location.x as latitude
-            lng: item.location?.y || -85.5883, // Use location.y as longitude
-          },
-        },
-        tokenCount: item.numtokens || 0,
-        difficulty: 'Medium', // Default since not in API response
-        estimatedTime: '30 min', // Default since not in API response
-        status: 'published', // Default since not in API response
-      }));
-
-      setAdventures(transformedAdventures);
-    } catch (err) {
-      console.error('Error fetching adventures:', err);
-      setError('Failed to load adventures');
-      
-      // Fallback to mock data in development
-      if (__DEV__) {
-        console.log('API failed, falling back to mock data...');
-        setAdventures(MOCK_ADVENTURES);
-      } else {
-        Alert.alert('Error', 'Failed to load adventures. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  // API state from context
+  const { adventures = [], isLoading, error, fetchAdventures } = useHome() as {
+    adventures: Adventure[];
+    isLoading: boolean;
+    error: string | null;
+    fetchAdventures: () => void;
   };
 
-  // Load adventures on component mount
+  // Ensure adventures are loaded on mount (context will fetch, but call if empty)
   useEffect(() => {
-    fetchAdventures();
-  }, []);
+    if (!adventures || adventures.length === 0) fetchAdventures();
+  }, [adventures, fetchAdventures]);
+
+  // Load adventures on component mount
+  // (fetch handled by context)
 
   // Get unique regions for filter
-  const regions = Array.from(
-    new Set(adventures.map((adv) => adv.region.name))
-  );
+  const regions = Array.from(new Set(adventures.map((adv: Adventure) => adv.region.name)));
 
   // Apply filters
-  const filteredAdventures = adventures.filter((adv) => {
+  const filteredAdventures = adventures.filter((adv: Adventure) => {
     const matchesSearch =
       adv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       adv.summary.toLowerCase().includes(searchQuery.toLowerCase());
@@ -233,8 +169,7 @@ export default function HomePage() {
         parseInt(adv.estimatedTime) <= 60) ||
       (selectedDuration === "long" && parseInt(adv.estimatedTime) > 60);
 
-    const matchesRegion =
-      !selectedRegion || adv.region.name === selectedRegion;
+    const matchesRegion = !selectedRegion || adv.region.name === selectedRegion;
 
     return matchesSearch && matchesDifficulty && matchesDuration && matchesRegion;
   });
@@ -536,7 +471,7 @@ export default function HomePage() {
 
             {/* Description */}
             <View style={styles.modalDescriptionSection}>
-              <Text style={styles.modalSectionTitle}>What you'll discover</Text>
+              <Text style={styles.modalSectionTitle}>What you will discover</Text>
               <Text style={styles.modalDescription}>
                 {selectedAdventure.description || selectedAdventure.summary}
               </Text>
