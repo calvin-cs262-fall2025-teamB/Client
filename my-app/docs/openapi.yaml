@@ -1,0 +1,1573 @@
+openapi: 3.0.3
+info:
+  title: WayFind API
+  version: 1.0.0
+  description: |
+    RESTful API for WayFind - A location-based adventure mobile game where users discover and collect tokens at real-world locations.
+
+    ## Features
+    - JWT-based authentication
+    - Real-time GPS token collection
+    - Adventure creation and management
+    - User progress tracking
+
+    ## Current Status
+    - ✅ Live: `GET /adventures`
+    - 🚧 Planned: All other endpoints
+  contact:
+    name: WayFind Development Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://cs262lab09-bqekb7ezfnhxctc7.canadacentral-01.azurewebsites.net
+    description: Production server
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: User Profile
+    description: User profile management and statistics
+  - name: Adventures
+    description: Adventure discovery and management
+  - name: Regions
+    description: Geographical region management
+  - name: Tokens
+    description: Collectible token management
+  - name: Gameplay
+    description: Active gameplay and progress tracking
+
+paths:
+  # ==================== AUTHENTICATION ====================
+  /api/auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account with email and password
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fullName
+                - email
+                - password
+              properties:
+                fullName:
+                  type: string
+                  minLength: 2
+                  maxLength: 255
+                  example: John Doe
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  minLength: 8
+                  example: SecurePass123!
+                  description: Must contain uppercase, lowercase, and number
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User created successfully
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                error:
+                  code: DUPLICATE_EMAIL
+                  message: An account with this email already exists
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user with email and password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  example: SecurePass123!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login successful
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: Incorrect email or password
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Invalidate user session (optional - can be client-side only)
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logged out successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== USER PROFILE ====================
+  /api/users/{userId}:
+    get:
+      tags:
+        - User Profile
+      summary: Get user profile
+      description: Retrieve user profile information
+      operationId: getUserProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - User Profile
+      summary: Update user profile
+      description: Update user profile information
+      operationId: updateUserProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                  minLength: 2
+                  maxLength: 255
+                  example: Jane Doe
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Profile updated successfully
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/users/{userId}/stats:
+    get:
+      tags:
+        - User Profile
+      summary: Get user statistics
+      description: Retrieve user's game statistics and progress
+      operationId: getUserStats
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: User statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/UserStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/users/{userId}/image:
+    post:
+      tags:
+        - User Profile
+      summary: Upload profile image
+      description: Upload user profile picture to Azure Blob Storage
+      operationId: uploadProfileImage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG)
+      responses:
+        '200':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Image uploaded successfully
+                  data:
+                    type: object
+                    properties:
+                      imageUrl:
+                        type: string
+                        format: uri
+                        example: https://storage.blob.core.windows.net/profile-images/user-123.jpg
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/users/{userId}/adventures:
+    get:
+      tags:
+        - User Profile
+      summary: Get user adventures
+      description: Get all adventures for a specific user (completed and in-progress)
+      operationId: getUserAdventures
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+        - name: status
+          in: query
+          description: Filter by status
+          required: false
+          schema:
+            type: string
+            enum: [completed, in-progress, all]
+            default: all
+      responses:
+        '200':
+          description: User adventures retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserAdventure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== ADVENTURES ====================
+  /adventures:
+    get:
+      tags:
+        - Adventures
+      summary: Get all adventures (LIVE)
+      description: |
+        Retrieve all published adventures. This endpoint is currently live.
+
+        **Current API Response Issues:**
+        - Uses `name` instead of `title`
+        - Uses `location.x/y` instead of `lat/lng`
+        - Missing fields: `summary`, `description`, `difficulty`, `estimatedTime`
+      operationId: getAdventures
+      parameters:
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+            enum: [published, draft, archived]
+            default: published
+        - name: difficulty
+          in: query
+          description: Filter by difficulty
+          schema:
+            type: string
+            enum: [Easy, Medium, Hard]
+        - name: regionId
+          in: query
+          description: Filter by region ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Adventures retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: Campus History Tour
+                    regionid:
+                      type: integer
+                      example: 1
+                    location:
+                      type: object
+                      properties:
+                        x:
+                          type: number
+                          format: double
+                          example: 42.9301
+                        y:
+                          type: number
+                          format: double
+                          example: -85.5883
+                    numtokens:
+                      type: integer
+                      example: 5
+
+  /api/adventures:
+    get:
+      tags:
+        - Adventures
+      summary: Get all adventures (PLANNED)
+      description: Retrieve all published adventures with improved schema
+      operationId: getAdventuresV2
+      parameters:
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+            enum: [published, draft, archived]
+            default: published
+        - name: difficulty
+          in: query
+          description: Filter by difficulty
+          schema:
+            type: string
+            enum: [Easy, Medium, Hard]
+        - name: regionId
+          in: query
+          description: Filter by region ID
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Adventures retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Adventure'
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 12
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 20
+
+    post:
+      tags:
+        - Adventures
+      summary: Create adventure
+      description: Create a new adventure (draft status by default)
+      operationId: createAdventure
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - regionId
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 255
+                  example: Downtown Explorer
+                summary:
+                  type: string
+                  example: Short summary of the adventure
+                description:
+                  type: string
+                  example: Full description of what users will discover
+                regionId:
+                  type: string
+                  format: uuid
+                difficulty:
+                  type: string
+                  enum: [Easy, Medium, Hard]
+                  default: Medium
+                estimatedTime:
+                  type: string
+                  example: 45-60 minutes
+                status:
+                  type: string
+                  enum: [draft, published, archived]
+                  default: draft
+                imageUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+      responses:
+        '201':
+          description: Adventure created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Adventure created successfully
+                  data:
+                    $ref: '#/components/schemas/Adventure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/adventures/{adventureId}:
+    get:
+      tags:
+        - Adventures
+      summary: Get adventure details
+      description: Get detailed information about a specific adventure
+      operationId: getAdventureById
+      parameters:
+        - $ref: '#/components/parameters/AdventureIdPath'
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Adventure retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AdventureDetailed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+        - Adventures
+      summary: Update adventure
+      description: Update adventure details
+      operationId: updateAdventure
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdventureIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                summary:
+                  type: string
+                description:
+                  type: string
+                difficulty:
+                  type: string
+                  enum: [Easy, Medium, Hard]
+                status:
+                  type: string
+                  enum: [draft, published, archived]
+      responses:
+        '200':
+          description: Adventure updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Adventure updated successfully
+                  data:
+                    $ref: '#/components/schemas/Adventure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Adventures
+      summary: Delete adventure
+      description: Delete an adventure (soft delete recommended)
+      operationId: deleteAdventure
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdventureIdPath'
+      responses:
+        '200':
+          description: Adventure deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Adventure deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== REGIONS ====================
+  /api/regions:
+    get:
+      tags:
+        - Regions
+      summary: Get all regions
+      description: Get all available geographical regions
+      operationId: getRegions
+      responses:
+        '200':
+          description: Regions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Region'
+
+    post:
+      tags:
+        - Regions
+      summary: Create region
+      description: Create a new geographical region
+      operationId: createRegion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - center
+              properties:
+                name:
+                  type: string
+                  minLength: 3
+                  maxLength: 255
+                  example: East Campus
+                center:
+                  type: object
+                  required:
+                    - lat
+                    - lng
+                  properties:
+                    lat:
+                      type: number
+                      format: double
+                      minimum: -90
+                      maximum: 90
+                      example: 42.9310
+                    lng:
+                      type: number
+                      format: double
+                      minimum: -180
+                      maximum: 180
+                      example: -85.5870
+                boundaries:
+                  type: array
+                  minItems: 3
+                  items:
+                    type: object
+                    properties:
+                      lat:
+                        type: number
+                        format: double
+                      lng:
+                        type: number
+                        format: double
+      responses:
+        '201':
+          description: Region created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Region created successfully
+                  data:
+                    $ref: '#/components/schemas/Region'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/regions/{regionId}:
+    get:
+      tags:
+        - Regions
+      summary: Get region details
+      description: Get detailed information about a specific region
+      operationId: getRegionById
+      parameters:
+        - $ref: '#/components/parameters/RegionIdPath'
+      responses:
+        '200':
+          description: Region retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/RegionDetailed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== TOKENS ====================
+  /api/adventures/{adventureId}/tokens:
+    get:
+      tags:
+        - Tokens
+      summary: Get tokens for adventure
+      description: Get all tokens for a specific adventure
+      operationId: getTokensByAdventure
+      parameters:
+        - $ref: '#/components/parameters/AdventureIdPath'
+      responses:
+        '200':
+          description: Tokens retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Token'
+
+    post:
+      tags:
+        - Tokens
+      summary: Create token
+      description: Add a token to an adventure
+      operationId: createToken
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdventureIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - latitude
+                - longitude
+              properties:
+                name:
+                  type: string
+                  minLength: 3
+                  maxLength: 255
+                  example: Historic Landmark
+                description:
+                  type: string
+                  example: Significant building from the 1800s
+                latitude:
+                  type: number
+                  format: double
+                  minimum: -90
+                  maximum: 90
+                  example: 42.9305
+                longitude:
+                  type: number
+                  format: double
+                  minimum: -180
+                  maximum: 180
+                  example: -85.5880
+                sequenceOrder:
+                  type: integer
+                  example: 1
+      responses:
+        '201':
+          description: Token created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Token created successfully
+                  data:
+                    $ref: '#/components/schemas/Token'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/tokens/{tokenId}:
+    patch:
+      tags:
+        - Tokens
+      summary: Update token
+      description: Update token details
+      operationId: updateToken
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TokenIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                latitude:
+                  type: number
+                  format: double
+                longitude:
+                  type: number
+                  format: double
+      responses:
+        '200':
+          description: Token updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Token updated successfully
+                  data:
+                    $ref: '#/components/schemas/Token'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Tokens
+      summary: Delete token
+      description: Remove a token from an adventure
+      operationId: deleteToken
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TokenIdPath'
+      responses:
+        '200':
+          description: Token deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Token deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== GAMEPLAY ====================
+  /api/users/{userId}/adventures/{adventureId}/start:
+    post:
+      tags:
+        - Gameplay
+      summary: Start adventure
+      description: Begin an adventure for a user
+      operationId: startAdventure
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+        - $ref: '#/components/parameters/AdventureIdPath'
+      responses:
+        '201':
+          description: Adventure started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Adventure started
+                  data:
+                    $ref: '#/components/schemas/UserAdventure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/users/{userId}/tokens/{tokenId}/collect:
+    post:
+      tags:
+        - Gameplay
+      summary: Collect token
+      description: Mark a token as collected when user is within proximity
+      operationId: collectToken
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+        - $ref: '#/components/parameters/TokenIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - latitude
+                - longitude
+              properties:
+                latitude:
+                  type: number
+                  format: double
+                  example: 42.9305
+                longitude:
+                  type: number
+                  format: double
+                  example: -85.5880
+                timestamp:
+                  type: string
+                  format: date-time
+                  example: 2025-01-16T12:30:00Z
+      responses:
+        '200':
+          description: Token collected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Token collected!
+                  data:
+                    type: object
+                    properties:
+                      tokenId:
+                        type: string
+                        format: uuid
+                      tokensEarned:
+                        type: integer
+                        example: 1
+                      totalTokens:
+                        type: integer
+                        example: 3
+                      progress:
+                        type: integer
+                        example: 60
+                      adventureCompleted:
+                        type: boolean
+                        example: false
+                      collectedAt:
+                        type: string
+                        format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          description: User too far from token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                error:
+                  code: PROXIMITY_ERROR
+                  message: Too far from token location
+
+  /api/users/{userId}/adventures/{adventureId}:
+    patch:
+      tags:
+        - Gameplay
+      summary: Update adventure progress
+      description: Update user's progress in an adventure
+      operationId: updateAdventureProgress
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+        - $ref: '#/components/parameters/AdventureIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tokensEarned:
+                  type: integer
+                progress:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                completed:
+                  type: boolean
+      responses:
+        '200':
+          description: Progress updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Progress updated
+                  data:
+                    $ref: '#/components/schemas/UserAdventure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/users/{userId}/adventures/{adventureId}/complete:
+    post:
+      tags:
+        - Gameplay
+      summary: Complete adventure
+      description: Mark an adventure as completed
+      operationId: completeAdventure
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+        - $ref: '#/components/parameters/AdventureIdPath'
+      responses:
+        '200':
+          description: Adventure completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Adventure completed! Congratulations!
+                  data:
+                    type: object
+                    properties:
+                      userAdventureId:
+                        type: string
+                        format: uuid
+                      adventureId:
+                        type: string
+                        format: uuid
+                      completed:
+                        type: boolean
+                        example: true
+                      tokensEarned:
+                        type: integer
+                        example: 5
+                      progress:
+                        type: integer
+                        example: 100
+                      completedAt:
+                        type: string
+                        format: date-time
+                      rewards:
+                        type: object
+                        properties:
+                          totalTokens:
+                            type: integer
+                            example: 130
+                          adventuresCompleted:
+                            type: integer
+                            example: 9
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+# ==================== COMPONENTS ====================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login/signup
+
+  parameters:
+    UserIdPath:
+      name: userId
+      in: path
+      required: true
+      description: User UUID
+      schema:
+        type: string
+        format: uuid
+
+    AdventureIdPath:
+      name: adventureId
+      in: path
+      required: true
+      description: Adventure UUID
+      schema:
+        type: string
+        format: uuid
+
+    RegionIdPath:
+      name: regionId
+      in: path
+      required: true
+      description: Region UUID
+      schema:
+        type: string
+        format: uuid
+
+    TokenIdPath:
+      name: tokenId
+      in: path
+      required: true
+      description: Token UUID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        fullName:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        profileImageUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://blob.storage.url/profiles/user-123.jpg
+        createdAt:
+          type: string
+          format: date-time
+          example: 2025-01-16T12:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2025-01-16T14:30:00Z
+
+    UserStats:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        totalTokens:
+          type: integer
+          example: 125
+        adventuresCompleted:
+          type: integer
+          example: 8
+        adventuresTotal:
+          type: integer
+          example: 12
+        upvotes:
+          type: integer
+          example: 42
+        completionRate:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 67
+        lastUpdated:
+          type: string
+          format: date-time
+
+    Adventure:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Campus History Tour
+        summary:
+          type: string
+          example: Discover the rich history of Calvin University
+        description:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        region:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: North Campus
+            center:
+              type: object
+              properties:
+                lat:
+                  type: number
+                  format: double
+                  example: 42.9301
+                lng:
+                  type: number
+                  format: double
+                  example: -85.5883
+        tokenCount:
+          type: integer
+          example: 5
+        difficulty:
+          type: string
+          enum: [Easy, Medium, Hard]
+          example: Easy
+        estimatedTime:
+          type: string
+          example: 30-45 minutes
+        status:
+          type: string
+          enum: [draft, published, archived]
+          example: published
+        createdAt:
+          type: string
+          format: date-time
+
+    AdventureDetailed:
+      allOf:
+        - $ref: '#/components/schemas/Adventure'
+        - type: object
+          properties:
+            tokens:
+              type: array
+              items:
+                $ref: '#/components/schemas/Token'
+            userProgress:
+              type: object
+              nullable: true
+              properties:
+                completed:
+                  type: boolean
+                unlocked:
+                  type: boolean
+                tokensCollected:
+                  type: integer
+                progress:
+                  type: integer
+
+    Region:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: North Campus
+        center:
+          type: object
+          properties:
+            lat:
+              type: number
+              format: double
+              example: 42.9301
+            lng:
+              type: number
+              format: double
+              example: -85.5883
+        boundaries:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              lat:
+                type: number
+                format: double
+              lng:
+                type: number
+                format: double
+        adventureCount:
+          type: integer
+          example: 5
+        createdAt:
+          type: string
+          format: date-time
+
+    RegionDetailed:
+      allOf:
+        - $ref: '#/components/schemas/Region'
+        - type: object
+          properties:
+            adventures:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  tokenCount:
+                    type: integer
+
+    Token:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        adventureId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Chapel Bell
+        description:
+          type: string
+          example: Historic bell from 1920
+        latitude:
+          type: number
+          format: double
+          example: 42.9305
+        longitude:
+          type: number
+          format: double
+          example: -85.5880
+        sequenceOrder:
+          type: integer
+          example: 1
+        isCollected:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+
+    UserAdventure:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        adventureId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Downtown Explorer
+        completed:
+          type: boolean
+          example: false
+        unlocked:
+          type: boolean
+          example: true
+        tokensEarned:
+          type: integer
+          example: 3
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 60
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastUpdated:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: ERROR_CODE
+            message:
+              type: string
+              example: Human-readable error message
+            details:
+              type: string
+              example: Additional context
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: UNAUTHORIZED
+              message: Missing or invalid authentication token
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: NOT_FOUND
+              message: Resource does not exist
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: Invalid request data

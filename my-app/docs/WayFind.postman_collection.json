@@ -1,0 +1,706 @@
+{
+	"info": {
+		"_postman_id": "wayfind-api-collection",
+		"name": "WayFind API",
+		"description": "Complete API collection for WayFind mobile application - location-based adventure game.\n\n## Setup\n1. Set `base_url` variable to: `https://cs262lab09-bqekb7ezfnhxctc7.canadacentral-01.azurewebsites.net`\n2. After login/signup, set `auth_token` variable with received JWT token\n\n## Status\n- ✅ Live: GET /adventures\n- 🚧 Planned: All other endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://cs262lab09-bqekb7ezfnhxctc7.canadacentral-01.azurewebsites.net",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "adventure_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Sign Up",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('auth_token', jsonData.data.token);",
+									"    pm.collectionVariables.set('user_id', jsonData.data.user.id);",
+									"    console.log('Token saved:', jsonData.data.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/signup",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "signup"]
+						},
+						"description": "Register a new user account.\n\n**Status:** 🚧 Planned\n\n**Validation:**\n- fullName: 2-255 characters\n- email: Valid email format, unique\n- password: Min 8 chars, must contain uppercase, lowercase, and number"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('auth_token', jsonData.data.token);",
+									"    pm.collectionVariables.set('user_id', jsonData.data.user.id);",
+									"    console.log('Token saved:', jsonData.data.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Authenticate existing user.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "logout"]
+						},
+						"description": "Invalidate user session.\n\n**Status:** 🚧 Planned (optional - can be client-side only)"
+					},
+					"response": []
+				}
+			],
+			"description": "User authentication endpoints"
+		},
+		{
+			"name": "User Profile",
+			"item": [
+				{
+					"name": "Get User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}"]
+						},
+						"description": "Retrieve user profile information.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `contexts/AuthContext.jsx`"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"Jane Doe\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}"]
+						},
+						"description": "Update user profile information.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `contexts/AuthContext.jsx:106`"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/stats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "stats"]
+						},
+						"description": "Retrieve user's game statistics.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `app/(tabs)/profile.tsx:77`\n\n**Returns:**\n- totalTokens\n- adventuresCompleted\n- adventuresTotal\n- upvotes\n- completionRate"
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Profile Image",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/image",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "image"]
+						},
+						"description": "Upload user profile picture to Azure Blob Storage.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `app/(tabs)/profile.tsx:37`"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Adventures",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/adventures?status=all",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "adventures"],
+							"query": [
+								{
+									"key": "status",
+									"value": "all",
+									"description": "completed | in-progress | all"
+								}
+							]
+						},
+						"description": "Get all adventures for a specific user.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `components/profile/AdventureRecord.tsx:19`"
+					},
+					"response": []
+				}
+			],
+			"description": "User profile management endpoints"
+		},
+		{
+			"name": "Adventures",
+			"item": [
+				{
+					"name": "Get All Adventures (LIVE)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.length > 0) {",
+									"        pm.collectionVariables.set('adventure_id', jsonData[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/adventures",
+							"host": ["{{base_url}}"],
+							"path": ["adventures"]
+						},
+						"description": "Retrieve all adventures - CURRENTLY LIVE.\n\n**Status:** ✅ Live\n\n**Frontend:** `app/(tabs)/home.tsx:155`, `contexts/HomeContext.jsx:50`\n\n**Issues:**\n- Uses `name` instead of `title`\n- Uses `location.x/y` instead of `lat/lng`\n- Missing: summary, description, difficulty, estimatedTime"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Adventures (Improved)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/adventures?status=published&difficulty=Easy&page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "adventures"],
+							"query": [
+								{
+									"key": "status",
+									"value": "published",
+									"description": "published | draft | archived"
+								},
+								{
+									"key": "difficulty",
+									"value": "Easy",
+									"description": "Easy | Medium | Hard"
+								},
+								{
+									"key": "regionId",
+									"value": "",
+									"description": "Region UUID",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Retrieve all adventures with improved schema and pagination.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Adventure Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/adventures/{{adventure_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "adventures", "{{adventure_id}}"]
+						},
+						"description": "Get detailed information about a specific adventure.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `app/(gameplay pages)/adventurePage.tsx:47`\n\n**Returns:** Full adventure details including tokens and user progress"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Adventure",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Downtown Explorer\",\n  \"summary\": \"Discover the heart of the city\",\n  \"description\": \"Embark on an urban adventure through historic downtown landmarks and hidden gems.\",\n  \"regionId\": \"region-uuid-here\",\n  \"difficulty\": \"Medium\",\n  \"estimatedTime\": \"45-60 minutes\",\n  \"status\": \"draft\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/adventures",
+							"host": ["{{base_url}}"],
+							"path": ["api", "adventures"]
+						},
+						"description": "Create a new adventure.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `app/creator/adventure.tsx:31`"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Adventure",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Adventure Title\",\n  \"status\": \"published\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/adventures/{{adventure_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "adventures", "{{adventure_id}}"]
+						},
+						"description": "Update adventure details.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Adventure",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/adventures/{{adventure_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "adventures", "{{adventure_id}}"]
+						},
+						"description": "Delete an adventure (soft delete recommended).\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				}
+			],
+			"description": "Adventure discovery and management"
+		},
+		{
+			"name": "Regions",
+			"item": [
+				{
+					"name": "Get All Regions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/regions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "regions"]
+						},
+						"description": "Get all available geographical regions.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Region Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/regions/:regionId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "regions", ":regionId"],
+							"variable": [
+								{
+									"key": "regionId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get detailed information about a specific region.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Region",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"East Campus\",\n  \"center\": {\n    \"lat\": 42.9310,\n    \"lng\": -85.5870\n  },\n  \"boundaries\": [\n    { \"lat\": 42.9301, \"lng\": -85.5883 },\n    { \"lat\": 42.9305, \"lng\": -85.5885 },\n    { \"lat\": 42.9303, \"lng\": -85.5890 }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/regions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "regions"]
+						},
+						"description": "Create a new geographical region.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `app/(tabs)/map.tsx:82-83`"
+					},
+					"response": []
+				}
+			],
+			"description": "Geographical region management"
+		},
+		{
+			"name": "Tokens",
+			"item": [
+				{
+					"name": "Get Tokens for Adventure",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/adventures/{{adventure_id}}/tokens",
+							"host": ["{{base_url}}"],
+							"path": ["api", "adventures", "{{adventure_id}}", "tokens"]
+						},
+						"description": "Get all tokens for a specific adventure.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Historic Landmark\",\n  \"description\": \"Significant building from the 1800s\",\n  \"latitude\": 42.9305,\n  \"longitude\": -85.5880,\n  \"sequenceOrder\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/adventures/{{adventure_id}}/tokens",
+							"host": ["{{base_url}}"],
+							"path": ["api", "adventures", "{{adventure_id}}", "tokens"]
+						},
+						"description": "Add a token to an adventure.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `app/(tabs)/map.tsx:~200`"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Token",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Token Name\",\n  \"latitude\": 42.9306,\n  \"longitude\": -85.5881\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tokens/:tokenId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tokens", ":tokenId"],
+							"variable": [
+								{
+									"key": "tokenId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update token details.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Token",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/tokens/:tokenId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tokens", ":tokenId"],
+							"variable": [
+								{
+									"key": "tokenId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Remove a token from an adventure.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				}
+			],
+			"description": "Collectible token management"
+		},
+		{
+			"name": "Gameplay",
+			"item": [
+				{
+					"name": "Start Adventure",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/adventures/{{adventure_id}}/start",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "adventures", "{{adventure_id}}", "start"]
+						},
+						"description": "Begin an adventure for a user.\n\n**Status:** 🚧 Planned\n\n**Frontend:** `app/(gameplay pages)/adventurePage.tsx:400+`"
+					},
+					"response": []
+				},
+				{
+					"name": "Collect Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"latitude\": 42.9305,\n  \"longitude\": -85.5880,\n  \"timestamp\": \"2025-01-16T12:30:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/tokens/:tokenId/collect",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "tokens", ":tokenId", "collect"],
+							"variable": [
+								{
+									"key": "tokenId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Mark a token as collected when user is within proximity.\n\n**Status:** 🚧 Planned\n\n**Proximity:** User must be within 50 meters"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Adventure Progress",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tokensEarned\": 3,\n  \"progress\": 60,\n  \"completed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/adventures/{{adventure_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "adventures", "{{adventure_id}}"]
+						},
+						"description": "Update user's progress in an adventure.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				},
+				{
+					"name": "Complete Adventure",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/adventures/{{adventure_id}}/complete",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users", "{{user_id}}", "adventures", "{{adventure_id}}", "complete"]
+						},
+						"description": "Mark an adventure as completed.\n\n**Status:** 🚧 Planned"
+					},
+					"response": []
+				}
+			],
+			"description": "Active gameplay and progress tracking"
+		}
+	]
+}
