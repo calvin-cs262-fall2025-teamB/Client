@@ -1,21 +1,22 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useReducer,
   useState,
-  useEffect,
 } from "react";
 import { MOCK_ADVENTURES } from "../components/home/MockData";
 
 const HomeContext = createContext();
 
 const initialState = {
-  adventures: null,
+  data: null,
+  user: null,
+  email: null,
   isAuthenticated: false,
 };
 
 function reducer(state, action) {
-  console.log(action.payload);
   switch (action.type) {
     case "set/data":
       return {
@@ -31,7 +32,7 @@ function reducer(state, action) {
         isAuthenticated: false,
       };
     default:
-      throw Error("Unkown Action.");
+      throw Error("Unknown Action.");
   }
 }
 
@@ -80,11 +81,13 @@ function HomeProvider({ children }) {
   return (
     <HomeContext.Provider
       value={{
+        data: state.data,
         user,
         email,
         isAuthenticated,
         isLoading,
         setIsLoading,
+        dispatch,
       }}
     >
       {children}
@@ -96,7 +99,7 @@ function useHome() {
   const context = useContext(HomeContext);
 
   if (context === undefined)
-    throw new Error("Context was used outside the AuthProvider");
+    throw new Error("Context was used outside the HomeProvider");
   return context;
 }
 

@@ -1,21 +1,25 @@
 import themes from "@/assets/utils/themes";
+import AdventureCard from "@/components/home/AdventureCard";
 import DifficultyBadge from "@/components/home/DifficultyBadge";
-import FilterChip from "@/components/home/FilterChip";
-import MapPlaceholder from "@/components/home/MapPlaceholder";
+import FiltersRow from "@/components/home/FiltersRow";
+import HomeHeader from "@/components/home/HomeHeader";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuth } from "@/contexts/AuthContext";
+import { useHome } from "@/contexts/HomeContext";
+
+// ============================================================================
 // Type definitions
+// ============================================================================
 interface Adventure {
   id: string;
   title: string;
@@ -32,98 +36,6 @@ interface Adventure {
   estimatedTime: string;
   status: string;
 }
-
-// ============================================================================
-// MOCK DATA - Fallback for if Azure Web Service fetch fails
-// ============================================================================
-const MOCK_ADVENTURES: Adventure[] = [
-  {
-    id: "1",
-    title: "Campus History Tour",
-    summary:
-      "Discover the rich history of Calvin University through iconic landmarks",
-    description:
-      "Explore historic buildings, memorable locations, and hidden gems that tell the story of our campus. Learn about the university's founding and significant events.",
-    image_url: null,
-    region: {
-      id: "1",
-      name: "North Campus",
-      center: { lat: 42.9301, lng: -85.5883 },
-    },
-    tokenCount: 5,
-    difficulty: "Easy",
-    estimatedTime: "30 min",
-    status: "published",
-  },
-  {
-    id: "2",
-    title: "Hidden Art Walk",
-    summary: "Find secret art installations scattered across campus",
-    description:
-      "Discover beautiful murals, sculptures, and installations that many students walk past every day. Each piece has a story about the artists and their inspiration.",
-    image_url: null,
-    region: {
-      id: "2",
-      name: "South Campus",
-      center: { lat: 42.929, lng: -85.587 },
-    },
-    tokenCount: 8,
-    difficulty: "Medium",
-    estimatedTime: "60 min",
-    status: "published",
-  },
-  {
-    id: "3",
-    title: "Science Building Quest",
-    summary: "Explore the wonders of our science facilities",
-    description:
-      "Visit laboratories, planetariums, and experimental spaces while learning about groundbreaking discoveries made right here at Calvin. Perfect for curious minds.",
-    image_url: null,
-    region: {
-      id: "1",
-      name: "North Campus",
-      center: { lat: 42.9301, lng: -85.5883 },
-    },
-    tokenCount: 6,
-    difficulty: "Medium",
-    estimatedTime: "45 min",
-    status: "published",
-  },
-  {
-    id: "4",
-    title: "Athletic Heritage Trail",
-    summary: "Journey through Calvin's sports history and achievements",
-    description:
-      "Visit iconic sports venues and learn about legendary athletes who made their mark. Experience the pride and tradition of Calvin athletics.",
-    image_url: null,
-    region: {
-      id: "3",
-      name: "Athletic Complex",
-      center: { lat: 42.9315, lng: -85.5895 },
-    },
-    tokenCount: 4,
-    difficulty: "Easy",
-    estimatedTime: "25 min",
-    status: "published",
-  },
-  {
-    id: "5",
-    title: "Ecosystem Discovery",
-    summary: "Explore Calvin's natural habitats and biodiversity",
-    description:
-      "A challenging adventure through various ecosystems on campus. Learn about local flora and fauna while collecting tokens at ecological points of interest.",
-    image_url: null,
-    region: {
-      id: "4",
-      name: "Ecosystem Preserve",
-      center: { lat: 42.9285, lng: -85.5870 },
-    },
-    tokenCount: 10,
-    difficulty: "Hard",
-    estimatedTime: "90 min",
-    status: "published",
-  },
-];
 
 export default function HomePage() {
   const router = useRouter();
@@ -143,31 +55,19 @@ export default function HomePage() {
   // API state
   const [adventures, setAdventures] = useState<Adventure[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Fetch adventures from Azure API
-  const fetchAdventures = async () => {
+  //Context states -- this might be problem
+
+  //Prevent loading from API everytime. Just gets data
+  const { data } = useHome();
+
+  // Transform data when it becomes available
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch(
-        'https://cs262lab09-bqekb7ezfnhxctc7.canadacentral-01.azurewebsites.net/adventures',
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Transform API response to match Adventure interface
       const transformedAdventures: Adventure[] = data.map((item: any) => ({
         id: item.id.toString(),
         title: item.name, // API uses 'name' field
@@ -175,7 +75,7 @@ export default function HomePage() {
         description: item.name, // Use name as description fallback
         image_url: null, // No image_url in current API response
         region: {
-          id: item.regionid?.toString() || '1',
+          id: item.regionid?.toString() || "1",
           name: `Region ${item.regionid}`, // Create region name from ID
           center: {
             lat: item.location?.x || 42.9301, // Use location.x as latitude
@@ -183,37 +83,21 @@ export default function HomePage() {
           },
         },
         tokenCount: item.numtokens || 0,
-        difficulty: 'Medium', // Default since not in API response
-        estimatedTime: '30 min', // Default since not in API response
-        status: 'published', // Default since not in API response
+        difficulty: "Medium", // Default since not in API response
+        estimatedTime: "30 min", // Default since not in API response
+        status: "published", // Default since not in API response
       }));
 
       setAdventures(transformedAdventures);
+      setIsLoading(false);
     } catch (err) {
-      console.error('Error fetching adventures:', err);
-      setError('Failed to load adventures');
-      
-      // Fallback to mock data in development
-      if (__DEV__) {
-        console.log('API failed, falling back to mock data...');
-        setAdventures(MOCK_ADVENTURES);
-      } else {
-        Alert.alert('Error', 'Failed to load adventures. Please try again.');
-      }
-    } finally {
+      console.error("Error transforming adventures:", err);
       setIsLoading(false);
     }
-  };
-
-  // Load adventures on component mount
-  useEffect(() => {
-    fetchAdventures();
-  }, []);
+  }, [data]);
 
   // Get unique regions for filter
-  const regions = Array.from(
-    new Set(adventures.map((adv) => adv.region.name))
-  );
+  const regions = Array.from(new Set(adventures.map((adv) => adv.region.name)));
 
   // Apply filters
   const filteredAdventures = adventures.filter((adv) => {
@@ -233,10 +117,11 @@ export default function HomePage() {
         parseInt(adv.estimatedTime) <= 60) ||
       (selectedDuration === "long" && parseInt(adv.estimatedTime) > 60);
 
-    const matchesRegion =
-      !selectedRegion || adv.region.name === selectedRegion;
+    const matchesRegion = !selectedRegion || adv.region.name === selectedRegion;
 
-    return matchesSearch && matchesDifficulty && matchesDuration && matchesRegion;
+    return (
+      matchesSearch && matchesDifficulty && matchesDuration && matchesRegion
+    );
   });
 
   const handleAdventurePress = (adventure: Adventure) => {
@@ -256,132 +141,29 @@ export default function HomePage() {
     setSelectedRegion(null);
   };
 
-  const hasActiveFilters =
-    selectedDifficulty || selectedDuration || selectedRegion;
+  const hasActiveFilters = !!(
+    selectedDifficulty ||
+    selectedDuration ||
+    selectedRegion
+  );
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.appTitle}>WayFind</Text>
-        <Text style={styles.subtitle}>Discover campus adventures</Text>
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <FontAwesome6
-            name="magnifying-glass"
-            size={18}
-            color="#9CA3AF"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search adventures..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <FontAwesome6 name="xmark" size={16} color="#9CA3AF" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      <HomeHeader searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
       {/* Filter Chips */}
-      <View style={styles.filtersSection}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersContainer}
-        >
-          {/* Difficulty Filters */}
-          <FilterChip
-            label="Easy"
-            selected={selectedDifficulty === "easy"}
-            onPress={() =>
-              setSelectedDifficulty(
-                selectedDifficulty === "easy" ? null : "easy"
-              )
-            }
-          />
-          <FilterChip
-            label="Medium"
-            selected={selectedDifficulty === "medium"}
-            onPress={() =>
-              setSelectedDifficulty(
-                selectedDifficulty === "medium" ? null : "medium"
-              )
-            }
-          />
-          <FilterChip
-            label="Hard"
-            selected={selectedDifficulty === "hard"}
-            onPress={() =>
-              setSelectedDifficulty(
-                selectedDifficulty === "hard" ? null : "hard"
-              )
-            }
-          />
-
-          {/* Duration Filters */}
-          <View style={styles.filterDivider} />
-          <FilterChip
-            label="< 30 min"
-            selected={selectedDuration === "quick"}
-            onPress={() =>
-              setSelectedDuration(
-                selectedDuration === "quick" ? null : "quick"
-              )
-            }
-          />
-          <FilterChip
-            label="30-60 min"
-            selected={selectedDuration === "medium"}
-            onPress={() =>
-              setSelectedDuration(
-                selectedDuration === "medium" ? null : "medium"
-              )
-            }
-          />
-          <FilterChip
-            label="> 60 min"
-            selected={selectedDuration === "long"}
-            onPress={() =>
-              setSelectedDuration(selectedDuration === "long" ? null : "long")
-            }
-          />
-
-          {/* Region Filters */}
-          {regions.length > 1 && (
-            <>
-              <View style={styles.filterDivider} />
-              {regions.map((region) => (
-                <FilterChip
-                  key={region}
-                  label={region}
-                  selected={selectedRegion === region}
-                  onPress={() =>
-                    setSelectedRegion(selectedRegion === region ? null : region)
-                  }
-                />
-              ))}
-            </>
-          )}
-        </ScrollView>
-
-        {/* Clear Filters Button */}
-        {hasActiveFilters && (
-          <TouchableOpacity
-            style={styles.clearFiltersButton}
-            onPress={clearFilters}
-          >
-            <FontAwesome6 name="xmark" size={12} color={themes.primaryColor} />
-            <Text style={styles.clearFiltersText}>Clear</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <FiltersRow
+        selectedDifficulty={selectedDifficulty}
+        setSelectedDifficulty={setSelectedDifficulty}
+        selectedDuration={selectedDuration}
+        setSelectedDuration={setSelectedDuration}
+        regions={regions}
+        selectedRegion={selectedRegion}
+        setSelectedRegion={setSelectedRegion}
+        clearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       {/* Adventure Cards */}
       <ScrollView
@@ -393,18 +175,6 @@ export default function HomePage() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.loadingText}>Loading adventures...</Text>
-          </View>
-        ) : error ? (
-          // Error state
-          <View style={styles.errorContainer}>
-            <FontAwesome6 name="triangle-exclamation" size={48} color="#FF3B30" />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={fetchAdventures}
-            >
-              <Text style={styles.retryButtonText}>Try Again</Text>
-            </TouchableOpacity>
           </View>
         ) : filteredAdventures.length === 0 ? (
           <View style={styles.emptyState}>
@@ -432,53 +202,11 @@ export default function HomePage() {
           </View>
         ) : (
           filteredAdventures.map((adventure) => (
-            <TouchableOpacity
+            <AdventureCard
               key={adventure.id}
-              style={styles.card}
+              adventure={adventure}
               onPress={() => handleAdventurePress(adventure)}
-              activeOpacity={0.8}
-            >
-              <MapPlaceholder
-                regionName={adventure.region.name}
-                height={160}
-              />
-              <View style={styles.cardContent}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {adventure.title}
-                  </Text>
-                  <DifficultyBadge
-                    difficulty={adventure.difficulty}
-                    size="small"
-                  />
-                </View>
-                <Text style={styles.cardSummary} numberOfLines={2}>
-                  {adventure.summary}
-                </Text>
-                <View style={styles.cardFooter}>
-                  <View style={styles.badge}>
-                    <FontAwesome6
-                      name="location-dot"
-                      size={12}
-                      color="#6B7280"
-                    />
-                    <Text style={styles.badgeText}>{adventure.region.name}</Text>
-                  </View>
-                  <View style={styles.badge}>
-                    <FontAwesome6 name="clock" size={12} color="#6B7280" />
-                    <Text style={styles.badgeText}>
-                      {adventure.estimatedTime}
-                    </Text>
-                  </View>
-                  <View style={styles.badge}>
-                    <FontAwesome6 name="coins" size={12} color="#FFD700" />
-                    <Text style={styles.badgeText}>
-                      {adventure.tokenCount}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
+            />
           ))
         )}
       </ScrollView>
@@ -509,7 +237,11 @@ export default function HomePage() {
             {/* Key Info Bar */}
             <View style={styles.modalInfoBar}>
               <View style={styles.modalInfoItem}>
-                <FontAwesome6 name="clock" size={16} color={themes.primaryColor} />
+                <FontAwesome6
+                  name="clock"
+                  size={16}
+                  color={themes.primaryColor}
+                />
                 <Text style={styles.modalInfoText}>
                   {selectedAdventure.estimatedTime}
                 </Text>
@@ -536,7 +268,9 @@ export default function HomePage() {
 
             {/* Description */}
             <View style={styles.modalDescriptionSection}>
-              <Text style={styles.modalSectionTitle}>What you'll discover</Text>
+              <Text style={styles.modalSectionTitle}>
+                What you will discover
+              </Text>
               <Text style={styles.modalDescription}>
                 {selectedAdventure.description || selectedAdventure.summary}
               </Text>
@@ -571,139 +305,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F9FAFB",
   },
-  header: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  appTitle: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: themes.primaryColor,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 16,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    height: 48,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#1F2937",
-  },
-  filtersSection: {
-    backgroundColor: "#fff",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  filtersContainer: {
-    paddingHorizontal: 20,
-    alignItems: "center",
-  },
-  filterDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: "#E5E7EB",
-    marginHorizontal: 8,
-  },
-  clearFiltersButton: {
-    position: "absolute",
-    right: 20,
-    top: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: themes.primaryColorLight,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    gap: 4,
-  },
-  clearFiltersText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: themes.primaryColor,
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
   },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 4,
-  },
   skeleton: {
     height: 280,
     backgroundColor: "#E5E7EB",
-  },
-  cardContent: {
-    padding: 16,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-    gap: 12,
-  },
-  cardTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1F2937",
-  },
-  cardSummary: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-  },
-  badgeText: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "500",
   },
   emptyState: {
     paddingTop: 80,
