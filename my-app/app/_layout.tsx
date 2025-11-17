@@ -1,10 +1,14 @@
 import { AuthProvider } from "@/contexts/AuthContext";
-import { Stack } from "expo-router";
+import { Slot } from "expo-router";
+import { HomeProvider } from "../contexts/HomeContext";
 
+// TODO: what is Slot
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }} />
+      <HomeProvider>
+        <Slot />
+      </HomeProvider>
     </AuthProvider>
   );
 }
