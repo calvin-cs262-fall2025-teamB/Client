@@ -1,13 +1,13 @@
 import { AuthProvider } from "@/contexts/AuthContext";
-import { HomeProvider } from "@/contexts/HomeContext";
+import { DatabaseProvider } from "@/contexts/DatabaseContext";
 import { Stack } from "expo-router";
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <HomeProvider>
+      <DatabaseProvider>
         <Stack screenOptions={{ headerShown: false }} />
-      </HomeProvider>
+      </DatabaseProvider>
     </AuthProvider>
   );
 }

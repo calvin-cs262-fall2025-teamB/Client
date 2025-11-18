@@ -2,28 +2,20 @@ import themes from "@/assets/utils/themes";
 import DifficultyBadge from "@/components/home/DifficultyBadge";
 import FilterChip from "@/components/home/FilterChip";
 import MapPlaceholder from "@/components/home/MapPlaceholder";
+import { Adventure as DbAdventure, FrontendAdventure } from "@/types";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { useHome } from "@/contexts/HomeContext";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-// Type definitions
-interface Adventure {
-  id: string;
-  title: string;
-  summary: string;
-  description?: string;
-  image_url: string | null;
-  region: {
-    id: string;
-    name: string;
-    center: { lat: number; lng: number };
-  };
-  tokenCount: number;
-  difficulty: string;
-  estimatedTime: string;
-  status: string;
-}
+import { useDatabase } from "../../contexts/DatabaseContext";
+
+// Use FrontendAdventure as the main Adventure type for UI components
+type Adventure = FrontendAdventure;
+
+// Filter type definitions
+type DifficultyFilter = 'Easy' | 'Medium' | 'Hard' | null;
+type DurationFilter = 'quick' | 'medium' | 'long' | null;
+type RegionFilter = string | null;
 
 // ============================================================================
 // MOCK DATA - Fallback for if Azure Web Service fetch fails
@@ -125,34 +117,53 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Filter states
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(
-    null
-  );
-  const [selectedDuration, setSelectedDuration] = useState<string | null>(null);
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  // Filter states with proper typing
+  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyFilter>(null);
+  const [selectedDuration, setSelectedDuration] = useState<DurationFilter>(null);
+  const [selectedRegion, setSelectedRegion] = useState<RegionFilter>(null);
 
-  // API state from context
-  const { adventures = [], isLoading, error, fetchAdventures } = useHome() as {
-    adventures: Adventure[];
-    isLoading: boolean;
-    error: string | null;
-    fetchAdventures: () => void;
-  };
-
-  // Ensure adventures are loaded on mount (context will fetch, but call if empty)
-  useEffect(() => {
-    if (!adventures || adventures.length === 0) fetchAdventures();
-  }, [adventures, fetchAdventures]);
+  // API state from DatabaseContext
+  const { 
+    adventures, 
+    loading, 
+    errors, 
+    fetchAdventures 
+  } = useDatabase();
 
   // Load adventures on component mount
-  // (fetch handled by context)
+  useEffect(() => {
+    fetchAdventures();
+  }, [fetchAdventures]);
+
+  // Transform database adventures to match the FrontendAdventure interface
+  const transformedAdventures: Adventure[] = adventures.map((item: DbAdventure) => ({
+    id: item.id?.toString() || '',
+    title: item.name || 'Unnamed Adventure',
+    summary: item.name || 'No description available',
+    description: item.name || 'No description available',
+    image_url: null,
+    region: {
+      id: item.regionId?.toString() || '1',
+      name: `Region ${item.regionId || 1}`,
+      center: {
+        lat: item.location?.x || 42.9301,
+        lng: item.location?.y || -85.5883,
+      },
+    },
+    tokenCount: item.numTokens || 0,
+    difficulty: 'Medium' as const,
+    estimatedTime: '30 min',
+    status: 'published' as const,
+  }));
+
+  // Use transformed adventures or fallback to mock data if empty
+  const displayAdventures = transformedAdventures.length > 0 ? transformedAdventures : (errors.adventures && __DEV__ ? MOCK_ADVENTURES : []);
 
   // Get unique regions for filter
-  const regions = Array.from(new Set(adventures.map((adv: Adventure) => adv.region.name)));
+  const regions: string[] = Array.from(new Set(displayAdventures.map((adv: Adventure) => adv.region.name)));
 
   // Apply filters
-  const filteredAdventures = adventures.filter((adv: Adventure) => {
+  const filteredAdventures = displayAdventures.filter((adv: Adventure) => {
     const matchesSearch =
       adv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       adv.summary.toLowerCase().includes(searchQuery.toLowerCase());
@@ -234,28 +245,28 @@ export default function HomePage() {
           {/* Difficulty Filters */}
           <FilterChip
             label="Easy"
-            selected={selectedDifficulty === "easy"}
+            selected={selectedDifficulty === "Easy"}
             onPress={() =>
               setSelectedDifficulty(
-                selectedDifficulty === "easy" ? null : "easy"
+                selectedDifficulty === "Easy" ? null : "Easy"
               )
             }
           />
           <FilterChip
             label="Medium"
-            selected={selectedDifficulty === "medium"}
+            selected={selectedDifficulty === "Medium"}
             onPress={() =>
               setSelectedDifficulty(
-                selectedDifficulty === "medium" ? null : "medium"
+                selectedDifficulty === "Medium" ? null : "Medium"
               )
             }
           />
           <FilterChip
             label="Hard"
-            selected={selectedDifficulty === "hard"}
+            selected={selectedDifficulty === "Hard"}
             onPress={() =>
               setSelectedDifficulty(
-                selectedDifficulty === "hard" ? null : "hard"
+                selectedDifficulty === "Hard" ? null : "Hard"
               )
             }
           />
@@ -323,17 +334,17 @@ export default function HomePage() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-        {isLoading ? (
+        {loading.adventures ? (
           // Loading state
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.loadingText}>Loading adventures...</Text>
           </View>
-        ) : error ? (
+        ) : errors.adventures && displayAdventures.length === 0 ? (
           // Error state
           <View style={styles.errorContainer}>
             <FontAwesome6 name="triangle-exclamation" size={48} color="#FF3B30" />
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{errors.adventures}</Text>
             <TouchableOpacity
               style={styles.retryButton}
               onPress={fetchAdventures}
@@ -366,7 +377,7 @@ export default function HomePage() {
             )}
           </View>
         ) : (
-          filteredAdventures.map((adventure) => (
+          filteredAdventures.map((adventure: Adventure) => (
             <TouchableOpacity
               key={adventure.id}
               style={styles.card}
