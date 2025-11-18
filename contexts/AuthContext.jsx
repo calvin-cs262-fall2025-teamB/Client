@@ -1,4 +1,8 @@
+"use client";
 import { createContext, useContext, useReducer, useState } from "react";
+import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const AuthContext = createContext();
 
@@ -50,6 +54,7 @@ function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { user, email, isAuthenticated } = state;
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   function signup(fullName, email, password) {
     // ============================================================================
@@ -148,8 +153,27 @@ function AuthProvider({ children }) {
     dispatch({ type: "edit/email", payload: newEmail });
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      // remove any stored auth tokens if present
+      await SecureStore.deleteItemAsync("authToken");
+    } catch (e) {
+      // ignore
+    }
+    try {
+      await AsyncStorage.removeItem("authToken");
+    } catch (e) {
+      // ignore
+    }
+
     dispatch({ type: "logout" });
+
+    // navigate to login/sign-in route
+    try {
+      router.replace("/login");
+    } catch (e) {
+      // ignore navigation errors
+    }
   }
   return (
     <AuthContext.Provider
