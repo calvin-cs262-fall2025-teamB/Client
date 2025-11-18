@@ -11,10 +11,13 @@ import {
   View,
 } from "react-native";
 
+import { useHome } from "../../contexts/HomeContext";
+//TODO: name the databaase properly, Jacob
+
 // Define adventure type
 interface Adventure {
   id: string | number;
-  title: string;
+  name: string;
   description: string;
   image: string;
   difficulty: string;
@@ -26,10 +29,11 @@ interface Adventure {
 
 export default function AdventurePageTemplate() {
   const router = useRouter();
+  const { data } = useHome();
   const { adventureId } = useLocalSearchParams();
 
   // State for adventure data
-  const [adventure, setAdventure] = useState<Adventure | null>(null);
+  const [adventure, setAdventure] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,69 +77,12 @@ export default function AdventurePageTemplate() {
       // ============================================================================
 
       // MOCK DATA - matching the adventures from home.tsx
-      const MOCK_ADVENTURES = [
-        {
-          id: "1",
-          title: "Campus History Tour",
-          description:
-            "Discover the rich history of Calvin University through iconic landmarks. This guided tour will take you through historic buildings, memorable locations, and hidden gems that tell the story of our campus. Learn about the university's founding, significant events, and the people who shaped this institution.",
-          difficulty: "Easy",
-          estimatedTime: "30 min",
-          rewards: "5 tokens",
-          isCompleted: false,
-          isUnlocked: true,
-        },
-        {
-          id: "2",
-          title: "Hidden Art Walk",
-          description:
-            "Find secret art installations scattered across campus. This artistic adventure will guide you to discover beautiful murals, sculptures, and installations that many students walk past every day. Each piece has a story - learn about the artists, the inspiration, and the meaning behind these creative works.",
-          difficulty: "Medium",
-          estimatedTime: "60 min",
-          rewards: "8 tokens",
-          isCompleted: false,
-          isUnlocked: true,
-        },
-        {
-          id: "3",
-          title: "Science Building Quest",
-          description:
-            "Explore the wonders of our science facilities and discover the cutting-edge research happening on campus. Visit laboratories, planetariums, and experimental spaces while learning about groundbreaking discoveries made right here at Calvin. Perfect for curious minds who want to see science in action.",
-          difficulty: "Medium",
-          estimatedTime: "45 min",
-          rewards: "6 tokens",
-          isCompleted: false,
-          isUnlocked: true,
-        },
-        {
-          id: "4",
-          title: "Athletic Heritage Trail",
-          description:
-            "Journey through Calvin's sports history and achievements. Visit iconic sports venues and learn about legendary athletes who made their mark. Experience the pride and tradition of Calvin athletics.",
-          difficulty: "Easy",
-          estimatedTime: "25 min",
-          rewards: "4 tokens",
-          isCompleted: false,
-          isUnlocked: true,
-        },
-        {
-          id: "5",
-          title: "Ecosystem Discovery",
-          description:
-            "A challenging adventure through various ecosystems on campus. Learn about local flora and fauna while collecting tokens at ecological points of interest. Perfect for nature enthusiasts and biology students.",
-          difficulty: "Hard",
-          estimatedTime: "90 min",
-          rewards: "10 tokens",
-          isCompleted: false,
-          isUnlocked: true,
-        },
-      ];
 
-      const currentId = Array.isArray(adventureId)
-        ? adventureId[0]
-        : adventureId || "1";
-      const foundAdventure = MOCK_ADVENTURES.find(
-        (adv) => adv.id === currentId
+      // const currentId = Array.isArray(adventureId)
+      //   ? adventureId[0]
+      //   : adventureId || "1";
+      const foundAdventure = data.find(
+        (adv) => adv.adventurerid === Number(adventureId)
       );
 
       if (!foundAdventure) {
@@ -144,17 +91,16 @@ export default function AdventurePageTemplate() {
         return;
       }
 
-      const mockAdventure: Adventure = {
+      const mockAdventure = {
         ...foundAdventure,
         image:
           "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
       };
 
       // Simulate network delay
-      setTimeout(() => {
-        setAdventure(mockAdventure);
-        setLoading(false);
-      }, 500);
+
+      setAdventure(mockAdventure);
+      setLoading(false);
     } catch (err) {
       console.error("Error fetching adventure:", err);
       setError("Failed to load adventure data");
@@ -168,12 +114,7 @@ export default function AdventurePageTemplate() {
   }, [adventureId]);
 
   const handlePlayPress = () => {
-    if (!adventure?.isUnlocked) {
-      console.log("Adventure is locked");
-      return;
-    }
-
-    console.log(`Starting adventure: ${adventure.title}`);
+    console.log(`Starting adventure: ${adventure?.name}`);
     // TODO: Navigate to adventure gameplay
     // router.push(`/adventure/${adventure.id}/play`);
   };
@@ -213,13 +154,11 @@ export default function AdventurePageTemplate() {
       <View style={styles.contentContainer}>
         {/* Title Section */}
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>{adventure.title}</Text>
+          <Text style={styles.title}>{adventure.name}</Text>
           <View style={styles.metaInfo}>
-            <Text style={styles.metaText}>
-              Difficulty: {adventure.difficulty}
-            </Text>
-            <Text style={styles.metaText}>Time: {adventure.estimatedTime}</Text>
-            <Text style={styles.metaText}>Rewards: {adventure.rewards}</Text>
+            <Text style={styles.metaText}>Difficulty: Easy</Text>
+            <Text style={styles.metaText}>Time: 60s</Text>
+            <Text style={styles.metaText}>Rewards: None</Text>
           </View>
         </View>
 
@@ -230,40 +169,23 @@ export default function AdventurePageTemplate() {
             style={styles.adventureImage}
             resizeMode="cover"
           />
-          {adventure.isCompleted && (
-            <View style={styles.completedBadge}>
-              <Text style={styles.completedBadgeText}>✓ Completed</Text>
-            </View>
-          )}
         </View>
 
         {/* Description Section */}
         <View style={styles.descriptionContainer}>
           <Text style={styles.descriptionTitle}>About this Adventure</Text>
-          <Text style={styles.description}>{adventure.description}</Text>
         </View>
 
         {/* Play Button Section */}
         <View style={styles.playButtonContainer}>
           <TouchableOpacity
-            style={[
-              styles.playButton,
-              !adventure.isUnlocked && styles.playButtonDisabled,
-            ]}
+            style={[styles.playButton, styles.playButtonDisabled]}
             onPress={handlePlayPress}
-            disabled={!adventure.isUnlocked}
           >
             <Text
-              style={[
-                styles.playButtonText,
-                !adventure.isUnlocked && styles.playButtonTextDisabled,
-              ]}
+              style={[styles.playButtonText, styles.playButtonTextDisabled]}
             >
-              {adventure.isCompleted
-                ? "Play Again"
-                : adventure.isUnlocked
-                ? "Start Adventure"
-                : "Locked"}
+              Start Adventure
             </Text>
           </TouchableOpacity>
         </View>
