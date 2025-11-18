@@ -1,4 +1,5 @@
 import BackButton from "@/components/reusable/BackButton";
+import { Adventure as DbAdventure } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -10,121 +11,89 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-import { useHome } from "../../contexts/HomeContext";
-//TODO: name the databaase properly, Jacob
-
-// Define adventure type
-interface Adventure {
-  id: string | number;
-  name: string;
-  description: string;
-  image: string;
-  difficulty: string;
-  estimatedTime: string;
-  rewards: string;
-  isCompleted: boolean;
-  isUnlocked: boolean;
-}
+import { useAuth } from "../../contexts/AuthContext";
+import { useDatabase } from "../../contexts/DatabaseContext";
 
 export default function AdventurePageTemplate() {
   const router = useRouter();
-  const { data } = useHome();
   const { adventureId } = useLocalSearchParams();
 
-  // State for adventure data
-  const [adventure, setAdventure] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use DatabaseContext
+  const { adventures, tokens, loading, errors, fetchAdventures, fetchTokens } = useDatabase();
+  const { user } = useAuth();
+  
+  // State for current adventure
+  const [adventure, setAdventure] = useState<DbAdventure | null>(null);
+  const [adventureTokens, setAdventureTokens] = useState<any[]>([]);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  // ============================================================================
-  // Fetch adventure data from database
-  // ============================================================================
-  const fetchAdventureData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // ============================================================================
-      // TODO: Replace with actual Azure API call to PostgreSQL backend
-      // ============================================================================
-      // Expected API endpoint: GET https://your-app.azurewebsites.net/api/adventures/{adventureId}
-      // Expected PostgreSQL query:
-      // SELECT
-      //   a.id,
-      //   a.title,
-      //   a.description,
-      //   a.image_url,
-      //   a.difficulty,
-      //   a.estimated_time,
-      //   COUNT(t.id) as token_count,
-      //   COALESCE(ua.completed, false) as is_completed,
-      //   COALESCE(ua.unlocked, true) as is_unlocked
-      // FROM adventures a
-      // LEFT JOIN tokens t ON t.adventure_id = a.id
-      // LEFT JOIN user_adventures ua ON ua.adventure_id = a.id AND ua.user_id = $1
-      // WHERE a.id = $2
-      // GROUP BY a.id, ua.completed, ua.unlocked;
-      //
-      // Implementation example:
-      // const response = await fetch(
-      //   `https://your-app.azurewebsites.net/api/adventures/${adventureId}`,
-      //   { headers: { 'Authorization': `Bearer ${authToken}` } }
-      // );
-      // const data = await response.json();
-      // setAdventure(data);
-      // setLoading(false);
-      // ============================================================================
-
-      // MOCK DATA - matching the adventures from home.tsx
-
-      // const currentId = Array.isArray(adventureId)
-      //   ? adventureId[0]
-      //   : adventureId || "1";
-      const foundAdventure = data.find(
-        (adv) => adv.adventurerid === Number(adventureId)
-      );
-
-      if (!foundAdventure) {
-        setError("Adventure not found");
-        setLoading(false);
-        return;
-      }
-
-      const mockAdventure = {
-        ...foundAdventure,
-        image:
-          "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
-      };
-
-      // Simulate network delay
-
-      setAdventure(mockAdventure);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching adventure:", err);
-      setError("Failed to load adventure data");
-      setLoading(false);
-    }
+  // Transform database adventure to display format
+  const transformAdventureForDisplay = (dbAdventure: DbAdventure) => {
+    return {
+      id: dbAdventure.id,
+      name: dbAdventure.name || 'Unnamed Adventure',
+      description: dbAdventure.name || 'No description available',
+      image: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
+      difficulty: 'Medium',
+      estimatedTime: '30 min',
+      rewards: `${dbAdventure.numTokens || 0} tokens`,
+      isCompleted: false, // TODO: Check against CompletedAdventure table using user.id
+      isUnlocked: true, // TODO: Check unlock requirements
+    };
   };
 
-  // Load adventure data on component mount
+  // Load adventure data from DatabaseContext
   useEffect(() => {
-    fetchAdventureData();
-  }, [adventureId]);
+    if (adventures.length === 0) {
+      fetchAdventures();
+    }
+  }, [adventures.length, fetchAdventures]);
+
+  // Find current adventure when data is loaded
+  useEffect(() => {
+    if (adventures.length > 0 && adventureId) {
+      const currentId = Array.isArray(adventureId) ? adventureId[0] : adventureId;
+      const foundAdventure = adventures.find(
+        (adv: DbAdventure) => adv.id.toString() === currentId.toString()
+      );
+      
+      if (foundAdventure) {
+        setAdventure(foundAdventure);
+        // Fetch tokens for this adventure
+        fetchTokens(foundAdventure.id);
+      } else {
+        setLocalError('Adventure not found');
+      }
+    }
+  }, [adventures, adventureId, fetchTokens]);
+
+  // Update adventure tokens when tokens are loaded
+  useEffect(() => {
+    if (adventure && tokens.length > 0) {
+      const adventureSpecificTokens = tokens.filter(
+        (token: any) => token.adventureId === adventure.id
+      );
+      setAdventureTokens(adventureSpecificTokens);
+    }
+  }, [tokens, adventure]);
 
   const handlePlayPress = () => {
-    console.log(`Starting adventure: ${adventure?.name}`);
-    // TODO: Navigate to adventure gameplay
-    // router.push(`/adventure/${adventure.id}/play`);
+    if (displayAdventure) {
+      console.log(`Starting adventure: ${displayAdventure.name}`);
+      // TODO: Navigate to adventure gameplay
+      // router.push(`/adventure/${displayAdventure.id}/play`);
+    }
   };
 
   const handleBackPress = () => {
     router.replace("/home");
   };
 
+  // Transform current adventure for display
+  const displayAdventure = adventure ? transformAdventureForDisplay(adventure) : null;
+
   // Loading state
-  if (loading) {
+  if (loading.adventures || loading.tokens || !displayAdventure) {
     return (
       <View style={styles.loadingContainer}>
         <View style={styles.loadingTopRow}>
@@ -137,10 +106,10 @@ export default function AdventurePageTemplate() {
   }
 
   // Error state
-  if (error || !adventure) {
+  if (errors.adventures || localError || !displayAdventure) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error || "Adventure not found"}</Text>
+        <Text style={styles.errorText}>{localError || errors.adventures || "Adventure not found"}</Text>
         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -154,18 +123,19 @@ export default function AdventurePageTemplate() {
       <View style={styles.contentContainer}>
         {/* Title Section */}
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>{adventure.name}</Text>
+          <Text style={styles.title}>{displayAdventure.name}</Text>
           <View style={styles.metaInfo}>
-            <Text style={styles.metaText}>Difficulty: Easy</Text>
-            <Text style={styles.metaText}>Time: 60s</Text>
-            <Text style={styles.metaText}>Rewards: None</Text>
+            <Text style={styles.metaText}>Difficulty: {displayAdventure.difficulty}</Text>
+            <Text style={styles.metaText}>Time: {displayAdventure.estimatedTime}</Text>
+            <Text style={styles.metaText}>Rewards: {displayAdventure.rewards}</Text>
+            <Text style={styles.metaText}>Tokens: {adventureTokens.length} available</Text>
           </View>
         </View>
 
         {/* Image Section */}
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: adventure.image }}
+            source={{ uri: displayAdventure.image }}
             style={styles.adventureImage}
             resizeMode="cover"
           />
@@ -174,6 +144,7 @@ export default function AdventurePageTemplate() {
         {/* Description Section */}
         <View style={styles.descriptionContainer}>
           <Text style={styles.descriptionTitle}>About this Adventure</Text>
+          <Text style={styles.description}>{displayAdventure.description}</Text>
         </View>
 
         {/* Play Button Section */}
