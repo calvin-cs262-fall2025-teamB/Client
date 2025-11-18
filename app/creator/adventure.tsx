@@ -3,7 +3,7 @@ import Button from "@/components/home/Button";
 import BackButton from "@/components/reusable/BackButton";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Alert,
   Pressable,
@@ -13,20 +13,53 @@ import {
   View,
 } from "react-native";
 
-const REGIONS = [
-  { id: "calvin", label: "Calvin University Campus" },
-  { id: "hope", label: "Hope College Campus" },
-];
+// Backend API base used elsewhere in the project (kept in sync with DatabaseContext)
+const API_BASE_URL =
+  "https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net/";
 
 export default function CreateAdventureScreen() {
   const router = useRouter();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [regions, setRegions] = useState<Array<{ id: string | number; label: string }>>([]);
+  const [loadingRegions, setLoadingRegions] = useState<boolean>(false);
+  const [regionsError, setRegionsError] = useState<string | null>(null);
 
   const handleSelect = (id: string) => {
     setSelectedRegion(id);
     setIsOpen(false);
   };
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchRegions = async () => {
+      setLoadingRegions(true);
+      setRegionsError(null);
+      try {
+        const res = await fetch(`${API_BASE_URL}regions`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // Map backend region objects to {id, label}
+        const mapped = (data || []).map((r: any) => ({
+          id: r.id ?? r.regionid ?? r.regionId ?? r.ID,
+          label: r.name ?? r.label ?? `Region ${r.id ?? r.regionid ?? "?"}`,
+        }));
+
+        if (mounted) setRegions(mapped);
+      } catch (err: any) {
+        console.error("Error fetching regions:", err);
+        if (mounted) setRegionsError(err.message ?? String(err));
+      } finally {
+        if (mounted) setLoadingRegions(false);
+      }
+    };
+
+    fetchRegions();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleCreate = () => {
     if (!selectedRegion) {
@@ -38,7 +71,7 @@ export default function CreateAdventureScreen() {
     }
 
     const regionLabel =
-      REGIONS.find((r) => r.id === selectedRegion)?.label ?? "";
+      regions.find((r) => String(r.id) === String(selectedRegion))?.label ?? "";
     Alert.alert("Adventure Created (sample)", `Region: ${regionLabel}`);
 
     // For this sample screen we'll simply go back to the creator hub.
@@ -57,7 +90,7 @@ export default function CreateAdventureScreen() {
       <View style={styles.dropdownWrapper}>
         <Pressable style={styles.dropdown} onPress={() => setIsOpen((v) => !v)}>
           <Text style={styles.dropdownText}>
-            {REGIONS.find((r) => r.id === selectedRegion)?.label ??
+            {regions.find((r) => String(r.id) === String(selectedRegion))?.label ??
               "Select a region..."}
           </Text>
           <FontAwesome6
@@ -69,15 +102,21 @@ export default function CreateAdventureScreen() {
 
         {isOpen && (
           <View style={styles.options}>
-            {REGIONS.map((r) => (
-              <Pressable
-                key={r.id}
-                style={styles.option}
-                onPress={() => handleSelect(r.id)}
-              >
-                <Text style={styles.optionText}>{r.label}</Text>
-              </Pressable>
-            ))}
+            {loadingRegions && <Text style={styles.optionText}>Loading regions...</Text>}
+            {regionsError && <Text style={styles.optionText}>Error: {regionsError}</Text>}
+            {!loadingRegions && !regionsError && regions.length === 0 && (
+              <Text style={styles.optionText}>No regions available</Text>
+            )}
+            {!loadingRegions && !regionsError &&
+              regions.map((r) => (
+                <Pressable
+                  key={String(r.id)}
+                  style={styles.option}
+                  onPress={() => handleSelect(String(r.id))}
+                >
+                  <Text style={styles.optionText}>{r.label}</Text>
+                </Pressable>
+              ))}
           </View>
         )}
       </View>
