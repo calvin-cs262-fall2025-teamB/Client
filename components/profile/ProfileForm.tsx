@@ -2,6 +2,7 @@ import { View, StyleSheet, Text, TextInput } from "react-native";
 import { useState } from "react";
 import themes from "@/assets/utils/themes";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 import GreenButton from "@/components/reusable/GreenButton";
 
@@ -10,6 +11,7 @@ export default function ProfileForm() {
   const [email, setEmail] = useState<string>("");
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const { user, email: userEmail, editUsername, editEmail } = useProfile();
+  const { logout } = useAuth();
   //   console.log("ProfileForm userEmail:", userEmail);
 
   function handleSubmit() {
@@ -61,6 +63,7 @@ export default function ProfileForm() {
           onPress={handleSubmit}
           info={isEditing ? "Submit" : "Edit"}
         />
+        <GreenButton onPress={logout} info={"Logout"} />
       </View>
     </View>
   );
