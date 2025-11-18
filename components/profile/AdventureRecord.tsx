@@ -1,135 +1,143 @@
+import { CompletedAdventure, Adventure as DbAdventure } from "@/types";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect } from "react";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAuth } from "../../contexts/AuthContext";
+import { useDatabase } from "../../contexts/DatabaseContext";
 
 import themes from "../../assets/utils/themes";
-const completedAdventures = [
-  { id: 1, title: "Campus History Tour", completed: true, tokens: 25 },
-  { id: 2, title: "Hidden Art Walk", completed: true, tokens: 30 },
-  { id: 3, title: "Science Building Quest", completed: true, tokens: 20 },
-  { id: 4, title: "Athletic Heritage Trail", completed: false, progress: 60 },
-  { id: 5, title: "Ecosystem Discovery", completed: true, tokens: 15 },
+
+// Interface for display adventures
+interface DisplayAdventure {
+  id: number;
+  title: string;
+  tokens: number;
+  completionDate?: string | null;
+}
+// Mock data fallback for development
+const MOCK_COMPLETED_ADVENTURES = [
+  { id: 1, title: "Campus History Tour", tokens: 25 },
+  { id: 2, title: "Hidden Art Walk", tokens: 30 },
+  { id: 3, title: "Science Building Quest", tokens: 20 },
+  { id: 4, title: "Athletic Heritage Trail", tokens: 35 },
+  { id: 5, title: "Ecosystem Discovery", tokens: 15 },
 ];
 
 export default function AdventureRecord() {
-  // ============================================================================
-  // MOCK DATA - Replace with actual PostgreSQL data via Azure API
-  // ============================================================================
-  // TODO: Fetch user's adventures from Azure backend
-  // Expected API endpoint: GET https://your-app.azurewebsites.net/api/users/{userId}/adventures
-  // Expected PostgreSQL query:
-  // SELECT
-  //   a.id,
-  //   a.title,
-  //   ua.completed,
-  //   ua.tokens_earned as tokens,
-  //   ua.progress_percentage as progress
-  // FROM user_adventures ua
-  // JOIN adventures a ON ua.adventure_id = a.id
-  // WHERE ua.user_id = $1
-  // ORDER BY ua.last_updated DESC;
-  //
-  // Implementation example:
-  // const { data: completedAdventures, isLoading } = useQuery({
-  //   queryKey: ['userAdventures', user?.id],
-  //   queryFn: async () => {
-  //     const response = await fetch(
-  //       `https://your-app.azurewebsites.net/api/users/${user.id}/adventures`,
-  //       { headers: { 'Authorization': `Bearer ${authToken}` } }
-  //     );
-  //     return response.json();
-  //   }
-  // });
-
-  // ============================================================================
   const router = useRouter();
+  const { user } = useAuth();
+  const { 
+    adventures, 
+    completedAdventures, 
+    loading, 
+    errors, 
+    fetchAdventures, 
+    fetchCompletedAdventures 
+  } = useDatabase();
 
-  const handleAdventurePress = (adventure: {
-    id: number;
-    title: string;
-    completed: boolean;
-  }) => {
+  // Load user's completed adventures
+  useEffect(() => {
+    if (user?.id) {
+      fetchCompletedAdventures(user.id);
+      fetchAdventures(); // Also fetch adventures for full data
+    }
+  }, [user?.id, fetchCompletedAdventures, fetchAdventures]);
+
+  // Transform database data to UI format
+  const transformedAdventures = completedAdventures?.map((completed: CompletedAdventure) => {
+    const adventure = adventures?.find((adv: DbAdventure) => adv.id === completed.adventureId);
+    return {
+      id: completed.adventureId,
+      title: adventure?.name || `Adventure ${completed.adventureId}`,
+      tokens: adventure?.numTokens || 0,
+      completionDate: completed.completionDate,
+    };
+  }) || [];
+
+  // Use transformed data or fallback to mock data if empty or in development
+  const displayAdventures = transformedAdventures.length > 0 
+    ? transformedAdventures 
+    : (errors.completedAdventures && __DEV__ ? MOCK_COMPLETED_ADVENTURES : []);
+
+  const handleAdventurePress = (adventure: DisplayAdventure) => {
     // Navigate using expo-router to the AdventureView screen with the adventureId as a query param
     router.push(
-      `/adventureView?adventureId=${adventure.id}&completed=${adventure.completed}`
+      `/adventureView?adventureId=${adventure.id}&completed=true`
     );
   };
 
+  // Show loading indicator
+  if (loading.completedAdventures || loading.adventures) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Completed Adventures</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={themes.primaryColor} />
+          <Text style={styles.loadingText}>Loading your adventures...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Show error state if API fails and no fallback data
+  if (errors.completedAdventures && displayAdventures.length === 0) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Completed Adventures</Text>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Unable to load adventures</Text>
+          <Text style={styles.emptySubtext}>Please check your connection and try again</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>My Adventures</Text>
+      <Text style={styles.sectionTitle}>Completed Adventures</Text>
       <View style={styles.adventuresContainer}>
-        {completedAdventures.map((adventure) => (
+        {displayAdventures.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No completed adventures yet</Text>
+            <Text style={styles.emptySubtext}>Start exploring to see your achievements here!</Text>
+          </View>
+        ) : (
+          displayAdventures.map((adventure: DisplayAdventure) => (
           <TouchableOpacity
             key={adventure.id}
-            style={[
-              styles.adventureCard,
-              !adventure.completed && styles.incompleteCard,
-            ]}
+            style={styles.adventureCard}
             onPress={() => handleAdventurePress(adventure)}
             activeOpacity={0.7}
           >
             <View style={styles.cardContent}>
               {/* Icon */}
-              <View
-                style={[
-                  styles.iconContainer,
-                  adventure.completed
-                    ? styles.completedIconBg
-                    : styles.incompleteIconBg,
-                ]}
-              >
+              <View style={[styles.iconContainer, styles.completedIconBg]}>
                 <Text style={styles.adventureIcon}>🗺️</Text>
               </View>
 
               {/* Title and Info */}
               <View style={styles.textContainer}>
-                <Text
-                  style={[
-                    styles.adventureTitle,
-                    !adventure.completed && styles.incompleteTitle,
-                  ]}
-                >
+                <Text style={styles.adventureTitle}>
                   {adventure.title}
                 </Text>
-                {adventure.completed ? (
-                  <View style={styles.rewardContainer}>
-                    <FontAwesome6
-                      name="coins"
-                      size={14}
-                      color="#FFD700"
-                      solid
-                    />
-                    <Text style={styles.rewardText}>
-                      {adventure.tokens} tokens earned
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressBar}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: `${adventure.progress || 0}%` },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.progressText}>
-                      {adventure.progress || 0}% complete
-                    </Text>
-                  </View>
-                )}
-              </View>
 
-              {/* Status Badge */}
-              {adventure.completed && (
-                <View style={styles.completedBadge}>
-                  <FontAwesome6 name="check" size={16} color="#fff" />
+                <View style={styles.rewardContainer}>
+                  <FontAwesome6
+                    name="coins"
+                    size={14}
+                    color="#FFD700"
+                    solid
+                  />
+                  <Text style={styles.rewardText}>
+                    {adventure.tokens} tokens earned
+                  </Text>
                 </View>
-              )}
+              </View>
             </View>
           </TouchableOpacity>
-        ))}
+          ))
+        )}
       </View>
     </View>
   );
@@ -175,18 +183,7 @@ const styles = StyleSheet.create({
   completedIconBg: {
     backgroundColor: themes.primaryColorLight,
   },
-  incompleteCard: {
-    backgroundColor: "#f9f9f9",
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    borderStyle: "dashed",
-  },
-  incompleteIconBg: {
-    backgroundColor: "#f0f0f0",
-  },
-  incompleteTitle: {
-    color: themes.primaryColorGreyDark,
-  },
+
   iconContainer: {
     width: 56,
     height: 56,
@@ -194,24 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  progressBar: {
-    height: 6,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  progressContainer: {
-    gap: 4,
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: themes.primaryColor,
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 12,
-    color: themes.primaryColorGreyDark,
-  },
+
   rewardContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -233,5 +213,33 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: themes.primaryColorGreyDark,
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    gap: 8,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: themes.primaryColorDark,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: themes.primaryColorGreyDark,
+    textAlign: 'center',
   },
 });

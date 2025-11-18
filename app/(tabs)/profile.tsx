@@ -34,9 +34,8 @@ ImageURL: string (optional),
 Adventures: [AdventureID], // the adventures a user has started / finished playing,
 CollectedTokens: number, Associated with adventures completed
 }
-
-
 */
+
 export default function Profile() {
   //TODO: use profile context to manage the user's state
   const [viewingInfo, setViewingInfo] = useState(false);

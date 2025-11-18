@@ -11,6 +11,7 @@
     "**/*.tsx",
     "components/authentication/Login.tex",
     "contexts/AuthContext.jsx",
-    "contexts/HomeContext.jsx"
+    "contexts/DatabaseContext.jsx",
+    "types/**/*.ts"
   ]
 }
