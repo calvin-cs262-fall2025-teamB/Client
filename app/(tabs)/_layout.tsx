@@ -1,6 +1,6 @@
+import themes from "@/assets/utils/themes";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import themes from "@/assets/utils/themes";
 import { HomeProvider } from "../../contexts/HomeContext";
 
 //TODO
@@ -44,7 +44,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="profile"
           options={{
-            title: "profile",
+            title: "Profile",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person" size={size} color={color} />
             ),
