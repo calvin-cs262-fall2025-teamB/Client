@@ -96,6 +96,15 @@ export default function Login() {
               </Text>
             </View>
           </View>
+          
+          {/* Debug Button - Only show in development */}
+          {__DEV__ && (
+            <View style={styles.debugSection}>
+              <Link href="/debug" style={styles.debugButton}>
+                <Text style={styles.debugButtonText}>🔧 Database Debug</Text>
+              </Link>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </>
@@ -142,4 +151,28 @@ const styles = StyleSheet.create({
   },
   input: { borderWidth: 1, borderColor: "#ddd", padding: 10, borderRadius: 6 },
   label: { fontSize: 14, fontWeight: "600" },
+  debugSection: {
+    marginTop: 20,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 15,
+  },
+  debugButton: {
+    backgroundColor: '#f39c12',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  debugButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+    textAlign: 'center',
+  },
 });

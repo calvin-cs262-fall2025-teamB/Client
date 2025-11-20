@@ -207,6 +207,14 @@ function databaseReducer(state, action) {
 export function DatabaseProvider({ children }) {
   const [state, dispatch] = useReducer(databaseReducer, initialState);
 
+  // Helper function to format location objects as PostgreSQL points
+  const formatLocationForPostgreSQL = (location) => {
+    if (!location || typeof location.x !== 'number' || typeof location.y !== 'number') {
+      return null;
+    }
+    return `(${location.x},${location.y})`;
+  };
+
   // Base API URL - replace with your Azure web service URL
   const API_BASE_URL = 'https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net/';
 
@@ -232,7 +240,8 @@ export function DatabaseProvider({ children }) {
     return response.json();
   }, []);
 
-  // Data fetching functions
+  /* Data fetching functions */
+
   const fetchAdventurers = useCallback(async () => {
     dispatch({ type: ActionTypes.SET_LOADING, entity: 'adventurers', isLoading: true });
     try {
@@ -287,7 +296,7 @@ export function DatabaseProvider({ children }) {
   const fetchTokens = useCallback(async (adventureId = null) => {
     dispatch({ type: ActionTypes.SET_LOADING, entity: 'tokens', isLoading: true });
     try {
-      const endpoint = adventureId ? `/tokens?adventureId=${adventureId}` : '/tokens';
+      const endpoint = adventureId ? `/tokens/adventure/${adventureId}` : '/tokens';
       const data = await apiCall(endpoint);
       dispatch({ type: ActionTypes.SET_TOKENS, data });
     } catch (error) {
@@ -299,7 +308,7 @@ export function DatabaseProvider({ children }) {
   const fetchCompletedAdventures = useCallback(async (adventurerId) => {
     dispatch({ type: ActionTypes.SET_LOADING, entity: 'completedAdventures', isLoading: true });
     try {
-      const data = await apiCall(`/completed-adventures?adventurerId=${adventurerId}`);
+      const data = await apiCall(`/completedAdventures/adventurer/${adventurerId}`);
       dispatch({ type: ActionTypes.SET_COMPLETED_ADVENTURES, data });
     } catch (error) {
       console.error('Error fetching completed adventures:', error);
@@ -324,7 +333,7 @@ export function DatabaseProvider({ children }) {
 
   const updateAdventurer = useCallback(async (id, adventurerData) => {
     try {
-      const data = await apiCall(`/adventurers/${id}`, {
+      const data = await apiCall(`/adventurer/${id}`, {
         method: 'PUT',
         body: JSON.stringify(adventurerData),
       });
@@ -338,9 +347,15 @@ export function DatabaseProvider({ children }) {
 
   const createRegion = useCallback(async (regionData) => {
     try {
+      // Format location for PostgreSQL point type
+      const formattedData = {
+        ...regionData,
+        location: formatLocationForPostgreSQL(regionData.location)
+      };
+      
       const data = await apiCall('/regions', {
         method: 'POST',
-        body: JSON.stringify(regionData),
+        body: JSON.stringify(formattedData),
       });
       dispatch({ type: ActionTypes.ADD_REGION, data });
       return data;
@@ -352,9 +367,15 @@ export function DatabaseProvider({ children }) {
 
   const createAdventure = useCallback(async (adventureData) => {
     try {
+      // Format location for PostgreSQL point type
+      const formattedData = {
+        ...adventureData,
+        location: formatLocationForPostgreSQL(adventureData.location)
+      };
+      
       const data = await apiCall('/adventures', {
         method: 'POST',
-        body: JSON.stringify(adventureData),
+        body: JSON.stringify(formattedData),
       });
       dispatch({ type: ActionTypes.ADD_ADVENTURE, data });
       return data;
@@ -366,9 +387,15 @@ export function DatabaseProvider({ children }) {
 
   const createToken = useCallback(async (tokenData) => {
     try {
+      // Format location for PostgreSQL point type
+      const formattedData = {
+        ...tokenData,
+        location: formatLocationForPostgreSQL(tokenData.location)
+      };
+      
       const data = await apiCall('/tokens', {
         method: 'POST',
-        body: JSON.stringify(tokenData),
+        body: JSON.stringify(formattedData),
       });
       dispatch({ type: ActionTypes.ADD_TOKEN, data });
       return data;
