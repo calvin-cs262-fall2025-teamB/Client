@@ -125,36 +125,69 @@ export default function HomePage() {
   // API state from DatabaseContext
   const { 
     adventures, 
+    regions: regionsData,
     loading, 
     errors, 
-    fetchAdventures 
+    fetchAdventures,
+    fetchRegions
   } = useDatabase();
 
-  // Load adventures on component mount
+  // Load adventures and regions on component mount
   useEffect(() => {
     fetchAdventures();
-  }, [fetchAdventures]);
+    fetchRegions();
+  }, [fetchAdventures, fetchRegions]);
 
   // Transform database adventures to match the FrontendAdventure interface
-  const transformedAdventures: Adventure[] = adventures.map((item: DbAdventure) => ({
-    id: item.id?.toString() || '',
-    title: item.name || 'Unnamed Adventure',
-    summary: item.name || 'No description available',
-    description: item.name || 'No description available',
-    image_url: null,
-    region: {
-      id: item.regionId?.toString() || '1',
-      name: `Region ${item.regionId || 1}`,
-      center: {
-        lat: item.location?.x || 42.9301,
-        lng: item.location?.y || -85.5883,
+  const transformedAdventures: Adventure[] = adventures.map((item: DbAdventure) => {
+    // Debug: Log the raw adventure data to understand the structure
+    if (__DEV__) {
+      console.log('Raw adventure data:', JSON.stringify(item, null, 2));
+    }
+    
+    // Handle both camelCase and snake_case field names from database
+    const itemAny = item as any;
+    const regionId = item.regionId || itemAny.regionid || itemAny.regionID;
+    const numTokens = item.numTokens || itemAny.numtokens || itemAny.num_tokens;
+    
+    // Find the corresponding region data
+    const region = regionsData.find((r: any) => r.id === regionId || r.ID === regionId);
+    
+    if (__DEV__) {
+      console.log(`Adventure "${item.name}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
+      if (region) {
+        console.log('Found region:', JSON.stringify(region, null, 2));
+      }
+    }
+    
+    return {
+      id: item.id?.toString() || '',
+      title: item.name || 'Unnamed Adventure',
+      summary: item.name || 'No description available',
+      description: item.name || 'No description available',
+      image_url: null,
+      region: {
+        id: regionId?.toString() || '1',
+        name: region?.name || `Region ${regionId || 1}`,
+        center: {
+          lat: region?.location?.x || item.location?.x || 42.9301,
+          lng: region?.location?.y || item.location?.y || -85.5883,
+        },
       },
-    },
-    tokenCount: item.numTokens || 0,
-    difficulty: 'Medium' as const,
-    estimatedTime: '30 min',
-    status: 'published' as const,
-  }));
+      tokenCount: numTokens || 0,
+      difficulty: 'Medium' as const,
+      estimatedTime: '30 min',
+      status: 'published' as const,
+    };
+  });
+
+  // Debug: Log regions data
+  if (__DEV__) {
+    console.log('Regions data loaded:', regionsData?.length || 0, 'regions');
+    if (regionsData?.length > 0) {
+      console.log('Sample region:', JSON.stringify(regionsData[0], null, 2));
+    }
+  }
 
   // Use transformed adventures or fallback to mock data if empty
   const displayAdventures = transformedAdventures.length > 0 ? transformedAdventures : (errors.adventures && __DEV__ ? MOCK_ADVENTURES : []);
