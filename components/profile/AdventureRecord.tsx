@@ -14,6 +14,7 @@ interface DisplayAdventure {
   title: string;
   tokens: number;
   completionDate?: string | null;
+  regionName?: string;
 }
 // Mock data fallback for development
 const MOCK_COMPLETED_ADVENTURES = [
@@ -29,29 +30,50 @@ export default function AdventureRecord() {
   const { user } = useAuth();
   const { 
     adventures, 
+    regions,
     completedAdventures, 
     loading, 
     errors, 
     fetchAdventures, 
+    fetchRegions,
     fetchCompletedAdventures 
   } = useDatabase();
 
-  // Load user's completed adventures
+  // Load user's completed adventures and related data
   useEffect(() => {
     if (user?.id) {
       fetchCompletedAdventures(user.id);
       fetchAdventures(); // Also fetch adventures for full data
+      fetchRegions(); // Fetch regions for region names
     }
-  }, [user?.id, fetchCompletedAdventures, fetchAdventures]);
+  }, [user?.id, fetchCompletedAdventures, fetchAdventures, fetchRegions]);
 
-  // Transform database data to UI format
+  // Transform database data to UI format with enhanced region information
   const transformedAdventures = completedAdventures?.map((completed: CompletedAdventure) => {
     const adventure = adventures?.find((adv: DbAdventure) => adv.id === completed.adventureId);
+    const region = regions?.find((r: any) => r.id === adventure?.regionId);
+    
+    // Handle both camelCase and snake_case field names
+    const adventureAny = adventure as any;
+    const regionId = adventure?.regionId || adventureAny?.regionid || adventureAny?.regionID;
+    const numTokens = adventure?.numTokens || adventureAny?.numtokens || adventureAny?.num_tokens;
+    
+    if (__DEV__) {
+      console.log(`Completed Adventure ${completed.adventureId}:`, {
+        adventureName: adventure?.name,
+        regionId,
+        regionName: region?.name,
+        tokens: numTokens,
+        completionDate: completed.completionDate
+      });
+    }
+    
     return {
       id: completed.adventureId,
       title: adventure?.name || `Adventure ${completed.adventureId}`,
-      tokens: adventure?.numTokens || 0,
+      tokens: numTokens || 0,
       completionDate: completed.completionDate,
+      regionName: region?.name || `Region ${regionId || '?'}`,
     };
   }) || [];
 
@@ -68,7 +90,7 @@ export default function AdventureRecord() {
   };
 
   // Show loading indicator
-  if (loading.completedAdventures || loading.adventures) {
+  if (loading.completedAdventures || loading.adventures || loading.regions) {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Completed Adventures</Text>
@@ -121,6 +143,20 @@ export default function AdventureRecord() {
                 <Text style={styles.adventureTitle}>
                   {adventure.title}
                 </Text>
+                
+                {/* Region information */}
+                {adventure.regionName && (
+                  <View style={styles.regionContainer}>
+                    <FontAwesome6
+                      name="location-dot"
+                      size={12}
+                      color={themes.primaryColor}
+                    />
+                    <Text style={styles.regionText}>
+                      {adventure.regionName}
+                    </Text>
+                  </View>
+                )}
 
                 <View style={styles.rewardContainer}>
                   <FontAwesome6
@@ -132,6 +168,16 @@ export default function AdventureRecord() {
                   <Text style={styles.rewardText}>
                     {adventure.tokens} tokens earned
                   </Text>
+                  
+                  {/* Completion date */}
+                  {adventure.completionDate && (
+                    <>
+                      <Text style={styles.divider}>•</Text>
+                      <Text style={styles.dateText}>
+                        {new Date(adventure.completionDate).toLocaleDateString()}
+                      </Text>
+                    </>
+                  )}
                 </View>
               </View>
             </View>
@@ -200,6 +246,27 @@ const styles = StyleSheet.create({
   rewardText: {
     fontSize: 13,
     color: themes.primaryColorGreyDark,
+  },
+  regionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  regionText: {
+    fontSize: 12,
+    color: themes.primaryColor,
+    fontWeight: '500',
+  },
+  dateText: {
+    fontSize: 12,
+    color: themes.primaryColorGreyDark,
+    fontStyle: 'italic',
+  },
+  divider: {
+    fontSize: 12,
+    color: themes.primaryColorGreyDark,
+    marginHorizontal: 6,
   },
   section: {
     padding: 20,
