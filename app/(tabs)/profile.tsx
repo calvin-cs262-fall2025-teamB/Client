@@ -1,9 +1,11 @@
-// import { useAuth } from "@/contexts/AuthContext"; // unused
+import { useAuth } from "@/contexts/AuthContext";
+import { useDatabase } from "@/contexts/DatabaseContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,13 +39,33 @@ CollectedTokens: number, Associated with adventures completed
 */
 
 export default function Profile() {
-  //TODO: use profile context to manage the user's state
+  const { user } = useAuth();
+  const {
+    adventures,
+    completedAdventures,
+    tokens,
+    loading,
+    errors,
+    fetchAdventures,
+    fetchCompletedAdventures,
+    fetchTokens,
+  } = useDatabase();
+
   const [viewingInfo, setViewingInfo] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | undefined>(
     undefined
   );
 
   const PlaceholderImage = require("@/assets/images/icon.png");
+
+  // Load user data on component mount
+  useEffect(() => {
+    if (user?.id) {
+      fetchCompletedAdventures(user.id);
+      fetchAdventures();
+      fetchTokens();
+    }
+  }, [user?.id, fetchCompletedAdventures, fetchAdventures, fetchTokens]);
 
   const pickImageAsync = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -69,38 +91,58 @@ export default function Profile() {
     }
   };
 
-  // ============================================================================
-  // MOCK DATA - Replace with actual PostgreSQL data via Azure API
-  // ============================================================================
-  // TODO: Fetch user stats from Azure backend
-  // Expected API endpoint: GET https://your-app.azurewebsites.net/api/users/{userId}/stats
-  // Expected response shape:
-  // {
-  //   totalTokens: number,
-  //   adventuresCompleted: number,
-  //   adventuresTotal: number,
-  //   upvotes: number,
-  //   completionRate: number
-  // }
-  //
-  // Implementation example:
-  // const { data: userStats, isLoading } = useQuery({
-  //   queryKey: ['userStats', user?.id],
-  //   queryFn: async () => {
-  //     const response = await fetch(`https://your-app.azurewebsites.net/api/users/${user.id}/stats`);
-  //     return response.json();
-  //   }
-  // });
+  // Calculate user stats from database context
+  const userStats = useMemo(() => {
+    const userCompletedAdventures = completedAdventures || [];
+    const userCreatedAdventures = adventures?.filter((adv: any) => adv.adventurerId === user?.id) || [];
+    
+    // Debug logging
+    if (__DEV__) {
+      console.log('Profile stats calculation:');
+      console.log('- User ID:', user?.id);
+      console.log('- Completed adventures:', userCompletedAdventures.length);
+      // console.log('- Total adventures available:', adventures?.length || 0);
+      // console.log('- Created adventures:', userCreatedAdventures.length);
+      // console.log('- Loading states:', { 
+      //   completedAdventures: loading.completedAdventures, 
+      //   adventures: loading.adventures, 
+      //   tokens: loading.tokens 
+      // });
+    }
+    
+    // Calculate total tokens from completed adventures
+    const totalTokens = userCompletedAdventures.reduce((sum: number, completed: any) => {
+      const adventure = adventures?.find((adv: any) => adv.id === completed.adventureId);
+      return sum + (adventure?.numTokens || 0);
+    }, 0);
+    
+    // Calculate completion rate
+    const totalAvailableAdventures = adventures?.length || 0;
+    const completionRate = totalAvailableAdventures > 0 
+      ? Math.round((userCompletedAdventures.length / totalAvailableAdventures) * 100)
+      : 0;
+    
+    // Type transformation: Add upvote property (not in database data)
+    // Generate upvotes based on completed adventures and created adventures
+    // This is a mock calculation since upvotes aren't stored in the database
+    const upvotes = Math.max(0, 
+      (userCompletedAdventures.length * 3) + // 3 upvotes per completed adventure
+      (userCreatedAdventures.length * 5) +   // 5 upvotes per created adventure
+      Math.floor(totalTokens / 10)          // 1 upvote per 10 tokens
+    );
+    
+    return {
+      totalTokens,
+      adventuresCompleted: userCompletedAdventures.length,
+      adventuresTotal: totalAvailableAdventures,
+      upvotes, // Type transformation: not in database but required for UI
+      completionRate,
+    };
+  }, [completedAdventures, adventures, user?.id]);
 
-  const userStats = {
-    totalTokens: 125,
-    adventuresCompleted: 8,
-    adventuresTotal: 12,
-    upvotes: 42,
-    completionRate: 67, // percentage
-  };
-  // ============================================================================
-
+  // Show loading state while data is being fetched
+  const isLoading = loading.completedAdventures || loading.adventures || loading.tokens;
+  
   return (
     <ProfileProvider>
       <ScrollView style={styles.container}>
@@ -157,31 +199,40 @@ export default function Profile() {
           <>
             <View style={styles.statsSection}>
               <Text style={styles.sectionTitle}>Detailed Statistics</Text>
-              <View style={styles.statsGrid}>
-                <StatCard
-                  icon="coins"
-                  iconFamily="fontawesome"
-                  value={userStats.totalTokens}
-                  label="Total Tokens"
-                  color="#FFD700"
-                />
-                <StatCard
-                  icon="map-location-dot"
-                  iconFamily="fontawesome"
-                  value={userStats.adventuresCompleted}
-                  label="Completed"
-                  color="#34c759"
-                />
-              </View>
-              <View style={styles.statsGrid}>
-                <StatCard
-                  icon="trophy"
-                  iconFamily="fontawesome"
-                  value={userStats.upvotes}
-                  label="Upvotes"
-                  color="#FF9500"
-                />
-              </View>
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={themes.primaryColor} />
+                  <Text style={styles.loadingText}>Loading your stats...</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.statsGrid}>
+                    <StatCard
+                      icon="coins"
+                      iconFamily="fontawesome"
+                      value={userStats.totalTokens}
+                      label="Total Tokens"
+                      color="#FFD700"
+                    />
+                    <StatCard
+                      icon="map-location-dot"
+                      iconFamily="fontawesome"
+                      value={userStats.adventuresCompleted}
+                      label="Completed"
+                      color="#34c759"
+                    />
+                  </View>
+                  <View style={styles.statsGrid}>
+                    <StatCard
+                      icon="trophy"
+                      iconFamily="fontawesome"
+                      value={userStats.upvotes}
+                      label="Upvotes"
+                      color="#FF9500"
+                    />
+                  </View>
+                </>
+              )}
             </View>
 
             {/* Completed Adventures */}
@@ -244,6 +295,16 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     position: "relative",
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: themes.primaryColorDark,
+    marginTop: 12,
   },
   nav: {
     // fontSize: 16,
