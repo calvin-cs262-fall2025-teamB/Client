@@ -23,10 +23,10 @@ import AppTitle from "../reusable/AppTitle";
 
 export default function Login() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  const { login, isAuthenticated, isLoading, setIsLoading } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   // console.log("Authentication status:", isAuthenticated);
 
   useEffect(() => {
@@ -36,17 +36,17 @@ export default function Login() {
   }, [isAuthenticated]);
 
   const handleSubmit = async () => {
-    if (email && password) {
-      setIsLoading(true);
+    if (username && password) {
       try {
-        login(email, password);
+        const result = await login(username, password);
+        if (!result.success) {
+          Alert.alert("Login failed", result.error || "Unknown error");
+        }
       } catch (err: any) {
         Alert.alert("Login failed", err.message || "Unknown error");
-      } finally {
-        setIsLoading(false);
       }
     } else {
-      Alert.alert("Validation", "Please enter email and password.");
+      Alert.alert("Validation", "Please enter username and password.");
     }
   };
 
@@ -58,12 +58,13 @@ export default function Login() {
       >
         <View style={styles.form}>
           <AppTitle />
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Username</Text>
           <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            autoComplete={"email"}
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Enter your username"
+            autoComplete={"username"}
+            autoCapitalize="none"
             style={styles.input}
             returnKeyType="next"
             onSubmitEditing={() => {}}

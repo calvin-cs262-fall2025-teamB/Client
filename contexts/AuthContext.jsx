@@ -1,60 +1,103 @@
 "use client";
-import { createContext, useContext, useReducer, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createContext, useContext, useReducer } from "react";
+import { useDatabase } from "./DatabaseContext";
 
 const AuthContext = createContext();
 
 const initialState = {
-  user: null,
+  user: null, // Will contain full Adventurer object from database
+  username: null,
   email: null,
   password: null,
-  // TODO: figure out how to store image urls
-  image: null,
+  profilePicture: null,
   isAuthenticated: false,
+  isLoading: false,
 };
 
 function reducer(state, action) {
-  console.log(action.payload);
+  if (__DEV__) {
+    console.log('AuthContext action:', action.type, action.payload);
+  }
+  
   switch (action.type) {
+    case "set_loading":
+      return { ...state, isLoading: action.payload };
+    
+    case "set_user_data":
+      return { 
+        ...state, 
+        user: action.payload.user,
+        username: action.payload.user?.username || null,
+        profilePicture: action.payload.user?.profilePicture || null,
+      };
+    
     case "edit/username":
-      return { ...state, user: action.payload };
+      return { 
+        ...state, 
+        user: state.user ? { ...state.user, username: action.payload } : null,
+        username: action.payload
+      };
+    
     case "edit/email":
       return { ...state, email: action.payload };
+    
     case "signup":
       return {
         ...state,
         user: action.payload.user,
+        username: action.payload.user?.username || null,
         email: action.payload.email,
         password: action.payload.password,
+        profilePicture: action.payload.user?.profilePicture || null,
         isAuthenticated: true,
+        isLoading: false,
       };
+    
     case "login":
       return {
         ...state,
-        user: action.payload.username,
+        user: action.payload.user,
+        username: action.payload.user?.username || null,
         email: action.payload.email,
+        profilePicture: action.payload.user?.profilePicture || null,
         isAuthenticated: true,
+        isLoading: false,
       };
+    
     case "logout":
       return {
         ...state,
         user: null,
+        username: null,
         email: null,
         password: null,
+        profilePicture: null,
         isAuthenticated: false,
+        isLoading: false,
       };
+    
     default:
-      throw Error("Unkown Action.");
+      throw Error("Unknown Action: " + action.type);
   }
 }
 
 function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { user, email, isAuthenticated } = state;
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, username, email, isAuthenticated, isLoading, profilePicture } = state;
   const router = useRouter();
+  
+  // Get database context functions
+  const { adventurers, fetchAdventurers, createAdventurer, updateAdventurer } = useDatabase();
+  
+  // Helper function to find user by username in adventurers data
+  const findUserByUsername = (adventurers, username) => {
+    return adventurers?.find(adventurer => 
+      adventurer.username?.toLowerCase() === username?.toLowerCase()
+    ) || null;
+  };
 
   function signup(fullName, email, password) {
     // ============================================================================
@@ -78,33 +121,78 @@ function AuthProvider({ children }) {
     dispatch({ type: "signup", payload: { user: fullName, email, password } });
   }
 
-  function login(email, password) {
-    // ============================================================================
-    // TODO: Replace with Azure API call to PostgreSQL backend
-    // ============================================================================
-    // Expected API endpoint: POST https://your-app.azurewebsites.net/api/auth/login
-    // Expected PostgreSQL query:
-    // SELECT id, full_name, email, profile_image_url
-    // FROM users
-    // WHERE email = $1 AND password_hash = crypt($2, password_hash);
-    //
-    // Implementation example:
-    // const response = await fetch('https://your-app.azurewebsites.net/api/auth/login', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email, password })
-    // });
-    // const data = await response.json();
-    // if (data.success) {
-    //   // Store auth token in secure storage
-    //   await SecureStore.setItemAsync('authToken', data.token);
-    //   dispatch({ type: "login", payload: data.user.full_name });
-    // }
-    // ============================================================================
+  async function login(username, password) {
+    dispatch({ type: "set_loading", payload: true });
+    
+    try {
+      // ============================================================================
+      // TODO: Replace with Azure API call to PostgreSQL backend for authentication
+      // ============================================================================
+      // Expected API endpoint: POST https://your-app.azurewebsites.net/api/auth/login
+      // Expected PostgreSQL query:
+      // SELECT id, username, password, profilePicture
+      // FROM Adventurer
+      // WHERE username = $1 AND password = crypt($2, password);
+      // ============================================================================
 
-    // TEMPORARY: Extract username from email for demo purposes
-    const username = email.split("@")[0];
-    dispatch({ type: "login", payload: { username, email } });
+      // Ensure we have adventurer data
+      if (!adventurers || adventurers.length === 0) {
+        await fetchAdventurers();
+      }
+      
+      if (__DEV__) {
+        console.log('Adventurers:');
+        console.log(adventurers);
+        console.log('Login attempt for username:', username);
+        console.log('Available adventurers:', adventurers?.length || 0);
+      }
+      
+      // Try to find user in database
+      let foundUser = findUserByUsername(adventurers, username);
+      
+      if (!foundUser) {
+        // For demo purposes, create user if not found
+        if (__DEV__) {
+          console.log('User not found, creating demo user:', username);
+        }
+        // Use a smaller ID that fits in PostgreSQL INTEGER range
+        const demoId = Math.floor(Math.random() * 1000000) + 10000; // Random ID between 10000-1010000
+        foundUser = {
+          id: demoId,
+          username: username,
+          password: password, // In real implementation, this would be hashed
+          profilePicture: null,
+        };
+        
+        // Note: Not creating in database - this is just for local demo authentication
+        if (__DEV__) {
+          console.log('Created demo user with ID:', demoId);
+        }
+      } else {
+        // In real implementation, verify password here
+        if (__DEV__) {
+          console.log('Found existing user:', foundUser.username);
+        }
+      }
+      
+      // Store auth token in secure storage (for demo)
+      await SecureStore.setItemAsync('authToken', 'demo-token-' + Date.now());
+      
+      dispatch({ 
+        type: "login", 
+        payload: { 
+          user: foundUser, 
+          email: null // Email can be set separately
+        } 
+      });
+      
+      return { success: true, user: foundUser };
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      dispatch({ type: "set_loading", payload: false });
+      return { success: false, error: error.message };
+    }
   }
 
   function editUsername(newUsername) {
@@ -178,16 +266,25 @@ function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
+        // User data
         user,
+        username,
         email,
+        profilePicture,
         isAuthenticated,
+        isLoading,
+        
+        // Authentication functions
         login,
+        signup,
+        logout,
+        
+        // Profile management functions
         editUsername,
         editEmail,
-        logout,
-        signup,
-        isLoading,
-        setIsLoading,
+        
+        // Helper functions for database integration
+        findUserByUsername,
       }}
     >
       {children}
@@ -204,3 +301,4 @@ function useAuth() {
 }
 
 export { AuthProvider, useAuth };
+

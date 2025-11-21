@@ -141,9 +141,9 @@ export default function HomePage() {
   // Transform database adventures to match the FrontendAdventure interface
   const transformedAdventures: Adventure[] = adventures.map((item: DbAdventure) => {
     // Debug: Log the raw adventure data to understand the structure
-    if (__DEV__) {
-      console.log('Raw adventure data:', JSON.stringify(item, null, 2));
-    }
+    // if (__DEV__) {
+    //   console.log('Raw adventure data:', JSON.stringify(item, null, 2));
+    // }
     
     // Handle both camelCase and snake_case field names from database
     const itemAny = item as any;
@@ -153,12 +153,12 @@ export default function HomePage() {
     // Find the corresponding region data
     const region = regionsData.find((r: any) => r.id === regionId || r.ID === regionId);
     
-    if (__DEV__) {
-      console.log(`Adventure "${item.name}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
-      if (region) {
-        console.log('Found region:', JSON.stringify(region, null, 2));
-      }
-    }
+    // if (__DEV__) {
+    //   console.log(`Adventure "${item.name}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
+    //   if (region) {
+    //     console.log('Found region:', JSON.stringify(region, null, 2));
+    //   }
+    // }
     
     return {
       id: item.id?.toString() || '',
@@ -182,12 +182,12 @@ export default function HomePage() {
   });
 
   // Debug: Log regions data
-  if (__DEV__) {
-    console.log('Regions data loaded:', regionsData?.length || 0, 'regions');
-    if (regionsData?.length > 0) {
-      console.log('Sample region:', JSON.stringify(regionsData[0], null, 2));
-    }
-  }
+  // if (__DEV__) {
+  //   console.log('Regions data loaded:', regionsData?.length || 0, 'regions');
+  //   if (regionsData?.length > 0) {
+  //     console.log('Sample region:', JSON.stringify(regionsData[0], null, 2));
+  //   }
+  // }
 
   // Use transformed adventures or fallback to mock data if empty
   const displayAdventures = transformedAdventures.length > 0 ? transformedAdventures : (errors.adventures && __DEV__ ? MOCK_ADVENTURES : []);
