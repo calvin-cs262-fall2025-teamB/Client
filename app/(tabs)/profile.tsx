@@ -97,15 +97,15 @@ export default function Profile() {
     const userCreatedAdventures = adventures?.filter((adv: any) => adv.adventurerId === user?.id) || [];
     
     // Debug logging
-    if (__DEV__) {
-      console.log('PROFILE STAT DEBUG');
-      console.log('Profile stats calculation:');
-      console.log('- User ID:', user?.id);
-      console.log('- Completed adventures:', userCompletedAdventures.length);
-      console.log('- Total adventures available:', adventures?.length || 0);
-      console.log('- Sample completed adventure:', userCompletedAdventures[0]);
-      console.log('- Sample adventure:', adventures?.[0]);
-    }
+    // if (__DEV__) {
+    //   console.log('PROFILE STAT DEBUG');
+    //   console.log('Profile stats calculation:');
+    //   console.log('- User ID:', user?.id);
+    //   console.log('- Completed adventures:', userCompletedAdventures.length);
+    //   console.log('- Total adventures available:', adventures?.length || 0);
+    //   console.log('- Sample completed adventure:', userCompletedAdventures[0]);
+    //   console.log('- Sample adventure:', adventures?.[0]);
+    // }
     
     // Calculate total tokens from completed adventures with enhanced field mapping
     const totalTokens = userCompletedAdventures.reduce((sum: number, completed: any, index: number) => {
@@ -121,15 +121,15 @@ export default function Profile() {
       // Handle different field naming conventions for token count
       const tokenCount = adventure?.numTokens || adventure?.numtokens || adventure?.num_tokens || adventure?.tokencount || 0;
       
-      if (__DEV__ && index < 3) { // Log first 3 for debugging
-        console.log(`Token calculation ${index + 1}:`, {
-          completedAdventureId: adventureId,
-          foundAdventure: !!adventure,
-          adventureName: adventure?.name || adventure?.adventurename,
-          tokenCount,
-          runningSum: sum + tokenCount
-        });
-      }
+      // if (__DEV__ && index < 3) { // Log first 3 for debugging
+      //   console.log(`Token calculation ${index + 1}:`, {
+      //     completedAdventureId: adventureId,
+      //     foundAdventure: !!adventure,
+      //     adventureName: adventure?.name || adventure?.adventurename,
+      //     tokenCount,
+      //     runningSum: sum + tokenCount
+      //   });
+      // }
       
       return sum + tokenCount;
     }, 0);
@@ -158,15 +158,15 @@ export default function Profile() {
     // Use the higher of the two calculations (in case one method works better)
     const finalTokens = Math.max(totalTokens, alternativeTokens);
     
-    if (__DEV__) {
-      console.log('Token calculation results:', {
-        fromAdventureData: totalTokens,
-        fromCompletedData: alternativeTokens,
-        finalTotal: finalTokens,
-        completedAdventures: userCompletedAdventures.length,
-        availableAdventures: totalAvailableAdventures
-      });
-    }
+    // if (__DEV__) {
+    //   console.log('Token calculation results:', {
+    //     fromAdventureData: totalTokens,
+    //     fromCompletedData: alternativeTokens,
+    //     finalTotal: finalTokens,
+    //     completedAdventures: userCompletedAdventures.length,
+    //     availableAdventures: totalAvailableAdventures
+    //   });
+    // }
     
     return {
       totalTokens: finalTokens,

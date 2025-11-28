@@ -140,21 +140,21 @@ function AuthProvider({ children }) {
         await fetchAdventurers();
       }
       
-      if (__DEV__) {
-        console.log('Adventurers:');
-        console.log(adventurers);
-        console.log('Login attempt for username:', username);
-        console.log('Available adventurers:', adventurers?.length || 0);
-      }
+      // if (__DEV__) {
+      //   console.log('Adventurers:');
+      //   console.log(adventurers);
+      //   console.log('Login attempt for username:', username);
+      //   console.log('Available adventurers:', adventurers?.length || 0);
+      // }
       
       // Try to find user in database
       let foundUser = findUserByUsername(adventurers, username);
       
       if (!foundUser) {
         // For demo purposes, create user if not found
-        if (__DEV__) {
-          console.log('User not found, creating demo user:', username);
-        }
+        // if (__DEV__) {
+        //   console.log('User not found, creating demo user:', username);
+        // }
         // Use a smaller ID that fits in PostgreSQL INTEGER range
         const demoId = Math.floor(Math.random() * 1000000) + 10000; // Random ID between 10000-1010000
         foundUser = {
@@ -165,9 +165,9 @@ function AuthProvider({ children }) {
         };
         
         // Note: Not creating in database - this is just for local demo authentication
-        if (__DEV__) {
-          console.log('Created demo user with ID:', demoId);
-        }
+        // if (__DEV__) {
+        //   console.log('Created demo user with ID:', demoId);
+        // }
       } else {
         // In real implementation, verify password here
         if (__DEV__) {
