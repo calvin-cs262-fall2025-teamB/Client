@@ -4,10 +4,10 @@ import { Stack } from "expo-router";
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <DatabaseProvider>
+    <DatabaseProvider>
+      <AuthProvider>
         <Stack screenOptions={{ headerShown: false }} />
-      </DatabaseProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </DatabaseProvider>
   );
 }

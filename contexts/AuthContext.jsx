@@ -1,15 +1,34 @@
 "use client";
-import { createContext, useContext, useReducer, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createContext, useContext, useReducer, useState } from "react";
+
+//Encryption Resource
+// Use bcryptjs (pure JS) in the React Native/Expo runtime instead of native `bcrypt`.
+// Note: password hashing should ideally be performed on the server-side; this is
+// a temporary client-side approach for development/demo only.
+import bcrypt from "bcryptjs";
+import * as Random from "expo-random";
+
+// Tell bcryptjs how to get random bytes in React Native/Expo
+bcrypt.setRandomFallback((len) => {
+  const bytes = Random.getRandomBytes(len);
+  // bcryptjs expects a string of random bytes
+  return Array.from(bytes)
+    .map((b) => String.fromCharCode(b))
+    .join("");
+});
+
+//API Functions
+import { useDatabase } from "./DatabaseContext";
 
 const AuthContext = createContext();
 
 const initialState = {
   user: null,
   email: null,
-  password: null,
+
   // TODO: figure out how to store image urls
   image: null,
   isAuthenticated: false,
@@ -27,7 +46,7 @@ function reducer(state, action) {
         ...state,
         user: action.payload.user,
         email: action.payload.email,
-        password: action.payload.password,
+
         isAuthenticated: true,
       };
     case "login":
@@ -56,26 +75,30 @@ function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  function signup(fullName, email, password) {
-    // ============================================================================
-    // TODO: Replace with Azure API call to PostgreSQL backend
-    // ============================================================================
-    // Expected API endpoint: POST https://your-app.azurewebsites.net/api/auth/signup
-    // Expected PostgreSQL table: users
-    // Expected columns: id, full_name, email, password_hash, created_at, updated_at
-    //
-    // Implementation example:
-    // const response = await fetch('https://your-app.azurewebsites.net/api/auth/signup', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ fullName, email, password })
-    // });
-    // const data = await response.json();
-    // if (data.success) {
-    //   dispatch({ type: "signup", payload: { user: data.user, email, password } });
-    // }
-    // ============================================================================
-    dispatch({ type: "signup", payload: { user: fullName, email, password } });
+  const { createAdventurer, fetchAdventurers, adventurers } = useDatabase();
+
+  async function signup(fullName, email, password) {
+    const BCRYPT_ROUNDS = 8; //Change to 13 to improve efficiency
+
+    const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
+
+    dispatch({
+      type: "signup",
+      payload: { user: fullName, email },
+    });
+
+    //TODO: Add loader while password is loading
+    //Make image field optional
+
+    console.log(
+      await createAdventurer({
+        username: fullName,
+        password: passwordHash,
+        profilepicture: "random.jpg",
+      })
+    );
+    // await fetchAdventurers(); //doesn't work
+    // console.log(adventurers);
   }
 
   function login(email, password) {
