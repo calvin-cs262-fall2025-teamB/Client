@@ -8,17 +8,16 @@ import { createContext, useContext, useReducer, useState } from "react";
 // Use bcryptjs (pure JS) in the React Native/Expo runtime instead of native `bcrypt`.
 // Note: password hashing should ideally be performed on the server-side; this is
 // a temporary client-side approach for development/demo only.
-import bcrypt from "bcryptjs";
-import * as Random from "expo-random";
+// import * as Random from "expo-random";
 
 // Tell bcryptjs how to get random bytes in React Native/Expo
-bcrypt.setRandomFallback((len) => {
-  const bytes = Random.getRandomBytes(len);
-  // bcryptjs expects a string of random bytes
-  return Array.from(bytes)
-    .map((b) => String.fromCharCode(b))
-    .join("");
-});
+// bcrypt.setRandomFallback((len) => {
+//   const bytes = Random.getRandomBytes(len);
+//   // bcryptjs expects a string of random bytes
+//   return Array.from(bytes)
+//     .map((b) => String.fromCharCode(b))
+//     .join("");
+// });
 
 //API Functions
 import { useDatabase } from "./DatabaseContext";
@@ -78,27 +77,22 @@ function AuthProvider({ children }) {
   const { createAdventurer, fetchAdventurers, adventurers } = useDatabase();
 
   async function signup(fullName, email, password) {
-    const BCRYPT_ROUNDS = 8; //Change to 13 to improve efficiency
-
-    const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-
     dispatch({
       type: "signup",
       payload: { user: fullName, email },
     });
+    // const BCRYPT_ROUNDS = 8; //Change to 13 to improve efficiency
+
+    // const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
 
     //TODO: Add loader while password is loading
     //Make image field optional
-
-    console.log(
-      await createAdventurer({
-        username: fullName,
-        password: passwordHash,
-        profilepicture: "random.jpg",
-      })
-    );
-    // await fetchAdventurers(); //doesn't work
-    // console.log(adventurers);
+    const res = await createAdventurer({
+      username: fullName,
+      password,
+      profilePicture: null,
+    });
+    console.log(res);
   }
 
   function login(email, password) {
@@ -180,12 +174,12 @@ function AuthProvider({ children }) {
     try {
       // remove any stored auth tokens if present
       await SecureStore.deleteItemAsync("authToken");
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
     try {
       await AsyncStorage.removeItem("authToken");
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
 
@@ -194,7 +188,7 @@ function AuthProvider({ children }) {
     // navigate to login/sign-in route
     try {
       router.replace("/login");
-    } catch (e) {
+    } catch (_e) {
       // ignore navigation errors
     }
   }

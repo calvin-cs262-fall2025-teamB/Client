@@ -158,7 +158,7 @@ export default function HomePage() {
 
       // Handle both camelCase and snake_case field names from database
       const itemAny = item as any;
-      const regionId = item.regionId || itemAny.regionid || itemAny.regionID;
+      const regionId = item.regionID || itemAny.regionID || itemAny.regionID;
       const numTokens =
         item.numTokens || itemAny.numtokens || itemAny.num_tokens;
 

@@ -8,7 +8,7 @@ const initialState = {
 const ProfileContext = createContext();
 
 function reducer(state, action) {
-  console.log(action.payload);
+  // console.log(action.payload);
   switch (action.type) {
     case "edit/image":
       return { ...state, image: action.payload };

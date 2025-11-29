@@ -36,7 +36,7 @@ export default function Login() {
     if (isAuthenticated) {
       router.replace("/home");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async () => {
     if (email && password) {

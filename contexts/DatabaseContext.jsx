@@ -237,29 +237,32 @@ export function DatabaseProvider({ children }) {
   };
 
   // Base API URL - replace with your Azure web service URL
+  // Base API URL - replace with your Azure web service URL
+  // Note: remove the trailing slash to avoid accidental double-slashes when
+  // concatenating endpoints (some servers accept double-slashes but others do not).
   const API_BASE_URL =
-    "https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net/";
+    "https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net";
 
   // Generic API call function
   const apiCall = useCallback(async (endpoint, options = {}) => {
-    const defaultOptions =
-      options.length > 0
-        ? options
-        : {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              ...options.headers,
-            },
-          };
+    const defaultOptions = {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    };
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, defaultOptions);
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...defaultOptions,
+      ...options,
+    });
 
     if (!response.ok) {
       let bodyText = "";
       try {
         bodyText = await response.text();
-      } catch (e) {
+      } catch (_e) {
         bodyText = "<could not read body>";
       }
       console.error("Server error:", response.status, bodyText);
@@ -395,8 +398,9 @@ export function DatabaseProvider({ children }) {
         isLoading: true,
       });
       try {
+        // Use the same endpoint naming as `completeAdventure` (hyphenated).
         const data = await apiCall(
-          `/completedAdventures/adventurer/${adventurerId}`
+          `/completed-adventures/adventurer/${adventurerId}`
         );
         dispatch({ type: ActionTypes.SET_COMPLETED_ADVENTURES, data });
       } catch (error) {
@@ -432,7 +436,8 @@ export function DatabaseProvider({ children }) {
   const updateAdventurer = useCallback(
     async (id, adventurerData) => {
       try {
-        const data = await apiCall(`/adventurer/${id}`, {
+        // Use plural resource name to match the POST endpoint `/adventurers`.
+        const data = await apiCall(`/adventurers/${id}`, {
           method: "PUT",
           body: JSON.stringify(adventurerData),
         });
