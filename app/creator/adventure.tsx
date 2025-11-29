@@ -9,8 +9,9 @@ import Button from "@/components/home/Button";
 import BackButton from "@/components/reusable/BackButton";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -18,7 +19,6 @@ import {
   Text,
   TextInput,
   View,
-  ActivityIndicator,
 } from "react-native";
 
 // === CONTEXT IMPORTS ===
@@ -113,8 +113,8 @@ export default function CreateAdventureScreen() {
 
       // Create adventure data matching backend schema
       const adventureData = {
-        adventurerId: user.id,
-        regionId: selectedRegionId,
+        adventurerID: user.id,
+        regionID: selectedRegionId,
         name: adventureName.trim(),
         numTokens: tokens.length, // Will be updated when tokens are added
         location: selectedRegion.location, // Use region's center as adventure location

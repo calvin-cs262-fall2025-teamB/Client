@@ -147,7 +147,7 @@ export default function HomePage() {
     
     // Handle both camelCase and snake_case field names from database
     const itemAny = item as any;
-    const regionId = item.regionId || itemAny.regionid || itemAny.regionID;
+    const regionId = item.regionID || itemAny.regionid || itemAny.regionID;
     const numTokens = item.numTokens || itemAny.numtokens || itemAny.num_tokens;
     
     // Find the corresponding region data
@@ -161,7 +161,7 @@ export default function HomePage() {
     // }
     
     return {
-      id: item.id?.toString() || '',
+      id: item.ID?.toString() || '',
       title: item.name || 'Unnamed Adventure',
       summary: item.name || 'No description available',
       description: item.name || 'No description available',
