@@ -464,7 +464,7 @@ export default function MapScreen() {
         zoomEnabled={creationStep === 'idle'}
         rotateEnabled={creationStep === 'idle'}
         pitchEnabled={creationStep === 'idle'}
-        onPress={creationStep === 'placing' ? handleMapPress : undefined}
+        onPress={creationStep !== 'adjusting' ? handleMapPress : undefined}
         initialRegion={{
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
