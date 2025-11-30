@@ -99,7 +99,7 @@ function AuthProvider({ children }) {
     ) || null;
   };
 
-  function signup(fullName, email, password) {
+  async function signup(fullName, email, password) {
     // ============================================================================
     // TODO: Replace with Azure API call to PostgreSQL backend
     // ============================================================================
@@ -117,8 +117,30 @@ function AuthProvider({ children }) {
     // if (data.success) {
     //   dispatch({ type: "signup", payload: { user: data.user, email, password } });
     // }
-    // ============================================================================
-    dispatch({ type: "signup", payload: { user: fullName, email, password } });
+    // ============================================================================    
+    try {
+      const result = await createAdventurer({
+        username: fullName, // Make unique to avoid conflicts
+        password: password,
+        profilePicture: null,
+      });
+      
+      dispatch({ 
+        type: "signup", 
+        payload: { 
+          user: result, 
+          email, 
+          password 
+        } 
+      });
+      
+      return { success: true, user: result };
+    } catch (error) {
+      console.error('Signup error:', error);
+      return { success: false, error: error.message };
+    }
+
+
   }
 
   async function login(username, password) {

@@ -161,7 +161,7 @@ export default function HomePage() {
     // }
     
     return {
-      id: item.ID?.toString() || '',
+      id: item.ID?.toString() || `adventure-${Date.now()}-${Math.random()}`,
       title: item.name || 'Unnamed Adventure',
       summary: item.name || 'No description available',
       description: item.name || 'No description available',
@@ -336,9 +336,9 @@ export default function HomePage() {
           {regions.length > 1 && (
             <>
               <View style={styles.filterDivider} />
-              {regions.map((region) => (
+              {regions.map((region, index) => (
                 <FilterChip
-                  key={region}
+                  key={`${region}-${index}`}
                   label={region}
                   selected={selectedRegion === region}
                   onPress={() =>
@@ -410,9 +410,9 @@ export default function HomePage() {
             )}
           </View>
         ) : (
-          filteredAdventures.map((adventure: Adventure) => (
+          filteredAdventures.map((adventure: Adventure, index: number) => (
             <TouchableOpacity
-              key={adventure.id}
+              key={`${adventure.id}-${index}`}
               style={styles.card}
               onPress={() => handleAdventurePress(adventure)}
               activeOpacity={0.8}

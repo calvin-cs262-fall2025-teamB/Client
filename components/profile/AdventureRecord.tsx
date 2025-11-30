@@ -49,7 +49,7 @@ export default function AdventureRecord() {
   }, [user?.id, fetchCompletedAdventures, fetchAdventures, fetchRegions]);
 
   // Transform database data to UI format with enhanced region information
-  const transformedAdventures = completedAdventures?.map((completed: CompletedAdventure) => {
+  const transformedAdventures = completedAdventures?.map((completed: CompletedAdventure, index: number) => {
     // Handle different field naming conventions for completed adventure
     const completedAny = completed as any;
     const adventureId = completed.adventureId || completedAny.adventureid || completedAny.adventure_id;
@@ -90,8 +90,8 @@ export default function AdventureRecord() {
     }
     
     return {
-      id: adventureId,
-      title: adventureName || `Adventure ${adventureId}`,
+      id: adventureId || `unknown-${index}`, // Ensure ID is always defined
+      title: adventureName || `Adventure ${adventureId || index}`,
       tokens: numTokens || 0,
       completionDate: completionDate,
       regionName: regionName || `Region ${regionId || '?'}`,
@@ -146,9 +146,9 @@ export default function AdventureRecord() {
             <Text style={styles.emptySubtext}>Start exploring to see your achievements here!</Text>
           </View>
         ) : (
-          displayAdventures.map((adventure: DisplayAdventure) => (
+          displayAdventures.map((adventure: DisplayAdventure, index: number) => (
           <TouchableOpacity
-            key={adventure.id}
+            key={`${adventure.id}-${index}`}
             style={styles.adventureCard}
             onPress={() => handleAdventurePress(adventure)}
             activeOpacity={0.7}
