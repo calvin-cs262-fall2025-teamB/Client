@@ -80,7 +80,10 @@ export default function Signup() {
 
       setIsLoading(true);
       try {
-        fullName = firstName + " " + lastName;
+        fullName =
+          firstName.replace(/\s+/g, "").toLowerCase() +
+          " " +
+          lastName.replace(/\s+/g, "").toLowerCase();
         signup(fullName, email, password);
       } catch (err: any) {
         Alert.alert("Signup failed", err.message || "Unknown error");

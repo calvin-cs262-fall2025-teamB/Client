@@ -40,6 +40,22 @@ export default function Login() {
 
   const handleSubmit = async () => {
     if (email && password) {
+      //Step 1: Make sure user enters the right password
+      // if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      //   Alert.alert(
+      //     "Validation",
+      //     "Email is not in the correct format (user@gmail.com)"
+      //   );
+      //   return;
+      // }
+      if (!/[A-Za-z0-9]/.test(password) || !(password.length >= 10)) {
+        Alert.alert(
+          "Validation",
+          "Passwords must be alphanumeric and at least 10 characters"
+        );
+        return;
+      }
+
       setIsLoading(true);
       try {
         login(email, password);

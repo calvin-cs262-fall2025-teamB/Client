@@ -283,6 +283,8 @@ export function DatabaseProvider({ children }) {
     try {
       const data = await apiCall("/adventurers");
       dispatch({ type: ActionTypes.SET_ADVENTURERS, data });
+
+      return data;
     } catch (error) {
       console.error("Error fetching adventurers:", error);
       dispatch({
@@ -347,8 +349,9 @@ export function DatabaseProvider({ children }) {
       try {
         let endpoint = "/adventures";
         const params = new URLSearchParams();
-        if (regionId) params.append("regionId", regionId);
-        if (adventurerId) params.append("adventurerId", adventurerId);
+        // Use snake_case for query parameters (matches PostgreSQL conventions)
+        if (regionId) params.append("region_id", regionId);
+        if (adventurerId) params.append("adventurer_id", adventurerId);
         if (params.toString()) endpoint += `?${params.toString()}`;
 
         const data = await apiCall(endpoint);

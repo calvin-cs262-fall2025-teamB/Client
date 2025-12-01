@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { createContext, useContext, useReducer, useState } from "react";
+import { Alert } from "react-native";
 
 //Encryption Resource
 // Use bcryptjs (pure JS) in the React Native/Expo runtime instead of native `bcrypt`.
@@ -87,15 +88,17 @@ function AuthProvider({ children }) {
 
     //TODO: Add loader while password is loading
     //Make image field optional
+    console.log(await fetchAdventurers());
     const res = await createAdventurer({
       username: fullName,
       password,
       profilePicture: null,
     });
+
     console.log(res);
   }
 
-  function login(email, password) {
+  async function login(email, password) {
     // ============================================================================
     // TODO: Replace with Azure API call to PostgreSQL backend
     // ============================================================================
@@ -120,8 +123,22 @@ function AuthProvider({ children }) {
     // ============================================================================
 
     // TEMPORARY: Extract username from email for demo purposes
-    const username = email.split("@")[0];
-    dispatch({ type: "login", payload: { username, email } });
+    const res = await fetchAdventurers();
+    const user = res.find((el) => el.username === email);
+
+    if (user) {
+      if (user.password === password)
+        dispatch({
+          type: "login",
+          payload: { username: user.username, email },
+        });
+      else Alert.alert("Validation", "Invalid Password.");
+    } else {
+      Alert.alert(
+        "Validation",
+        "Account not found, sign up with the link below."
+      );
+    }
   }
 
   function editUsername(newUsername) {
