@@ -62,6 +62,7 @@ const ActionTypes = {
   UPDATE_ADVENTURER: 'UPDATE_ADVENTURER',
   ADD_REGION: 'ADD_REGION',
   UPDATE_REGION: 'UPDATE_REGION',
+  ADD_LANDMARK: 'ADD_LANDMARK',
   ADD_ADVENTURE: 'ADD_ADVENTURE',
   UPDATE_ADVENTURE: 'UPDATE_ADVENTURE',
   ADD_TOKEN: 'ADD_TOKEN',
@@ -156,6 +157,12 @@ function databaseReducer(state, action) {
       return {
         ...state,
         regions: [...state.regions, action.data],
+      };
+
+    case ActionTypes.ADD_LANDMARK:
+      return {
+        ...state,
+        landmarks: [...state.landmarks, action.data],
       };
 
     case ActionTypes.ADD_ADVENTURE:
@@ -503,7 +510,7 @@ export function DatabaseProvider({ children }) {
         ...regionData,
         location: formatLocationForPostgreSQL(regionData.location)
       };
-      
+
       const data = await apiCall('/regions', {
         method: 'POST',
         body: JSON.stringify(formattedData),
@@ -512,6 +519,26 @@ export function DatabaseProvider({ children }) {
       return data;
     } catch (error) {
       console.error('Error creating region:', error);
+      throw error;
+    }
+  }, [apiCall]);
+
+  const createLandmark = useCallback(async (landmarkData) => {
+    try {
+      // Format location for PostgreSQL point type
+      const formattedData = {
+        ...landmarkData,
+        location: formatLocationForPostgreSQL(landmarkData.location)
+      };
+
+      const data = await apiCall('/landmarks', {
+        method: 'POST',
+        body: JSON.stringify(formattedData),
+      });
+      dispatch({ type: ActionTypes.ADD_LANDMARK, data });
+      return data;
+    } catch (error) {
+      console.error('Error creating landmark:', error);
       throw error;
     }
   }, [apiCall]);
@@ -664,6 +691,7 @@ export function DatabaseProvider({ children }) {
     createAdventurer,
     updateAdventurer,
     createRegion,
+    createLandmark,
     createAdventure,
     createToken,
     completeAdventure,
