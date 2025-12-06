@@ -1,9 +1,10 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useDatabase } from "@/contexts/DatabaseContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
+import { CompletedAdventure, Adventure as DbAdventure } from "@/types";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -44,30 +45,59 @@ export default function Profile() {
   const {
     adventures,
     completedAdventures,
-    tokens,
     loading,
     errors,
     fetchAdventures,
     fetchCompletedAdventures,
-    fetchTokens,
   } = useDatabase();
 
   const [viewingInfo, setViewingInfo] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | undefined>(
     undefined
   );
+  const [userStats, setUserStats] = useState({
+    totalTokens: 0,
+    adventuresCompleted: 0,
+  });
 
   const PlaceholderImage = require("@/assets/images/icon.png");
 
   // Load user data on component mount
   useEffect(() => {
     if (user?.id) {
-      //TODO: fix this
-      // fetchCompletedAdventures(user.id);
-      // fetchAdventures();
-      // fetchTokens();
+      fetchCompletedAdventures(user.id);
+      fetchAdventures();
     }
-  }, [user?.id, fetchCompletedAdventures, fetchAdventures, fetchTokens]);
+  }, [user?.id, fetchCompletedAdventures, fetchAdventures]);
+
+  // Calculate user stats when data changes
+  useEffect(() => {
+    if (completedAdventures && adventures && user?.id) {
+      const userCompletedAdventures: CompletedAdventure[] = completedAdventures;
+      const userCreatedAdventures: DbAdventure[] = adventures.filter(
+        (adv: DbAdventure) => adv.adventurerid === user.id
+      );
+
+      // Calculate total tokens from completed adventures
+      const totalTokens = userCompletedAdventures.reduce(
+        (sum: number, completed: CompletedAdventure) => {
+          // Find matching adventure using proper interface fields
+          const adventure = adventures.find(
+            (adv: DbAdventure) => adv.id === completed.adventureid
+          );
+          
+          const tokenCount = adventure?.numtokens || 0;
+          return sum + tokenCount;
+        },
+        0
+      );
+
+      setUserStats({
+        totalTokens,
+        adventuresCompleted: userCompletedAdventures.length,
+      });
+    }
+  }, [completedAdventures, adventures, user?.id]);
 
   const pickImageAsync = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -104,89 +134,6 @@ export default function Profile() {
       alert("Don't know how to open this URL: " + url);
     }
   };
-
-  // Calculate user stats from database context
-  const userStats = useMemo(() => {
-    const userCompletedAdventures = completedAdventures || [];
-    const userCreatedAdventures =
-      adventures?.filter((adv: any) => adv.adventurerId === user?.id) || [];
-
-    // Debug logging
-
-    if (__DEV__) {
-      console.log("Profile stats calculation:");
-      console.log("- User ID:", user?.id);
-      console.log("- Completed adventures:", userCompletedAdventures.length);
-      // console.log('- Total adventures available:', adventures?.length || 0);
-      // console.log('- Created adventures:', userCreatedAdventures.length);
-      // console.log('- Loading states:', {
-      //   completedAdventures: loading.completedAdventures,
-      //   adventures: loading.adventures,
-      //   tokens: loading.tokens
-      // });
-    }
-
-    // Calculate total tokens from completed adventures with enhanced field mapping
-    const totalTokens = userCompletedAdventures.reduce(
-      (sum: number, completed: any, index: number) => {
-        // Handle different field naming conventions for adventure ID
-        const adventureId = completed.adventureID || completed.adventureid || completed.adventure_id || completed.adventureId;
-        
-        // Find matching adventure with flexible ID matching
-        const adventure = adventures?.find((adv: any) => {
-          const advId = adv.ID || adv.id || adv.adventureid || adv.adventure_id;
-          return advId === adventureId || advId?.toString() === adventureId?.toString();
-        });
-        
-        // Handle different field naming conventions for token count
-        const tokenCount = adventure?.numTokens || adventure?.numtokens || adventure?.num_tokens || adventure?.tokencount || 0;
-        
-        // if (__DEV__ && index < 3) { // Log first 3 for debugging
-        //   console.log(`Token calculation ${index + 1}:`, {
-        //     completedAdventureId: adventureId,
-        //     foundAdventure: !!adventure,
-        //     adventureName: adventure?.name || adventure?.adventurename,
-        //     tokenCount,
-        //     runningSum: sum + tokenCount
-        //   });
-        // }
-        
-        return sum + tokenCount;
-      },
-      0
-    );
-
-    // Alternative token calculation: check if tokens are directly in completed adventures
-    const alternativeTokens = userCompletedAdventures.reduce(
-      (sum: number, completed: any) => {
-        const directTokens =
-          completed.tokens ||
-          completed.tokencount ||
-          completed.token_count ||
-          0;
-        return sum + directTokens;
-      },
-      0
-    );
-
-    // Use the higher of the two calculations (in case one method works better)
-    const finalTokens = Math.max(totalTokens, alternativeTokens);
-
-    // if (__DEV__) {
-    //   console.log('Token calculation results:', {
-    //     fromAdventureData: totalTokens,
-    //     fromCompletedData: alternativeTokens,
-    //     finalTotal: finalTokens,
-    //     completedAdventures: userCompletedAdventures.length,
-    //     availableAdventures: totalAvailableAdventures
-    //   });
-    // }
-
-    return {
-      totalTokens: finalTokens,
-      adventuresCompleted: userCompletedAdventures.length,
-    };
-  }, [completedAdventures, adventures, user?.id]);
 
   // Show loading state while data is being fetched
   const isLoading =
