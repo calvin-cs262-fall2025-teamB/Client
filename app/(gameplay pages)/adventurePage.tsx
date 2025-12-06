@@ -95,15 +95,15 @@ export default function AdventurePageTemplate() {
         const advId = adv.ID || advAny.id;
         const idMatch = advId && (advId.toString() === currentId || advId === parseInt(currentId));
         
-        if (idMatch) {
-          console.log('Found matching adventure:', { ID: advId, name: adv.name });
-        }
+        // if (idMatch) {
+        //   console.log('Found matching adventure:', { ID: advId, name: adv.name });
+        // }
         
         return idMatch;
       });
       
       if (foundDbAdventure) {
-        console.log('Successfully found adventure:', foundDbAdventure.name);
+        // console.log('Successfully found adventure:', foundDbAdventure.name);
         const transformedAdventure = transformAdventureToFrontend(foundDbAdventure, regionsData || []);
         setAdventure(transformedAdventure);
         setIsInitializing(false);

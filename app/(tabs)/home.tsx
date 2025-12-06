@@ -248,6 +248,7 @@ export default function HomePage() {
 
       {/* Filter Chips */}
       <View style={styles.filtersSection}>
+        <Text style={styles.filtersLabel}>Regions</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -491,6 +492,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
+  },
+  filtersLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
   filtersContainer: {
     paddingHorizontal: 20,
