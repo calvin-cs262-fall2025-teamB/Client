@@ -1,7 +1,7 @@
 import themes from "@/assets/utils/themes";
 import FilterChip from "@/components/home/FilterChip";
 import MapPlaceholder from "@/components/home/MapPlaceholder";
-import { Adventure as DbAdventure } from "@/types";
+import { Adventure as DbAdventure, Region } from "@/types";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -51,10 +51,10 @@ export default function HomePage() {
 
   // Helper function to get region name for an adventure
   const getRegionName = (adventure: DbAdventure): string => {
-    const advAny = adventure as any;
+    const adv = adventure;
     // Handle both lowercase (PostgreSQL default) and camelCase field names
-    const regionId = advAny.regionid || adventure.regionid || advAny.region_id;
-    const region = regionsData.find((r: any) => (r.id || r.ID) === regionId);
+    const regionId = adv.regionid;
+    const region = regionsData.find((r: Region) => r.id === regionId);
     return region?.name || `Region ${regionId}`;
   };
 
@@ -65,9 +65,7 @@ export default function HomePage() {
 
   // Apply filters
   const filteredAdventures = displayAdventures.filter((adv: DbAdventure) => {
-    const advAny = adv as any;
-    // Handle lowercase field names from PostgreSQL
-    const adventureName = advAny.name || adv.name || '';
+    const adventureName = adv.name || '';
     const matchesSearch = adventureName.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesRegion = !selectedRegion || getRegionName(adv) === selectedRegion;
@@ -83,8 +81,7 @@ export default function HomePage() {
   const handleStartAdventure = () => {
     if (!selectedAdventure) return;
     setIsModalOpen(false);
-    const advAny = selectedAdventure;
-    const adventureId = advAny.id || selectedAdventure.id;
+    const adventureId = selectedAdventure.id;
     router.push(`/adventurePage?adventureId=${adventureId}`);
   };
 
