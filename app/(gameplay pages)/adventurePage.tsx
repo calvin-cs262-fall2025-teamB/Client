@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../contexts/AuthContext";
 import { useDatabase } from "../../contexts/DatabaseContext";
 
 export default function AdventurePageTemplate() {
@@ -19,9 +18,9 @@ export default function AdventurePageTemplate() {
   const { adventureId } = useLocalSearchParams();
 
   // Use DatabaseContext
-  const { adventures, tokens, loading, errors, fetchAdventures, fetchTokens } = useDatabase();
-  const { user } = useAuth();
-  
+  const { adventures, tokens, loading, errors, fetchAdventures, fetchTokens } =
+    useDatabase();
+
   // State for current adventure
   const [adventure, setAdventure] = useState<FrontendAdventure | null>(null);
   const [adventureTokens, setAdventureTokens] = useState<any[]>([]);
@@ -136,13 +135,18 @@ export default function AdventurePageTemplate() {
     if (adventure) {
       console.log(`Starting adventure: ${adventure.title}`);
       // TODO: Navigate to adventure gameplay
-      // router.push(`/adventure/${adventure.id}/play`);
+      router.push(`/gameMap?adventureId=${adventureId}`);
     }
   };
 
   const handleBackPress = () => {
     router.replace("/home");
   };
+
+  // Transform current adventure for display
+  const displayAdventure = adventure
+    ? transformAdventureForDisplay(adventure)
+    : null;
 
   // Loading state
   if (loading.adventures || isInitializing) {
@@ -161,7 +165,9 @@ export default function AdventurePageTemplate() {
   if (errors.adventures || localError || (!loading.adventures && !isInitializing && !adventure)) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{localError || errors.adventures || "Adventure not found"}</Text>
+        <Text style={styles.errorText}>
+          {localError || errors.adventures || "Adventure not found"}
+        </Text>
         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -182,8 +188,18 @@ export default function AdventurePageTemplate() {
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{adventure.title}</Text>
           <View style={styles.metaInfo}>
-            <Text style={styles.metaText}>Region: {adventure.region.name}</Text>
-            <Text style={styles.metaText}>Tokens: {adventure.tokenCount}</Text>
+            <Text style={styles.metaText}>
+              Difficulty: {displayAdventure.difficulty}
+            </Text>
+            <Text style={styles.metaText}>
+              Time: {displayAdventure.estimatedTime}
+            </Text>
+            <Text style={styles.metaText}>
+              Rewards: {displayAdventure.rewards}
+            </Text>
+            <Text style={styles.metaText}>
+              Tokens: {adventureTokens.length} available
+            </Text>
           </View>
         </View>
 
@@ -211,7 +227,7 @@ export default function AdventurePageTemplate() {
             <Text
               style={[styles.playButtonText, styles.playButtonTextDisabled]}
             >
-              Start Adventure
+              Play
             </Text>
           </TouchableOpacity>
         </View>

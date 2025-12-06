@@ -62,9 +62,10 @@ export default function Profile() {
   // Load user data on component mount
   useEffect(() => {
     if (user?.id) {
-      fetchCompletedAdventures(user.id);
-      fetchAdventures();
-      fetchTokens();
+      //TODO: fix this
+      // fetchCompletedAdventures(user.id);
+      // fetchAdventures();
+      // fetchTokens();
     }
   }, [user?.id, fetchCompletedAdventures, fetchAdventures, fetchTokens]);
 
@@ -93,7 +94,8 @@ export default function Profile() {
   };
 
   const openHelpWebsite = async () => {
-    const url = "https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net/";
+    const url =
+      "https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net/";
     const supported = await Linking.canOpenURL(url);
 
     if (supported) {
@@ -106,70 +108,70 @@ export default function Profile() {
   // Calculate user stats from database context
   const userStats = useMemo(() => {
     const userCompletedAdventures = completedAdventures || [];
-    const userCreatedAdventures = adventures?.filter((adv: any) => adv.adventurerId === user?.id) || [];
-    
+    const userCreatedAdventures =
+      adventures?.filter((adv: any) => adv.adventurerId === user?.id) || [];
+
     // Debug logging
-    // if (__DEV__) {
-    //   console.log('PROFILE STAT DEBUG');
-    //   console.log('Profile stats calculation:');
-    //   console.log('- User ID:', user?.id);
-    //   console.log('- Completed adventures:', userCompletedAdventures.length);
-    //   console.log('- Total adventures available:', adventures?.length || 0);
-    //   console.log('- Sample completed adventure:', userCompletedAdventures[0]);
-    //   console.log('- Sample adventure:', adventures?.[0]);
-    // }
-    
-    // Calculate total tokens from completed adventures with enhanced field mapping
-    const totalTokens = userCompletedAdventures.reduce((sum: number, completed: any, index: number) => {
-      // Handle different field naming conventions for adventure ID
-      const adventureId = completed.adventureId || completed.adventureid || completed.adventure_id;
-      
-      // Find matching adventure with flexible ID matching
-      const adventure = adventures?.find((adv: any) => {
-        const advId = adv.id || adv.adventureid || adv.adventure_id;
-        return advId === adventureId;
-      });
-      
-      // Handle different field naming conventions for token count
-      const tokenCount = adventure?.numTokens || adventure?.numtokens || adventure?.num_tokens || adventure?.tokencount || 0;
-      
-      // if (__DEV__ && index < 3) { // Log first 3 for debugging
-      //   console.log(`Token calculation ${index + 1}:`, {
-      //     completedAdventureId: adventureId,
-      //     foundAdventure: !!adventure,
-      //     adventureName: adventure?.name || adventure?.adventurename,
-      //     tokenCount,
-      //     runningSum: sum + tokenCount
-      //   });
-      // }
-      
-      return sum + tokenCount;
-    }, 0);
-    
+
+    if (__DEV__) {
+      console.log("Profile stats calculation:");
+      console.log("- User ID:", user?.id);
+      console.log("- Completed adventures:", userCompletedAdventures.length);
+      // console.log('- Total adventures available:', adventures?.length || 0);
+      // console.log('- Created adventures:', userCreatedAdventures.length);
+      // console.log('- Loading states:', {
+      //   completedAdventures: loading.completedAdventures,
+      //   adventures: loading.adventures,
+      //   tokens: loading.tokens
+      // });
+    }
+
+    // Calculate total tokens from completed adventures
+    const totalTokens = userCompletedAdventures.reduce(
+      (sum: number, completed: any) => {
+        const adventure = adventures?.find(
+          (adv: any) => adv.id === completed.adventureId
+        );
+        return sum + (adventure?.numTokens || 0);
+      },
+      0
+    );
+
     // Calculate completion rate
     const totalAvailableAdventures = adventures?.length || 0;
-    const completionRate = totalAvailableAdventures > 0 
-      ? Math.round((userCompletedAdventures.length / totalAvailableAdventures) * 100)
-      : 0;
-    
+    const completionRate =
+      totalAvailableAdventures > 0
+        ? Math.round(
+            (userCompletedAdventures.length / totalAvailableAdventures) * 100
+          )
+        : 0;
+
     // Type transformation: Add upvote property (not in database data)
     // Generate upvotes based on completed adventures and created adventures
     // This is a mock calculation since upvotes aren't stored in the database
-    const upvotes = Math.max(0, 
-      (userCompletedAdventures.length * 3) + // 3 upvotes per completed adventure
-      (userCreatedAdventures.length * 5) +   // 5 upvotes per created adventure
-      Math.floor(totalTokens / 10)          // 1 upvote per 10 tokens
+    const upvotes = Math.max(
+      0,
+      userCompletedAdventures.length * 3 + // 3 upvotes per completed adventure
+        userCreatedAdventures.length * 5 + // 5 upvotes per created adventure
+        Math.floor(totalTokens / 10) // 1 upvote per 10 tokens
     );
-    
+
     // Alternative token calculation: check if tokens are directly in completed adventures
-    const alternativeTokens = userCompletedAdventures.reduce((sum: number, completed: any) => {
-      const directTokens = completed.tokens || completed.tokencount || completed.token_count || 0;
-      return sum + directTokens;
-    }, 0);
-    
+    const alternativeTokens = userCompletedAdventures.reduce(
+      (sum: number, completed: any) => {
+        const directTokens =
+          completed.tokens ||
+          completed.tokencount ||
+          completed.token_count ||
+          0;
+        return sum + directTokens;
+      },
+      0
+    );
+
     // Use the higher of the two calculations (in case one method works better)
     const finalTokens = Math.max(totalTokens, alternativeTokens);
-    
+
     // if (__DEV__) {
     //   console.log('Token calculation results:', {
     //     fromAdventureData: totalTokens,
@@ -179,7 +181,7 @@ export default function Profile() {
     //     availableAdventures: totalAvailableAdventures
     //   });
     // }
-    
+
     return {
       totalTokens: finalTokens,
       adventuresCompleted: userCompletedAdventures.length,
@@ -190,8 +192,9 @@ export default function Profile() {
   }, [completedAdventures, adventures, user?.id]);
 
   // Show loading state while data is being fetched
-  const isLoading = loading.completedAdventures || loading.adventures || loading.tokens;
-  
+  const isLoading =
+    loading.completedAdventures || loading.adventures || loading.tokens;
+
   return (
     <ProfileProvider>
       <ScrollView style={styles.container}>
@@ -222,7 +225,7 @@ export default function Profile() {
             </View>
           </View>
         </LinearGradient>
-        
+
         {/* Help Button */}
         <View style={styles.helpButtonContainer}>
           <TouchableOpacity onPress={openHelpWebsite} style={styles.helpButton}>

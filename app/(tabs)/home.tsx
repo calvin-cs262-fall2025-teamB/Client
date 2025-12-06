@@ -5,7 +5,15 @@ import { Adventure as DbAdventure, FrontendAdventure } from "@/types";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useDatabase } from "../../contexts/DatabaseContext";
 
 // Use FrontendAdventure as the main Adventure type for UI components
@@ -85,7 +93,7 @@ const MOCK_ADVENTURES: Adventure[] = [
     region: {
       id: "4",
       name: "Ecosystem Preserve",
-      center: { lat: 42.9285, lng: -85.5870 },
+      center: { lat: 42.9285, lng: -85.587 },
     },
     tokenCount: 10,
   },
@@ -103,13 +111,13 @@ export default function HomePage() {
   const [selectedRegion, setSelectedRegion] = useState<RegionFilter>(null);
 
   // API state from DatabaseContext
-  const { 
-    adventures, 
+  const {
+    adventures,
     regions: regionsData,
-    loading, 
-    errors, 
+    loading,
+    errors,
     fetchAdventures,
-    fetchRegions
+    fetchRegions,
   } = useDatabase();
 
   // Load adventures and regions on component mount
@@ -178,18 +186,26 @@ export default function HomePage() {
   });
 
   // Debug: Log regions data
-  // if (__DEV__) {
-  //   console.log('Regions data loaded:', regionsData?.length || 0, 'regions');
-  //   if (regionsData?.length > 0) {
-  //     console.log('Sample region:', JSON.stringify(regionsData[0], null, 2));
-  //   }
-  // }
+
+  if (__DEV__) {
+    // console.log("Regions data loaded:", regionsData?.length || 0, "regions");
+    // if (regionsData?.length > 0) {
+    //   console.log("Sample region:", JSON.stringify(regionsData[0], null, 2));
+    // }
+  }
 
   // Use transformed adventures or fallback to mock data if empty
-  const displayAdventures = transformedAdventures.length > 0 ? transformedAdventures : (errors.adventures && __DEV__ ? MOCK_ADVENTURES : []);
+  const displayAdventures =
+    transformedAdventures.length > 0
+      ? transformedAdventures
+      : errors.adventures && __DEV__
+      ? MOCK_ADVENTURES
+      : [];
 
   // Get unique regions for filter
-  const regions: string[] = Array.from(new Set(displayAdventures.map((adv: Adventure) => adv.region.name)));
+  const regions: string[] = Array.from(
+    new Set(displayAdventures.map((adv: Adventure) => adv.region.name))
+  );
 
   // Apply filters
   const filteredAdventures = displayAdventures.filter((adv: Adventure) => {
@@ -295,7 +311,11 @@ export default function HomePage() {
         ) : errors.adventures && displayAdventures.length === 0 ? (
           // Error state
           <View style={styles.errorContainer}>
-            <FontAwesome6 name="triangle-exclamation" size={48} color="#FF3B30" />
+            <FontAwesome6
+              name="triangle-exclamation"
+              size={48}
+              color="#FF3B30"
+            />
             <Text style={styles.errorText}>{errors.adventures}</Text>
             <TouchableOpacity
               style={styles.retryButton}
@@ -336,10 +356,7 @@ export default function HomePage() {
               onPress={() => handleAdventurePress(adventure)}
               activeOpacity={0.8}
             >
-              <MapPlaceholder
-                regionName={adventure.region.name}
-                height={160}
-              />
+              <MapPlaceholder regionName={adventure.region.name} height={160} />
               <View style={styles.cardContent}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle} numberOfLines={1}>
@@ -361,9 +378,7 @@ export default function HomePage() {
 
                   <View style={styles.badge}>
                     <FontAwesome6 name="coins" size={12} color="#FFD700" />
-                    <Text style={styles.badgeText}>
-                      {adventure.tokenCount}
-                    </Text>
+                    <Text style={styles.badgeText}>{adventure.tokenCount}</Text>
                   </View>
                 </View>
               </View>
@@ -414,7 +429,9 @@ export default function HomePage() {
 
             {/* Description */}
             <View style={styles.modalDescriptionSection}>
-              <Text style={styles.modalSectionTitle}>What you will discover</Text>
+              <Text style={styles.modalSectionTitle}>
+                What you will discover
+              </Text>
               <Text style={styles.modalDescription}>
                 {selectedAdventure.description || selectedAdventure.summary}
               </Text>

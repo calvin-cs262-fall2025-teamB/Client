@@ -8,7 +8,7 @@ const initialState = {
 const ProfileContext = createContext();
 
 function reducer(state, action) {
-  console.log(action.payload);
+  // console.log(action.payload);
   switch (action.type) {
     case "edit/image":
       return { ...state, image: action.payload };
@@ -26,7 +26,7 @@ function reducer(state, action) {
 }
 
 function ProfileProvider({ children }) {
-  const { user, email, editEmail, editUsername } = useAuth();
+  const { user, username, email, editEmail, editUsername } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
   const { image } = state;
 
@@ -65,6 +65,7 @@ function ProfileProvider({ children }) {
     <ProfileContext.Provider
       value={{
         user,
+        username,
         email,
         image,
         editUsername,
