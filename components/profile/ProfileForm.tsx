@@ -10,7 +10,7 @@ export default function ProfileForm() {
   const [fullname, setFullname] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const { user, email: userEmail, editUsername, editEmail } = useProfile();
+  const { email: userEmail, editUsername, editEmail, username } = useProfile();
   const { logout } = useAuth();
   //   console.log("ProfileForm userEmail:", userEmail);
 
@@ -37,7 +37,7 @@ export default function ProfileForm() {
           <Text style={styles.formLabel}>Full Name</Text>
           <TextInput
             style={styles.formInput}
-            placeholder={user}
+            placeholder={username}
             value={fullname}
             onChangeText={setFullname}
             accessibilityLabel="Profile form text input"

@@ -2,71 +2,90 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { createContext, useContext, useReducer } from "react";
+
+import { createContext, useContext, useReducer, useState } from "react";
+import { Alert } from "react-native";
+
+//Encryption Resource
+// Use bcryptjs (pure JS) in the React Native/Expo runtime instead of native `bcrypt`.
+// Note: password hashing should ideally be performed on the server-side; this is
+// a temporary client-side approach for development/demo only.
+// import * as Random from "expo-random";
+
+// Tell bcryptjs how to get random bytes in React Native/Expo
+// bcrypt.setRandomFallback((len) => {
+//   const bytes = Random.getRandomBytes(len);
+//   // bcryptjs expects a string of random bytes
+//   return Array.from(bytes)
+//     .map((b) => String.fromCharCode(b))
+//     .join("");
+// });
+
+//API Functions
+
 import { useDatabase } from "./DatabaseContext";
 
 const AuthContext = createContext();
 
 const initialState = {
-  user: null, // Will contain full Adventurer object from database
+  user: null,
   username: null,
   email: null,
-  password: null,
+  // TODO: figure out how to store image urls
   profilePicture: null,
+
   isAuthenticated: false,
   isLoading: false,
 };
 
 function reducer(state, action) {
   if (__DEV__) {
-    console.log('AuthContext action:', action.type, action.payload);
+    console.log("AuthContext action:", action.type, action.payload);
   }
-  
+
   switch (action.type) {
     case "set_loading":
       return { ...state, isLoading: action.payload };
-    
+
     case "set_user_data":
-      return { 
-        ...state, 
-        user: action.payload.user,
-        username: action.payload.user?.username || null,
-        profilePicture: action.payload.user?.profilePicture || null,
-      };
-    
-    case "edit/username":
-      return { 
-        ...state, 
-        user: state.user ? { ...state.user, username: action.payload } : null,
-        username: action.payload
-      };
-    
-    case "edit/email":
-      return { ...state, email: action.payload };
-    
-    case "signup":
       return {
         ...state,
         user: action.payload.user,
         username: action.payload.user?.username || null,
-        email: action.payload.email,
-        password: action.payload.password,
         profilePicture: action.payload.user?.profilePicture || null,
+      };
+
+    case "edit/username":
+      return { ...state, username: action.payload };
+
+    case "edit/email":
+      return { ...state, email: action.payload };
+
+    case "signup":
+      return {
+        ...state,
+        username: action.payload.username,
+        user: action.payload.user,
+
+        email: action.payload.email,
+
         isAuthenticated: true,
         isLoading: false,
       };
-    
+
     case "login":
       return {
         ...state,
         user: action.payload.user,
-        username: action.payload.user?.username || null,
+
+        username: action.payload.username,
+
         email: action.payload.email,
         profilePicture: action.payload.user?.profilePicture || null,
         isAuthenticated: true,
         isLoading: false,
       };
-    
+
     case "logout":
       return {
         ...state,
@@ -78,7 +97,7 @@ function reducer(state, action) {
         isAuthenticated: false,
         isLoading: false,
       };
-    
+
     default:
       throw Error("Unknown Action: " + action.type);
   }
@@ -86,138 +105,90 @@ function reducer(state, action) {
 
 function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { user, username, email, isAuthenticated, isLoading, profilePicture } = state;
+
+  const { user, email, username, isAuthenticated, profilePicture } = state;
+  const [isLoading, setIsLoading] = useState(false);
+
   const router = useRouter();
-  
+
   // Get database context functions
-  const { adventurers, fetchAdventurers, createAdventurer, updateAdventurer } = useDatabase();
-  
-  // Helper function to find user by username in adventurers data
-  const findUserByUsername = (adventurers, username) => {
-    return adventurers?.find(adventurer => 
-      adventurer.username?.toLowerCase() === username?.toLowerCase()
-    ) || null;
-  };
+  const { fetchAdventurers, createAdventurer, updateAdventurer } =
+    useDatabase();
 
   async function signup(fullName, email, password) {
+    // const BCRYPT_ROUNDS = 8; //Change to 13 to improve efficiency
+
+    // const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
+
+    //TODO: Add loader while password is loading
+    //Make image field optional
+
+    setIsLoading(true);
+    const res = await createAdventurer({
+      username: fullName,
+      password,
+      profilePicture: null,
+    });
+
+    const data = await fetchAdventurers();
+    setIsLoading(false);
+
+    const user = data.find((el) => el.id === res.id);
+
+    // console.log(data);
+    dispatch({
+      type: "signup",
+      payload: { username: fullName, email, user },
+    });
+  }
+
+  async function login(email, password) {
     // ============================================================================
     // TODO: Replace with Azure API call to PostgreSQL backend
     // ============================================================================
-    // Expected API endpoint: POST https://your-app.azurewebsites.net/api/auth/signup
-    // Expected PostgreSQL table: users
-    // Expected columns: id, full_name, email, password_hash, created_at, updated_at
+    // Expected API endpoint: POST https://your-app.azurewebsites.net/api/auth/login
+    // Expected PostgreSQL query:
+    // SELECT id, full_name, email, profile_image_url
+    // FROM users
+    // WHERE email = $1 AND password_hash = crypt($2, password_hash);
     //
     // Implementation example:
-    // const response = await fetch('https://your-app.azurewebsites.net/api/auth/signup', {
+    // const response = await fetch('https://your-app.azurewebsites.net/api/auth/login', {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ fullName, email, password })
+    //   body: JSON.stringify({ email, password })
     // });
     // const data = await response.json();
     // if (data.success) {
-    //   dispatch({ type: "signup", payload: { user: data.user, email, password } });
+    //   // Store auth token in secure storage
+    //   await SecureStore.setItemAsync('authToken', data.token);
+    //   dispatch({ type: "login", payload: data.user.full_name });
     // }
-    // ============================================================================    
-    try {
-      const result = await createAdventurer({
-        username: fullName, // Make unique to avoid conflicts
-        password: password,
-        profilePicture: null,
-      });
-      
-      dispatch({ 
-        type: "signup", 
-        payload: { 
-          user: result, 
-          email, 
-          password 
-        } 
-      });
-      
-      return { success: true, user: result };
-    } catch (error) {
-      console.error('Signup error:', error);
-      return { success: false, error: error.message };
-    }
+    // ============================================================================
 
+    // TEMPORARY: Extract username from email for demo purposes
+    setIsLoading(true);
+    const res = await fetchAdventurers();
+    // console.log(res);
+    const user = res.find((el) => el.username === email);
+    setIsLoading(false);
 
-  }
-
-  async function login(username, password) {
-    dispatch({ type: "set_loading", payload: true });
-    
-    try {
-      // ============================================================================
-      // TODO: Replace with Azure API call to PostgreSQL backend for authentication
-      // ============================================================================
-      // Expected API endpoint: POST https://your-app.azurewebsites.net/api/auth/login
-      // Expected PostgreSQL query:
-      // SELECT id, username, password, profilePicture
-      // FROM Adventurer
-      // WHERE username = $1 AND password = crypt($2, password);
-      // ============================================================================
-
-      // Ensure we have adventurer data
-      if (!adventurers || adventurers.length === 0) {
-        await fetchAdventurers();
-      }
-      
-      // if (__DEV__) {
-      //   console.log('Adventurers:');
-      //   console.log(adventurers);
-      //   console.log('Login attempt for username:', username);
-      //   console.log('Available adventurers:', adventurers?.length || 0);
-      // }
-      
-      // Try to find user in database
-      let foundUser = findUserByUsername(adventurers, username);
-      
-      if (!foundUser) {
-        // For demo purposes, create user if not found
-        // if (__DEV__) {
-        //   console.log('User not found, creating demo user:', username);
-        // }
-        // Use a smaller ID that fits in PostgreSQL INTEGER range
-        const demoId = Math.floor(Math.random() * 1000000) + 10000; // Random ID between 10000-1010000
-        foundUser = {
-          id: demoId,
-          username: username,
-          password: password, // In real implementation, this would be hashed
-          profilePicture: null,
-        };
-        
-        // Note: Not creating in database - this is just for local demo authentication
-        // if (__DEV__) {
-        //   console.log('Created demo user with ID:', demoId);
-        // }
-      } else {
-        // In real implementation, verify password here
-        if (__DEV__) {
-          console.log('Found existing user:', foundUser.username);
-        }
-      }
-      
-      // Store auth token in secure storage (for demo)
-      await SecureStore.setItemAsync('authToken', 'demo-token-' + Date.now());
-      
-      dispatch({ 
-        type: "login", 
-        payload: { 
-          user: foundUser, 
-          email: null // Email can be set separately
-        } 
-      });
-      
-      return { success: true, user: foundUser };
-      
-    } catch (error) {
-      console.error('Login error:', error);
-      dispatch({ type: "set_loading", payload: false });
-      return { success: false, error: error.message };
+    if (user) {
+      if (user.password === password)
+        dispatch({
+          type: "login",
+          payload: { user, username: user.username, email },
+        });
+      else Alert.alert("Validation", "Invalid Password.");
+    } else {
+      Alert.alert(
+        "Validation",
+        "Account not found, sign up with the link below."
+      );
     }
   }
 
-  function editUsername(newUsername) {
+  async function editUsername(newUsername) {
     // ============================================================================
     // TODO: Update username via Azure API call to PostgreSQL backend
     // ============================================================================
@@ -235,9 +206,12 @@ function AuthProvider({ children }) {
     //   body: JSON.stringify({ fullName: newUsername })
     // });
     // ============================================================================
+    // console.log("here", user.id);
+    const res = await updateAdventurer(user.id, { username: newUsername });
+    // console.log("email :", res);
     dispatch({ type: "edit/username", payload: newUsername });
   }
-  function editEmail(newEmail) {
+  async function editEmail(newEmail) {
     // ============================================================================
     // TODO: Upload image to Azure Blob Storage and update user profile
     // ============================================================================
@@ -260,6 +234,9 @@ function AuthProvider({ children }) {
     //   body: JSON.stringify({ imageUrl: blobUrl })
     // });
     // ============================================================================
+
+    await updateAdventurer(user.id, { email: newEmail });
+
     dispatch({ type: "edit/email", payload: newEmail });
   }
 
@@ -267,12 +244,12 @@ function AuthProvider({ children }) {
     try {
       // remove any stored auth tokens if present
       await SecureStore.deleteItemAsync("authToken");
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
     try {
       await AsyncStorage.removeItem("authToken");
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
 
@@ -281,7 +258,7 @@ function AuthProvider({ children }) {
     // navigate to login/sign-in route
     try {
       router.replace("/login");
-    } catch (e) {
+    } catch (_e) {
       // ignore navigation errors
     }
   }
@@ -295,18 +272,16 @@ function AuthProvider({ children }) {
         profilePicture,
         isAuthenticated,
         isLoading,
-        
+        setIsLoading,
+
         // Authentication functions
         login,
         signup,
         logout,
-        
+
         // Profile management functions
         editUsername,
         editEmail,
-        
-        // Helper functions for database integration
-        findUserByUsername,
       }}
     >
       {children}
@@ -323,4 +298,3 @@ function useAuth() {
 }
 
 export { AuthProvider, useAuth };
-

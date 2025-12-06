@@ -1,6 +1,6 @@
 /**
  * Database Types and Interfaces
- * 
+ *
  * This file contains TypeScript interfaces that correspond to the PostgreSQL database schema.
  * These types ensure type safety when working with database operations and API responses.
  */
@@ -44,6 +44,7 @@ export interface Adventurer {
  */
 export interface Region {
   ID: number;
+
   adventurerID: number;
   name: string;
   description?: string | null;
@@ -56,6 +57,7 @@ export interface Region {
  */
 export interface Landmark {
   ID: number;
+
   regionID: number;
   name: string;
   location?: Point | null;
@@ -66,6 +68,7 @@ export interface Landmark {
  */
 export interface Adventure {
   ID: number;
+
   adventurerID: number;
   regionID: number;
   name: string;
@@ -78,6 +81,7 @@ export interface Adventure {
  */
 export interface Token {
   ID: number;
+
   adventureID: number;
   location?: Point | null;
   hint?: string | null;
@@ -91,6 +95,7 @@ export interface CompletedAdventure {
   ID: number;
   adventurerID: number;
   adventureID: number;
+
   completionDate?: string | null; // ISO date string
   completionTime?: string | null; // PostgreSQL interval as string
 }
@@ -187,9 +192,9 @@ export interface FrontendAdventure {
     center: Coordinates;
   };
   tokenCount: number;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
+  difficulty: "Easy" | "Medium" | "Hard";
   estimatedTime: string;
-  status: 'draft' | 'published' | 'archived';
+  status: "draft" | "published" | "archived";
 }
 
 /**
@@ -227,12 +232,12 @@ export interface RegisterData {
 /**
  * Create operations (omit auto-generated fields)
  */
-export type CreateAdventurer = Omit<Adventurer, 'id'>;
-export type CreateRegion = Omit<Region, 'id'>;
-export type CreateLandmark = Omit<Landmark, 'id'>;
-export type CreateAdventure = Omit<Adventure, 'id'>;
-export type CreateToken = Omit<Token, 'id'>;
-export type CreateCompletedAdventure = Omit<CompletedAdventure, 'id'>;
+export type CreateAdventurer = Omit<Adventurer, "id">;
+export type CreateRegion = Omit<Region, "id">;
+export type CreateLandmark = Omit<Landmark, "id">;
+export type CreateAdventure = Omit<Adventure, "id">;
+export type CreateToken = Omit<Token, "id">;
+export type CreateCompletedAdventure = Omit<CompletedAdventure, "id">;
 
 /**
  * Update operations (all fields optional except id)
@@ -242,7 +247,9 @@ export type UpdateRegion = Partial<Region> & { id: number };
 export type UpdateLandmark = Partial<Landmark> & { id: number };
 export type UpdateAdventure = Partial<Adventure> & { id: number };
 export type UpdateToken = Partial<Token> & { id: number };
-export type UpdateCompletedAdventure = Partial<CompletedAdventure> & { id: number };
+export type UpdateCompletedAdventure = Partial<CompletedAdventure> & {
+  id: number;
+};
 
 // ============================================================================
 // Query Parameters and Filters
@@ -267,7 +274,7 @@ export interface PaginationParams {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 /**
@@ -308,20 +315,24 @@ export interface ValidationError {
 /**
  * Database entity names
  */
-export type EntityType = 
-  | 'adventurer' 
-  | 'region' 
-  | 'landmark' 
-  | 'adventure' 
-  | 'token' 
-  | 'completedAdventure';
+export type EntityType =
+  | "adventurer"
+  | "region"
+  | "landmark"
+  | "adventure"
+  | "token"
+  | "completedAdventure";
 
 /**
  * CRUD operation types
  */
-export type CrudOperation = 'create' | 'read' | 'update' | 'delete';
+export type CrudOperation = "create" | "read" | "update" | "delete";
 
 /**
  * Database connection status
  */
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+export type ConnectionStatus =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";

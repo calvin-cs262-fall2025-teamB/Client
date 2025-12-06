@@ -6,15 +6,23 @@ import { Adventure as DbAdventure, FrontendAdventure } from "@/types";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useDatabase } from "../../contexts/DatabaseContext";
 
 // Use FrontendAdventure as the main Adventure type for UI components
 type Adventure = FrontendAdventure;
 
 // Filter type definitions
-type DifficultyFilter = 'Easy' | 'Medium' | 'Hard' | null;
-type DurationFilter = 'quick' | 'medium' | 'long' | null;
+type DifficultyFilter = "Easy" | "Medium" | "Hard" | null;
+type DurationFilter = "quick" | "medium" | "long" | null;
 type RegionFilter = string | null;
 
 // ============================================================================
@@ -100,7 +108,7 @@ const MOCK_ADVENTURES: Adventure[] = [
     region: {
       id: "4",
       name: "Ecosystem Preserve",
-      center: { lat: 42.9285, lng: -85.5870 },
+      center: { lat: 42.9285, lng: -85.587 },
     },
     tokenCount: 10,
     difficulty: "Hard",
@@ -118,18 +126,20 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Filter states with proper typing
-  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyFilter>(null);
-  const [selectedDuration, setSelectedDuration] = useState<DurationFilter>(null);
+  const [selectedDifficulty, setSelectedDifficulty] =
+    useState<DifficultyFilter>(null);
+  const [selectedDuration, setSelectedDuration] =
+    useState<DurationFilter>(null);
   const [selectedRegion, setSelectedRegion] = useState<RegionFilter>(null);
 
   // API state from DatabaseContext
-  const { 
-    adventures, 
+  const {
+    adventures,
     regions: regionsData,
-    loading, 
-    errors, 
+    loading,
+    errors,
     fetchAdventures,
-    fetchRegions
+    fetchRegions,
   } = useDatabase();
 
   // Load adventures and regions on component mount
@@ -139,64 +149,82 @@ export default function HomePage() {
   }, [fetchAdventures, fetchRegions]);
 
   // Transform database adventures to match the FrontendAdventure interface
-  const transformedAdventures: Adventure[] = adventures.map((item: DbAdventure) => {
-    // Debug: Log the raw adventure data to understand the structure
-    // if (__DEV__) {
-    //   console.log('Raw adventure data:', JSON.stringify(item, null, 2));
-    // }
-    
-    // Handle both camelCase and snake_case field names from database
-    const itemAny = item as any;
-    const regionId = item.regionID || itemAny.regionid || itemAny.regionID;
-    const numTokens = item.numTokens || itemAny.numtokens || itemAny.num_tokens;
-    
-    // Handle adventure name with flexible field mapping
-    const adventureName = item.name || itemAny.adventurename || itemAny.adventure_name || itemAny.Name;
-    
-    // Find the corresponding region data
-    const region = regionsData.find((r: any) => r.id === regionId || r.ID === regionId);
-    
-    // if (__DEV__) {
-    //   console.log(`Adventure "${adventureName}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
-    //   if (region) {
-    //     console.log('Found region:', JSON.stringify(region, null, 2));
-    //   }
-    // }
-    
-    return {
-      id: item.ID?.toString() || `adventure-${Date.now()}-${Math.random()}`,
-      title: adventureName || 'Unnamed Adventure',
-      summary: adventureName || 'No description available',
-      description: adventureName || 'No description available',
-      image_url: null,
-      region: {
-        id: regionId?.toString() || '1',
-        name: region?.name || `Region ${regionId || 1}`,
-        center: {
-          lat: region?.location?.x || item.location?.x || 42.9301,
-          lng: region?.location?.y || item.location?.y || -85.5883,
+
+  const transformedAdventures: Adventure[] = adventures.map(
+    (item: DbAdventure) => {
+      // Debug: Log the raw adventure data to understand the structure
+      // if (__DEV__) {
+      //   console.log('Raw adventure data:', JSON.stringify(item, null, 2));
+      // }
+
+      // Handle both camelCase and snake_case field names from database
+      const itemAny = item as any;
+      const regionId = item.regionID || itemAny.regionid || itemAny.regionID;
+      const numTokens =
+        item.numTokens || itemAny.numtokens || itemAny.num_tokens;
+
+      // Handle adventure name with flexible field mapping
+      const adventureName =
+        item.name ||
+        itemAny.adventurename ||
+        itemAny.adventure_name ||
+        itemAny.Name;
+
+      // Find the corresponding region data
+      const region = regionsData.find(
+        (r: any) => r.id === regionId || r.ID === regionId
+      );
+
+      // if (__DEV__) {
+      //   console.log(`Adventure "${adventureName}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
+      //   if (region) {
+      //     console.log('Found region:', JSON.stringify(region, null, 2));
+      //   }
+      // }
+
+      return {
+        id: item?.ID?.toString() || `adventure-${Date.now()}-${Math.random()}`,
+        title: adventureName || "Unnamed Adventure",
+        summary: adventureName || "No description available",
+        description: adventureName || "No description available",
+        image_url: null,
+        region: {
+          id: regionId?.toString() || "1",
+          name: region?.name || `Region ${regionId || 1}`,
+          center: {
+            lat: region?.location?.x || item.location?.x || 42.9301,
+            lng: region?.location?.y || item.location?.y || -85.5883,
+          },
+          tokenCount: numTokens || 0,
+          difficulty: "Medium" as const,
+          estimatedTime: "30 min",
+          status: "published" as const,
         },
-      },
-      tokenCount: numTokens || 0,
-      difficulty: 'Medium' as const,
-      estimatedTime: '30 min',
-      status: 'published' as const,
-    };
-  });
+      };
+    }
+  );
 
   // Debug: Log regions data
-  // if (__DEV__) {
-  //   console.log('Regions data loaded:', regionsData?.length || 0, 'regions');
-  //   if (regionsData?.length > 0) {
-  //     console.log('Sample region:', JSON.stringify(regionsData[0], null, 2));
-  //   }
-  // }
+
+  if (__DEV__) {
+    // console.log("Regions data loaded:", regionsData?.length || 0, "regions");
+    // if (regionsData?.length > 0) {
+    //   console.log("Sample region:", JSON.stringify(regionsData[0], null, 2));
+    // }
+  }
 
   // Use transformed adventures or fallback to mock data if empty
-  const displayAdventures = transformedAdventures.length > 0 ? transformedAdventures : (errors.adventures && __DEV__ ? MOCK_ADVENTURES : []);
+  const displayAdventures =
+    transformedAdventures.length > 0
+      ? transformedAdventures
+      : errors.adventures && __DEV__
+      ? MOCK_ADVENTURES
+      : [];
 
   // Get unique regions for filter
-  const regions: string[] = Array.from(new Set(displayAdventures.map((adv: Adventure) => adv.region.name)));
+  const regions: string[] = Array.from(
+    new Set(displayAdventures.map((adv: Adventure) => adv.region.name))
+  );
 
   // Apply filters
   const filteredAdventures = displayAdventures.filter((adv: Adventure) => {
@@ -218,7 +246,9 @@ export default function HomePage() {
 
     const matchesRegion = !selectedRegion || adv.region.name === selectedRegion;
 
-    return matchesSearch && matchesDifficulty && matchesDuration && matchesRegion;
+    return (
+      matchesSearch && matchesDifficulty && matchesDuration && matchesRegion
+    );
   });
 
   const handleAdventurePress = (adventure: Adventure) => {
@@ -310,9 +340,7 @@ export default function HomePage() {
             label="< 30 min"
             selected={selectedDuration === "quick"}
             onPress={() =>
-              setSelectedDuration(
-                selectedDuration === "quick" ? null : "quick"
-              )
+              setSelectedDuration(selectedDuration === "quick" ? null : "quick")
             }
           />
           <FilterChip
@@ -376,7 +404,11 @@ export default function HomePage() {
         ) : errors.adventures && displayAdventures.length === 0 ? (
           // Error state
           <View style={styles.errorContainer}>
-            <FontAwesome6 name="triangle-exclamation" size={48} color="#FF3B30" />
+            <FontAwesome6
+              name="triangle-exclamation"
+              size={48}
+              color="#FF3B30"
+            />
             <Text style={styles.errorText}>{errors.adventures}</Text>
             <TouchableOpacity
               style={styles.retryButton}
@@ -417,10 +449,7 @@ export default function HomePage() {
               onPress={() => handleAdventurePress(adventure)}
               activeOpacity={0.8}
             >
-              <MapPlaceholder
-                regionName={adventure.region.name}
-                height={160}
-              />
+              <MapPlaceholder regionName={adventure.region.name} height={160} />
               <View style={styles.cardContent}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle} numberOfLines={1}>
@@ -441,7 +470,9 @@ export default function HomePage() {
                       size={12}
                       color="#6B7280"
                     />
-                    <Text style={styles.badgeText}>{adventure.region.name}</Text>
+                    <Text style={styles.badgeText}>
+                      {adventure.region.name}
+                    </Text>
                   </View>
                   <View style={styles.badge}>
                     <FontAwesome6 name="clock" size={12} color="#6B7280" />
@@ -451,9 +482,7 @@ export default function HomePage() {
                   </View>
                   <View style={styles.badge}>
                     <FontAwesome6 name="coins" size={12} color="#FFD700" />
-                    <Text style={styles.badgeText}>
-                      {adventure.tokenCount}
-                    </Text>
+                    <Text style={styles.badgeText}>{adventure.tokenCount}</Text>
                   </View>
                 </View>
               </View>
@@ -488,7 +517,11 @@ export default function HomePage() {
             {/* Key Info Bar */}
             <View style={styles.modalInfoBar}>
               <View style={styles.modalInfoItem}>
-                <FontAwesome6 name="clock" size={16} color={themes.primaryColor} />
+                <FontAwesome6
+                  name="clock"
+                  size={16}
+                  color={themes.primaryColor}
+                />
                 <Text style={styles.modalInfoText}>
                   {selectedAdventure.estimatedTime}
                 </Text>
@@ -515,7 +548,9 @@ export default function HomePage() {
 
             {/* Description */}
             <View style={styles.modalDescriptionSection}>
-              <Text style={styles.modalSectionTitle}>What you will discover</Text>
+              <Text style={styles.modalSectionTitle}>
+                What you will discover
+              </Text>
               <Text style={styles.modalDescription}>
                 {selectedAdventure.description || selectedAdventure.summary}
               </Text>

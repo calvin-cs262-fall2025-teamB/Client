@@ -97,7 +97,9 @@ export default function MapScreen() {
   const [regionCenter, setRegionCenter] = useState<LatLng | null>(null);
   const [regionRadius, setRegionRadius] = useState<number>(200); // Default 200m
   const [regionName, setRegionName] = useState<string>("");
-  const [creationStep, setCreationStep] = useState<'idle' | 'placing' | 'adjusting'>('idle');
+  const [creationStep, setCreationStep] = useState<
+    "idle" | "placing" | "adjusting"
+  >("idle");
 
   const mapRef = useRef<MapView>(null);
   const [isPinching, setIsPinching] = useState(false);
@@ -121,21 +123,24 @@ export default function MapScreen() {
 
   // === IMPROVED: Adaptive pixel-to-meter conversion for better control ===
   // Smaller radii get finer control, larger radii get coarser control
-  const pixelsToMeters = useCallback((pixels: number, latitude: number, currentRadius: number) => {
-    // Base sensitivity - adjust this to change overall responsiveness
-    let sensitivity = 2.5;
+  const pixelsToMeters = useCallback(
+    (pixels: number, latitude: number, currentRadius: number) => {
+      // Base sensitivity - adjust this to change overall responsiveness
+      let sensitivity = 2.5;
 
-    // Adaptive sensitivity based on current radius
-    // Small circles (< 200m) = fine control (lower multiplier)
-    // Large circles (> 1000m) = coarse control (higher multiplier)
-    if (currentRadius < 200) {
-      sensitivity = 1.5; // Fine control for small circles
-    } else if (currentRadius > 1000) {
-      sensitivity = 4.0; // Faster changes for large circles
-    }
+      // Adaptive sensitivity based on current radius
+      // Small circles (< 200m) = fine control (lower multiplier)
+      // Large circles (> 1000m) = coarse control (higher multiplier)
+      if (currentRadius < 200) {
+        sensitivity = 1.5; // Fine control for small circles
+      } else if (currentRadius > 1000) {
+        sensitivity = 4.0; // Faster changes for large circles
+      }
 
-    return pixels * sensitivity;
-  }, []);
+      return pixels * sensitivity;
+    },
+    []
+  );
 
   // === OPTIMIZED: Pinch gesture with haptics and throttling ===
   const panResponder = PanResponder.create({
@@ -146,7 +151,7 @@ export default function MapScreen() {
         return true; // Capture pinch
       }
       // For single tap, handle it here and don't capture
-      if (touchCount === 1 && creationStep === 'adjusting') {
+      if (touchCount === 1 && creationStep === "adjusting") {
         const touch = evt.nativeEvent.touches[0];
         // We'll handle this in onPanResponderGrant if needed
       }
@@ -157,7 +162,7 @@ export default function MapScreen() {
     onPanResponderGrant: (evt) => {
       const touches = evt.nativeEvent.touches;
       if (touches.length === 2) {
-        console.log('✌️ Pinch started!');
+        console.log("✌️ Pinch started!");
         // Haptic feedback when pinch starts
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setIsPinching(true);
@@ -185,19 +190,30 @@ export default function MapScreen() {
         const distanceChange = currentDistance - initialPinchDistance.current;
 
         // Convert pixel change to meters with adaptive sensitivity
-        const metersChange = pixelsToMeters(distanceChange, regionCenter.latitude, regionRadius);
+        const metersChange = pixelsToMeters(
+          distanceChange,
+          regionCenter.latitude,
+          regionRadius
+        );
 
         // Update radius
         const newRadius = initialRadius.current + metersChange;
-        const clampedRadius = Math.max(50, Math.min(5000, Math.round(newRadius)));
+        const clampedRadius = Math.max(
+          50,
+          Math.min(5000, Math.round(newRadius))
+        );
 
-        console.log(`🤏 Pinching: ${clampedRadius}m (pixel distance: ${Math.round(currentDistance)}px)`);
+        console.log(
+          `🤏 Pinching: ${clampedRadius}m (pixel distance: ${Math.round(
+            currentDistance
+          )}px)`
+        );
         setRegionRadius(clampedRadius);
       }
     },
 
     onPanResponderRelease: () => {
-      console.log('✅ Pinch released!');
+      console.log("✅ Pinch released!");
       // Haptic feedback when pinch ends
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setIsPinching(false);
@@ -261,18 +277,18 @@ export default function MapScreen() {
   const handleMapPress = (event: MapPressEvent) => {
     const coord = event.nativeEvent.coordinate;
 
-    if (creationStep === 'placing' || creationStep === 'adjusting') {
+    if (creationStep === "placing" || creationStep === "adjusting") {
       // User can tap/re-tap to set or adjust region center
       setRegionCenter(coord);
       // Haptic feedback for placement
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      if (creationStep === 'placing') {
+      if (creationStep === "placing") {
         // First tap - move to adjusting mode
-        setCreationStep('adjusting');
+        setCreationStep("adjusting");
       }
       // If already in adjusting mode, just update the center (stay in adjusting)
-    } else if (creationStep === 'idle') {
+    } else if (creationStep === "idle") {
       // Add token (existing functionality)
       Alert.prompt("Add Custom Token", "Enter a name:", (tokenName) => {
         if (!tokenName) return;
@@ -300,7 +316,10 @@ export default function MapScreen() {
   const finalizeRegion = async () => {
     // Validation
     if (!regionCenter) {
-      Alert.alert("No Location", "Please tap the map to place your region center.");
+      Alert.alert(
+        "No Location",
+        "Please tap the map to place your region center."
+      );
       return;
     }
 
@@ -310,14 +329,17 @@ export default function MapScreen() {
     }
 
     if (!user || !user.id) {
-      Alert.alert("Authentication Required", "You must be logged in to create a region.");
+      Alert.alert(
+        "Authentication Required",
+        "You must be logged in to create a region."
+      );
       return;
     }
 
     setIsCreatingRegion(true);
 
     try {
-      // === Circle approach: Direct mapping to backend! === 
+      // === Circle approach: Direct mapping to backend! ===
       const regionData = {
         adventurerId: user.id,
         name: regionName.trim(),
@@ -344,8 +366,10 @@ export default function MapScreen() {
         const radiusInDegrees = regionRadius / 111320; // 1 degree ≈ 111.32 km
 
         const lat = regionCenter.latitude + radiusInDegrees * Math.cos(angle);
-        const lng = regionCenter.longitude +
-          (radiusInDegrees * Math.sin(angle)) / Math.cos(regionCenter.latitude * Math.PI / 180);
+        const lng =
+          regionCenter.longitude +
+          (radiusInDegrees * Math.sin(angle)) /
+            Math.cos((regionCenter.latitude * Math.PI) / 180);
 
         const landmarkData = {
           regionId: savedRegion.id,
@@ -370,8 +394,8 @@ export default function MapScreen() {
       Alert.alert(
         "🎉 Region Created!",
         `"${regionName}" created successfully!\n\n` +
-        `📍 Radius: ${regionRadius}m\n` +
-        `🏷️ Landmarks: ${numLandmarks} evenly-spaced points`,
+          `📍 Radius: ${regionRadius}m\n` +
+          `🏷️ Landmarks: ${numLandmarks} evenly-spaced points`,
         [{ text: "Awesome!", style: "default" }]
       );
 
@@ -381,7 +405,9 @@ export default function MapScreen() {
       console.error("Error creating region:", error);
       Alert.alert(
         "Error",
-        `Failed to create region: ${error instanceof Error ? error.message : "Unknown error"}`
+        `Failed to create region: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     } finally {
       setIsCreatingRegion(false);
@@ -393,7 +419,7 @@ export default function MapScreen() {
     setRegionCenter(null);
     setRegionRadius(200);
     setRegionName("");
-    setCreationStep('idle');
+    setCreationStep("idle");
   };
 
   // === MODIFIED: Cancel region creation ===
@@ -413,7 +439,7 @@ export default function MapScreen() {
           return;
         }
         setRegionName(name.trim());
-        setCreationStep('placing');
+        setCreationStep("placing");
       }
     );
   };
@@ -460,11 +486,11 @@ export default function MapScreen() {
         ref={mapRef}
         style={styles.map}
         showsUserLocation={true}
-        scrollEnabled={creationStep === 'idle'}
-        zoomEnabled={creationStep === 'idle'}
-        rotateEnabled={creationStep === 'idle'}
-        pitchEnabled={creationStep === 'idle'}
-        onPress={creationStep !== 'adjusting' ? handleMapPress : undefined}
+        scrollEnabled={creationStep === "idle"}
+        zoomEnabled={creationStep === "idle"}
+        rotateEnabled={creationStep === "idle"}
+        pitchEnabled={creationStep === "idle"}
+        onPress={creationStep !== "adjusting" ? handleMapPress : undefined}
         initialRegion={{
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
@@ -489,7 +515,7 @@ export default function MapScreen() {
         ))}
 
         {/* === ADDED: Live circle preview during creation === */}
-        {regionCenter && creationStep !== 'idle' && (
+        {regionCenter && creationStep !== "idle" && (
           <>
             {/* Circle region preview */}
             <Circle
@@ -500,10 +526,7 @@ export default function MapScreen() {
               strokeWidth={3}
             />
             {/* Center marker */}
-            <Marker
-              coordinate={regionCenter}
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
+            <Marker coordinate={regionCenter} anchor={{ x: 0.5, y: 0.5 }}>
               <View style={styles.centerMarker}>
                 <View style={styles.centerDot} />
               </View>
@@ -512,7 +535,7 @@ export default function MapScreen() {
         )}
 
         {/* Tokens */}
-        {creationStep === 'idle' &&
+        {creationStep === "idle" &&
           tokens
             .filter((t) => t.isVisible)
             .map((t) => (
@@ -527,13 +550,18 @@ export default function MapScreen() {
       </MapView>
 
       {/* === ADDED: Touch overlay for gestures === */}
-      {creationStep === 'adjusting' && (
+      {creationStep === "adjusting" && (
         <View
           style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
           {...panResponder.panHandlers}
           onTouchEnd={async (evt) => {
             // Handle single taps for repositioning
-            if (evt.nativeEvent.touches.length === 0 && !isPinching && regionCenter && mapRef.current) {
+            if (
+              evt.nativeEvent.touches.length === 0 &&
+              !isPinching &&
+              regionCenter &&
+              mapRef.current
+            ) {
               try {
                 const { locationX, locationY } = evt.nativeEvent;
                 const coord = await mapRef.current.coordinateForPoint({
@@ -542,9 +570,9 @@ export default function MapScreen() {
                 });
                 setRegionCenter(coord);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                console.log('📍 Center repositioned');
+                console.log("📍 Center repositioned");
               } catch (error) {
-                console.error('Error getting coordinate:', error);
+                console.error("Error getting coordinate:", error);
               }
             }
           }}
@@ -554,13 +582,20 @@ export default function MapScreen() {
       {/* === COMPLETELY REWRITTEN: Beautiful circle-based controls === */}
 
       {/* === SIMPLIFIED: Clean instruction overlay === */}
-      {creationStep !== 'idle' && (
-        <View style={[styles.instructionsOverlay, { zIndex: 2000, pointerEvents: 'none' }]}>
-          <View style={[
-            styles.instructionsCard,
-            isPinching && styles.instructionsCardPinching
-          ]}>
-            {creationStep === 'placing' ? (
+      {creationStep !== "idle" && (
+        <View
+          style={[
+            styles.instructionsOverlay,
+            { zIndex: 2000, pointerEvents: "none" },
+          ]}
+        >
+          <View
+            style={[
+              styles.instructionsCard,
+              isPinching && styles.instructionsCardPinching,
+            ]}
+          >
+            {creationStep === "placing" ? (
               <>
                 <Text style={styles.instructionsTitle}>📍 Place Center</Text>
                 <Text style={styles.instructionsText}>
@@ -569,19 +604,29 @@ export default function MapScreen() {
               </>
             ) : (
               <>
-                <Text style={[
-                  styles.instructionsTitle,
-                  isPinching && { color: '#FFFFFF' }
-                ]}>"{regionName}"</Text>
-                <Text style={[
-                  styles.radiusDisplay,
-                  isPinching && styles.radiusDisplayActive
-                ]}>{regionRadius}m</Text>
-                <Text style={[
-                  styles.instructionsText,
-                  isPinching && { color: '#FFFFFF' }
-                ]}>
-                  {isPinching ? '🤏 Pinching...' : '🤏 Pinch to resize'}
+                <Text
+                  style={[
+                    styles.instructionsTitle,
+                    isPinching && { color: "#FFFFFF" },
+                  ]}
+                >
+                  {regionName}
+                </Text>
+                <Text
+                  style={[
+                    styles.radiusDisplay,
+                    isPinching && styles.radiusDisplayActive,
+                  ]}
+                >
+                  {regionRadius}m
+                </Text>
+                <Text
+                  style={[
+                    styles.instructionsText,
+                    isPinching && { color: "#FFFFFF" },
+                  ]}
+                >
+                  {isPinching ? "🤏 Pinching..." : "🤏 Pinch to resize"}
                 </Text>
                 {!isPinching && (
                   <Text style={styles.instructionsSubtext}>
@@ -595,15 +640,14 @@ export default function MapScreen() {
       )}
 
       {/* Main Action Controls */}
-      <View style={[styles.controls, { zIndex: 3000, pointerEvents: 'box-none' }]}>
-        {creationStep === 'idle' ? (
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={startCreation}
-          >
+      <View
+        style={[styles.controls, { zIndex: 3000, pointerEvents: "box-none" }]}
+      >
+        {creationStep === "idle" ? (
+          <TouchableOpacity style={styles.createButton} onPress={startCreation}>
             <Text style={styles.createButtonText}>➕ Create Region</Text>
           </TouchableOpacity>
-        ) : creationStep === 'adjusting' ? (
+        ) : creationStep === "adjusting" ? (
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.button, styles.saveButton]}
@@ -611,7 +655,9 @@ export default function MapScreen() {
               disabled={isCreatingRegion}
             >
               {isCreatingRegion ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
                   <ActivityIndicator size="small" color="#fff" />
                   <Text style={styles.buttonText}>Saving...</Text>
                 </View>
