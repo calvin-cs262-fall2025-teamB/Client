@@ -1,15 +1,14 @@
 import BackButton from "@/components/reusable/BackButton";
-import { Adventure as DbAdventure, FrontendAdventure } from "@/types";
+import { Adventure as DbAdventure } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useDatabase } from "../../contexts/DatabaseContext";
 
@@ -22,39 +21,9 @@ export default function AdventurePageTemplate() {
     useDatabase();
 
   // State for current adventure
-  const [adventure, setAdventure] = useState<FrontendAdventure | null>(null);
+  const [adventure, setAdventure] = useState<DbAdventure | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-
-  // Transform database adventure to FrontendAdventure format
-  const transformAdventureToFrontend = (dbAdventure: DbAdventure, regionsData: any[]): FrontendAdventure => {
-    const dbAny = dbAdventure as any;
-    
-    // Handle different field naming conventions
-    const adventureId = dbAdventure.ID || dbAny.id;
-    const regionId = dbAdventure.regionID || dbAny.regionid || dbAny.regionID;
-    const adventureName = dbAdventure.name || dbAny.adventurename || dbAny.adventure_name || dbAny.Name;
-    const numTokens = dbAdventure.numTokens || dbAny.numtokens || dbAny.num_tokens;
-    
-    const region = regionsData.find((r: any) => r.id === regionId || r.ID === regionId);
-    
-    return {
-      id: (adventureId && adventureId.toString()) || `adventure-${Date.now()}`,
-      title: adventureName || 'Unnamed Adventure',
-      summary: adventureName || 'No description available',
-      description: adventureName || 'No description available',
-      image_url: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
-      region: {
-        id: regionId?.toString() || '1',
-        name: region?.name || `Region ${regionId || 1}`,
-        center: {
-          lat: region?.location?.x || dbAdventure.location?.x || 42.9301,
-          lng: region?.location?.y || dbAdventure.location?.y || -85.5883,
-        },
-      },
-      tokenCount: numTokens || 0,
-    };
-  };
 
   // Load adventure data from DatabaseContext
   useEffect(() => {
@@ -78,16 +47,14 @@ export default function AdventurePageTemplate() {
     if (adventures.length > 0 && adventureId && !adventure) {
       const currentId = Array.isArray(adventureId) ? adventureId[0] : adventureId;
       const foundDbAdventure = adventures.find((adv: DbAdventure) => {
-        const advAny = adv as any;
-        const advId = adv.ID || advAny.id;
+        const advId = adv.id;
         const idMatch = advId && (advId.toString() === currentId || advId === parseInt(currentId));
         
         return idMatch;
       });
       
       if (foundDbAdventure) {
-        const transformedAdventure = transformAdventureToFrontend(foundDbAdventure, regionsData || []);
-        setAdventure(transformedAdventure);
+        setAdventure(foundDbAdventure);
         setIsInitializing(false);
       } else {
         console.log('Adventure not found. Available IDs:', adventures.map((adv: any) => adv.ID || adv.id));
@@ -103,7 +70,7 @@ export default function AdventurePageTemplate() {
 
   const handlePlayPress = () => {
     if (adventure) {
-      console.log(`Starting adventure: ${adventure.title}`);
+      console.log(`Starting adventure: ${adventure.name}`);
       // TODO: Navigate to adventure gameplay
       router.push(`/gameMap?adventureId=${adventureId}`);
     }
@@ -151,27 +118,18 @@ export default function AdventurePageTemplate() {
       <View style={styles.contentContainer}>
         {/* Title Section */}
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>{adventure.title}</Text>
+          <Text style={styles.title}>{adventure.name}</Text>
           <View style={styles.metaInfo}>
             <Text style={styles.metaText}>
-              Tokens: {adventure.tokenCount} available
+              Tokens: {adventure.numtokens} available
             </Text>
           </View>
-        </View>
-
-        {/* Image Section */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: adventure.image_url || "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image" }}
-            style={styles.adventureImage}
-            resizeMode="cover"
-          />
         </View>
 
         {/* Description Section */}
         <View style={styles.descriptionContainer}>
           <Text style={styles.descriptionTitle}>About this Adventure</Text>
-          <Text style={styles.description}>{adventure.description}</Text>
+          <Text style={styles.description}>{adventure.name}</Text>
         </View>
 
         {/* Play Button Section */}
