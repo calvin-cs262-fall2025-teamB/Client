@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "../../contexts/AuthContext";
 import { useDatabase } from "../../contexts/DatabaseContext";
 
 export default function AdventurePageTemplate() {
@@ -19,9 +18,9 @@ export default function AdventurePageTemplate() {
   const { adventureId } = useLocalSearchParams();
 
   // Use DatabaseContext
-  const { adventures, tokens, loading, errors, fetchAdventures, fetchTokens } = useDatabase();
-  const { user } = useAuth();
-  
+  const { adventures, tokens, loading, errors, fetchAdventures, fetchTokens } =
+    useDatabase();
+
   // State for current adventure
   const [adventure, setAdventure] = useState<DbAdventure | null>(null);
   const [adventureTokens, setAdventureTokens] = useState<any[]>([]);
@@ -31,11 +30,12 @@ export default function AdventurePageTemplate() {
   const transformAdventureForDisplay = (dbAdventure: DbAdventure) => {
     return {
       id: dbAdventure.id,
-      name: dbAdventure.name || 'Unnamed Adventure',
-      description: dbAdventure.name || 'No description available',
-      image: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
-      difficulty: 'Medium',
-      estimatedTime: '30 min',
+      name: dbAdventure.name || "Unnamed Adventure",
+      description: dbAdventure.name || "No description available",
+      image:
+        "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
+      difficulty: "Medium",
+      estimatedTime: "30 min",
       rewards: `${dbAdventure.numTokens || 0} tokens`,
       isCompleted: false, // TODO: Check against CompletedAdventure table using user.id
       isUnlocked: true, // TODO: Check unlock requirements
@@ -52,17 +52,19 @@ export default function AdventurePageTemplate() {
   // Find current adventure when data is loaded
   useEffect(() => {
     if (adventures.length > 0 && adventureId) {
-      const currentId = Array.isArray(adventureId) ? adventureId[0] : adventureId;
+      const currentId = Array.isArray(adventureId)
+        ? adventureId[0]
+        : adventureId;
       const foundAdventure = adventures.find(
         (adv: DbAdventure) => adv.id.toString() === currentId.toString()
       );
-      
+
       if (foundAdventure) {
         setAdventure(foundAdventure);
         // Fetch tokens for this adventure
         fetchTokens(foundAdventure.id);
       } else {
-        setLocalError('Adventure not found');
+        setLocalError("Adventure not found");
       }
     }
   }, [adventures, adventureId, fetchTokens]);
@@ -79,9 +81,8 @@ export default function AdventurePageTemplate() {
 
   const handlePlayPress = () => {
     if (displayAdventure) {
-      console.log(`Starting adventure: ${displayAdventure.name}`);
       // TODO: Navigate to adventure gameplay
-      // router.push(`/adventure/${displayAdventure.id}/play`);
+      router.push(`/gameMap?adventureId=${adventureId}`);
     }
   };
 
@@ -90,7 +91,9 @@ export default function AdventurePageTemplate() {
   };
 
   // Transform current adventure for display
-  const displayAdventure = adventure ? transformAdventureForDisplay(adventure) : null;
+  const displayAdventure = adventure
+    ? transformAdventureForDisplay(adventure)
+    : null;
 
   // Loading state
   if (loading.adventures || loading.tokens || !displayAdventure) {
@@ -109,7 +112,9 @@ export default function AdventurePageTemplate() {
   if (errors.adventures || localError || !displayAdventure) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{localError || errors.adventures || "Adventure not found"}</Text>
+        <Text style={styles.errorText}>
+          {localError || errors.adventures || "Adventure not found"}
+        </Text>
         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -125,10 +130,18 @@ export default function AdventurePageTemplate() {
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{displayAdventure.name}</Text>
           <View style={styles.metaInfo}>
-            <Text style={styles.metaText}>Difficulty: {displayAdventure.difficulty}</Text>
-            <Text style={styles.metaText}>Time: {displayAdventure.estimatedTime}</Text>
-            <Text style={styles.metaText}>Rewards: {displayAdventure.rewards}</Text>
-            <Text style={styles.metaText}>Tokens: {adventureTokens.length} available</Text>
+            <Text style={styles.metaText}>
+              Difficulty: {displayAdventure.difficulty}
+            </Text>
+            <Text style={styles.metaText}>
+              Time: {displayAdventure.estimatedTime}
+            </Text>
+            <Text style={styles.metaText}>
+              Rewards: {displayAdventure.rewards}
+            </Text>
+            <Text style={styles.metaText}>
+              Tokens: {adventureTokens.length} available
+            </Text>
           </View>
         </View>
 
@@ -156,7 +169,7 @@ export default function AdventurePageTemplate() {
             <Text
               style={[styles.playButtonText, styles.playButtonTextDisabled]}
             >
-              Start Adventure
+              Play
             </Text>
           </TouchableOpacity>
         </View>

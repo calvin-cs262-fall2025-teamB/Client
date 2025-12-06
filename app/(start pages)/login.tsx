@@ -40,7 +40,7 @@ export default function Login() {
 
   const handleSubmit = async () => {
     if (email && password) {
-      //Step 1: Make sure user enters the right password
+      //TODO: add email validation
       // if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       //   Alert.alert(
       //     "Validation",
@@ -58,7 +58,7 @@ export default function Login() {
 
       setIsLoading(true);
       try {
-        login(email, password);
+        login(email.toLowerCase(), password);
       } catch (err: any) {
         Alert.alert("Login failed", err.message || "Unknown error");
       } finally {

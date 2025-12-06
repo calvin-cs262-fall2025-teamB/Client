@@ -27,8 +27,8 @@ const AuthContext = createContext();
 
 const initialState = {
   user: null,
+  username: null,
   email: null,
-
   // TODO: figure out how to store image urls
   image: null,
   isAuthenticated: false,
@@ -38,12 +38,13 @@ function reducer(state, action) {
   console.log(action.payload);
   switch (action.type) {
     case "edit/username":
-      return { ...state, user: action.payload };
+      return { ...state, username: action.payload };
     case "edit/email":
       return { ...state, email: action.payload };
     case "signup":
       return {
         ...state,
+        username: action.payload.username,
         user: action.payload.user,
         email: action.payload.email,
 
@@ -52,7 +53,8 @@ function reducer(state, action) {
     case "login":
       return {
         ...state,
-        user: action.payload.username,
+        user: action.payload.user,
+        username: action.payload.username,
         email: action.payload.email,
         isAuthenticated: true,
       };
@@ -60,6 +62,7 @@ function reducer(state, action) {
       return {
         ...state,
         user: null,
+        username: null,
         email: null,
         password: null,
         isAuthenticated: false,
@@ -71,31 +74,36 @@ function reducer(state, action) {
 
 function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { user, email, isAuthenticated } = state;
+  const { user, email, username, isAuthenticated } = state;
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const { createAdventurer, fetchAdventurers, adventurers } = useDatabase();
+  const { createAdventurer, fetchAdventurers, updateAdventurer } =
+    useDatabase();
 
   async function signup(fullName, email, password) {
-    dispatch({
-      type: "signup",
-      payload: { user: fullName, email },
-    });
     // const BCRYPT_ROUNDS = 8; //Change to 13 to improve efficiency
 
     // const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
 
     //TODO: Add loader while password is loading
     //Make image field optional
-    console.log(await fetchAdventurers());
+
     const res = await createAdventurer({
       username: fullName,
       password,
       profilePicture: null,
     });
 
-    console.log(res);
+    const data = await fetchAdventurers();
+
+    const user = data.find((el) => el.id === res.id);
+
+    // console.log(data);
+    dispatch({
+      type: "signup",
+      payload: { username: fullName, email, user },
+    });
   }
 
   async function login(email, password) {
@@ -124,13 +132,14 @@ function AuthProvider({ children }) {
 
     // TEMPORARY: Extract username from email for demo purposes
     const res = await fetchAdventurers();
+    // console.log(res);
     const user = res.find((el) => el.username === email);
 
     if (user) {
       if (user.password === password)
         dispatch({
           type: "login",
-          payload: { username: user.username, email },
+          payload: { user, username: user.username, email },
         });
       else Alert.alert("Validation", "Invalid Password.");
     } else {
@@ -141,7 +150,7 @@ function AuthProvider({ children }) {
     }
   }
 
-  function editUsername(newUsername) {
+  async function editUsername(newUsername) {
     // ============================================================================
     // TODO: Update username via Azure API call to PostgreSQL backend
     // ============================================================================
@@ -159,9 +168,12 @@ function AuthProvider({ children }) {
     //   body: JSON.stringify({ fullName: newUsername })
     // });
     // ============================================================================
+    // console.log("here", user.id);
+    const res = await updateAdventurer(user.id, { username: newUsername });
+    // console.log("email :", res);
     dispatch({ type: "edit/username", payload: newUsername });
   }
-  function editEmail(newEmail) {
+  async function editEmail(newEmail) {
     // ============================================================================
     // TODO: Upload image to Azure Blob Storage and update user profile
     // ============================================================================
@@ -184,6 +196,9 @@ function AuthProvider({ children }) {
     //   body: JSON.stringify({ imageUrl: blobUrl })
     // });
     // ============================================================================
+
+    await updateAdventurer(user.id, { email: newEmail });
+
     dispatch({ type: "edit/email", payload: newEmail });
   }
 
@@ -213,6 +228,7 @@ function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        username,
         email,
         isAuthenticated,
         login,

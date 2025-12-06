@@ -403,8 +403,12 @@ export function DatabaseProvider({ children }) {
       try {
         // Use the same endpoint naming as `completeAdventure` (hyphenated).
         const data = await apiCall(
-          `/completed-adventures/adventurer/${adventurerId}`
+          `/completedAdventures/adventurer/${adventurerId}`
         );
+
+        // const data = await apiCall(
+        //   `/completed-adventures/adventurer/${adventurerId}`
+        // );
         dispatch({ type: ActionTypes.SET_COMPLETED_ADVENTURES, data });
       } catch (error) {
         console.error("Error fetching completed adventures:", error);
@@ -440,7 +444,13 @@ export function DatabaseProvider({ children }) {
     async (id, adventurerData) => {
       try {
         // Use plural resource name to match the POST endpoint `/adventurers`.
-        const data = await apiCall(`/adventurers/${id}`, {
+        console.log(
+          "updateAdventurer called with id =",
+          request.params.id,
+          "body =",
+          request.body
+        );
+        const data = await apiCall(`/adventurer/${id}`, {
           method: "PUT",
           body: JSON.stringify(adventurerData),
         });
