@@ -187,9 +187,6 @@ export interface FrontendAdventure {
     center: Coordinates;
   };
   tokenCount: number;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  estimatedTime: string;
-  status: 'draft' | 'published' | 'archived';
 }
 
 /**

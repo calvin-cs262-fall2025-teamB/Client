@@ -1,8 +1,8 @@
-import { View, StyleSheet, Text, TextInput } from "react-native";
-import { useState } from "react";
 import themes from "@/assets/utils/themes";
-import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/contexts/ProfileContext";
+import { useState } from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import GreenButton from "@/components/reusable/GreenButton";
 
@@ -37,7 +37,7 @@ export default function ProfileForm() {
           <Text style={styles.formLabel}>Full Name</Text>
           <TextInput
             style={styles.formInput}
-            placeholder={user}
+            placeholder={typeof user === 'string' ? user : user?.username || user?.fullName || "Enter your full name"}
             value={fullname}
             onChangeText={setFullname}
             accessibilityLabel="Profile form text input"
@@ -50,7 +50,7 @@ export default function ProfileForm() {
           <Text style={styles.formLabel}>Email Address</Text>
           <TextInput
             style={styles.formInput}
-            placeholder={userEmail}
+            placeholder={typeof userEmail === 'string' ? userEmail : user?.email || "Enter your email address"}
             value={email}
             onChangeText={setEmail}
             accessibilityLabel="Profile form email input"

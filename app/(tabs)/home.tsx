@@ -1,5 +1,4 @@
 import themes from "@/assets/utils/themes";
-import DifficultyBadge from "@/components/home/DifficultyBadge";
 import FilterChip from "@/components/home/FilterChip";
 import MapPlaceholder from "@/components/home/MapPlaceholder";
 import { Adventure as DbAdventure, FrontendAdventure } from "@/types";
@@ -13,8 +12,6 @@ import { useDatabase } from "../../contexts/DatabaseContext";
 type Adventure = FrontendAdventure;
 
 // Filter type definitions
-type DifficultyFilter = 'Easy' | 'Medium' | 'Hard' | null;
-type DurationFilter = 'quick' | 'medium' | 'long' | null;
 type RegionFilter = string | null;
 
 // ============================================================================
@@ -35,9 +32,6 @@ const MOCK_ADVENTURES: Adventure[] = [
       center: { lat: 42.9301, lng: -85.5883 },
     },
     tokenCount: 5,
-    difficulty: "Easy",
-    estimatedTime: "30 min",
-    status: "published",
   },
   {
     id: "2",
@@ -52,9 +46,6 @@ const MOCK_ADVENTURES: Adventure[] = [
       center: { lat: 42.929, lng: -85.587 },
     },
     tokenCount: 8,
-    difficulty: "Medium",
-    estimatedTime: "60 min",
-    status: "published",
   },
   {
     id: "3",
@@ -69,9 +60,6 @@ const MOCK_ADVENTURES: Adventure[] = [
       center: { lat: 42.9301, lng: -85.5883 },
     },
     tokenCount: 6,
-    difficulty: "Medium",
-    estimatedTime: "45 min",
-    status: "published",
   },
   {
     id: "4",
@@ -86,9 +74,6 @@ const MOCK_ADVENTURES: Adventure[] = [
       center: { lat: 42.9315, lng: -85.5895 },
     },
     tokenCount: 4,
-    difficulty: "Easy",
-    estimatedTime: "25 min",
-    status: "published",
   },
   {
     id: "5",
@@ -103,9 +88,6 @@ const MOCK_ADVENTURES: Adventure[] = [
       center: { lat: 42.9285, lng: -85.5870 },
     },
     tokenCount: 10,
-    difficulty: "Hard",
-    estimatedTime: "90 min",
-    status: "published",
   },
 ];
 
@@ -118,8 +100,6 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Filter states with proper typing
-  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyFilter>(null);
-  const [selectedDuration, setSelectedDuration] = useState<DurationFilter>(null);
   const [selectedRegion, setSelectedRegion] = useState<RegionFilter>(null);
 
   // API state from DatabaseContext
@@ -139,7 +119,7 @@ export default function HomePage() {
   }, [fetchAdventures, fetchRegions]);
 
   // Transform database adventures to match the FrontendAdventure interface
-  const transformedAdventures: Adventure[] = adventures.map((item: DbAdventure) => {
+  const transformedAdventures: Adventure[] = adventures.map((item: DbAdventure, index: number) => {
     // Debug: Log the raw adventure data to understand the structure
     // if (__DEV__) {
     //   console.log('Raw adventure data:', JSON.stringify(item, null, 2));
@@ -163,8 +143,24 @@ export default function HomePage() {
     //   }
     // }
     
+    // Handle different field naming conventions for ID
+    const adventureId = item.ID || itemAny.id || itemAny.adventureid || itemAny.adventure_id;
+    
+    // Debug logging for first few items
+    // if (__DEV__ && index < 3) {
+    //   console.log(`Home Page Adventure Transform ${index + 1}:`, {
+    //     originalItem: Object.keys(item),
+    //     ID: item.ID,
+    //     id: itemAny.id,
+    //     adventureid: itemAny.adventureid,
+    //     adventure_id: itemAny.adventure_id,
+    //     finalId: adventureId,
+    //     name: adventureName
+    //   });
+    // }
+    
     return {
-      id: item.ID?.toString() || `adventure-${Date.now()}-${Math.random()}`,
+      id: adventureId?.toString() || `adventure-${Date.now()}-${Math.random()}`,
       title: adventureName || 'Unnamed Adventure',
       summary: adventureName || 'No description available',
       description: adventureName || 'No description available',
@@ -178,9 +174,6 @@ export default function HomePage() {
         },
       },
       tokenCount: numTokens || 0,
-      difficulty: 'Medium' as const,
-      estimatedTime: '30 min',
-      status: 'published' as const,
     };
   });
 
@@ -204,21 +197,9 @@ export default function HomePage() {
       adv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       adv.summary.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesDifficulty =
-      !selectedDifficulty ||
-      adv.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
-
-    const matchesDuration =
-      !selectedDuration ||
-      (selectedDuration === "quick" && parseInt(adv.estimatedTime) < 30) ||
-      (selectedDuration === "medium" &&
-        parseInt(adv.estimatedTime) >= 30 &&
-        parseInt(adv.estimatedTime) <= 60) ||
-      (selectedDuration === "long" && parseInt(adv.estimatedTime) > 60);
-
     const matchesRegion = !selectedRegion || adv.region.name === selectedRegion;
 
-    return matchesSearch && matchesDifficulty && matchesDuration && matchesRegion;
+    return matchesSearch && matchesRegion;
   });
 
   const handleAdventurePress = (adventure: Adventure) => {
@@ -233,13 +214,10 @@ export default function HomePage() {
   };
 
   const clearFilters = () => {
-    setSelectedDifficulty(null);
-    setSelectedDuration(null);
     setSelectedRegion(null);
   };
 
-  const hasActiveFilters =
-    selectedDifficulty || selectedDuration || selectedRegion;
+  const hasActiveFilters = selectedRegion;
 
   return (
     <View style={styles.container}>
@@ -275,78 +253,18 @@ export default function HomePage() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersContainer}
         >
-          {/* Difficulty Filters */}
-          <FilterChip
-            label="Easy"
-            selected={selectedDifficulty === "Easy"}
-            onPress={() =>
-              setSelectedDifficulty(
-                selectedDifficulty === "Easy" ? null : "Easy"
-              )
-            }
-          />
-          <FilterChip
-            label="Medium"
-            selected={selectedDifficulty === "Medium"}
-            onPress={() =>
-              setSelectedDifficulty(
-                selectedDifficulty === "Medium" ? null : "Medium"
-              )
-            }
-          />
-          <FilterChip
-            label="Hard"
-            selected={selectedDifficulty === "Hard"}
-            onPress={() =>
-              setSelectedDifficulty(
-                selectedDifficulty === "Hard" ? null : "Hard"
-              )
-            }
-          />
-
-          {/* Duration Filters */}
-          <View style={styles.filterDivider} />
-          <FilterChip
-            label="< 30 min"
-            selected={selectedDuration === "quick"}
-            onPress={() =>
-              setSelectedDuration(
-                selectedDuration === "quick" ? null : "quick"
-              )
-            }
-          />
-          <FilterChip
-            label="30-60 min"
-            selected={selectedDuration === "medium"}
-            onPress={() =>
-              setSelectedDuration(
-                selectedDuration === "medium" ? null : "medium"
-              )
-            }
-          />
-          <FilterChip
-            label="> 60 min"
-            selected={selectedDuration === "long"}
-            onPress={() =>
-              setSelectedDuration(selectedDuration === "long" ? null : "long")
-            }
-          />
-
           {/* Region Filters */}
           {regions.length > 1 && (
-            <>
-              <View style={styles.filterDivider} />
-              {regions.map((region, index) => (
-                <FilterChip
-                  key={`${region}-${index}`}
-                  label={region}
-                  selected={selectedRegion === region}
-                  onPress={() =>
-                    setSelectedRegion(selectedRegion === region ? null : region)
-                  }
-                />
-              ))}
-            </>
+            regions.map((region, index) => (
+              <FilterChip
+                key={`${region}-${index}`}
+                label={region}
+                selected={selectedRegion === region}
+                onPress={() =>
+                  setSelectedRegion(selectedRegion === region ? null : region)
+                }
+              />
+            ))
           )}
         </ScrollView>
 
@@ -426,10 +344,6 @@ export default function HomePage() {
                   <Text style={styles.cardTitle} numberOfLines={1}>
                     {adventure.title}
                   </Text>
-                  <DifficultyBadge
-                    difficulty={adventure.difficulty}
-                    size="small"
-                  />
                 </View>
                 <Text style={styles.cardSummary} numberOfLines={2}>
                   {adventure.summary}
@@ -443,12 +357,7 @@ export default function HomePage() {
                     />
                     <Text style={styles.badgeText}>{adventure.region.name}</Text>
                   </View>
-                  <View style={styles.badge}>
-                    <FontAwesome6 name="clock" size={12} color="#6B7280" />
-                    <Text style={styles.badgeText}>
-                      {adventure.estimatedTime}
-                    </Text>
-                  </View>
+
                   <View style={styles.badge}>
                     <FontAwesome6 name="coins" size={12} color="#FFD700" />
                     <Text style={styles.badgeText}>
@@ -479,21 +388,10 @@ export default function HomePage() {
                   <FontAwesome6 name="xmark" size={20} color="#6B7280" />
                 </TouchableOpacity>
               </View>
-              <DifficultyBadge
-                difficulty={selectedAdventure.difficulty}
-                size="medium"
-              />
             </View>
 
             {/* Key Info Bar */}
             <View style={styles.modalInfoBar}>
-              <View style={styles.modalInfoItem}>
-                <FontAwesome6 name="clock" size={16} color={themes.primaryColor} />
-                <Text style={styles.modalInfoText}>
-                  {selectedAdventure.estimatedTime}
-                </Text>
-              </View>
-              <View style={styles.modalInfoDivider} />
               <View style={styles.modalInfoItem}>
                 <FontAwesome6
                   name="location-dot"

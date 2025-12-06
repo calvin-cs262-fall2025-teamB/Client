@@ -1,5 +1,5 @@
 import BackButton from "@/components/reusable/BackButton";
-import { Adventure as DbAdventure } from "@/types";
+import { Adventure as DbAdventure, FrontendAdventure } from "@/types";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -23,22 +23,38 @@ export default function AdventurePageTemplate() {
   const { user } = useAuth();
   
   // State for current adventure
-  const [adventure, setAdventure] = useState<DbAdventure | null>(null);
+  const [adventure, setAdventure] = useState<FrontendAdventure | null>(null);
   const [adventureTokens, setAdventureTokens] = useState<any[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  // Transform database adventure to display format
-  const transformAdventureForDisplay = (dbAdventure: DbAdventure) => {
+  // Transform database adventure to FrontendAdventure format
+  const transformAdventureToFrontend = (dbAdventure: DbAdventure, regionsData: any[]): FrontendAdventure => {
+    const dbAny = dbAdventure as any;
+    
+    // Handle different field naming conventions
+    const adventureId = dbAdventure.ID || dbAny.id;
+    const regionId = dbAdventure.regionID || dbAny.regionid || dbAny.regionID;
+    const adventureName = dbAdventure.name || dbAny.adventurename || dbAny.adventure_name || dbAny.Name;
+    const numTokens = dbAdventure.numTokens || dbAny.numtokens || dbAny.num_tokens;
+    
+    const region = regionsData.find((r: any) => r.id === regionId || r.ID === regionId);
+    
     return {
-      id: dbAdventure.id,
-      name: dbAdventure.name || 'Unnamed Adventure',
-      description: dbAdventure.name || 'No description available',
-      image: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
-      difficulty: 'Medium',
-      estimatedTime: '30 min',
-      rewards: `${dbAdventure.numTokens || 0} tokens`,
-      isCompleted: false, // TODO: Check against CompletedAdventure table using user.id
-      isUnlocked: true, // TODO: Check unlock requirements
+      id: (adventureId && adventureId.toString()) || `adventure-${Date.now()}`,
+      title: adventureName || 'Unnamed Adventure',
+      summary: adventureName || 'No description available',
+      description: adventureName || 'No description available',
+      image_url: "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image",
+      region: {
+        id: regionId?.toString() || '1',
+        name: region?.name || `Region ${regionId || 1}`,
+        center: {
+          lat: region?.location?.x || dbAdventure.location?.x || 42.9301,
+          lng: region?.location?.y || dbAdventure.location?.y || -85.5883,
+        },
+      },
+      tokenCount: numTokens || 0,
     };
   };
 
@@ -49,39 +65,78 @@ export default function AdventurePageTemplate() {
     }
   }, [adventures.length, fetchAdventures]);
 
+  // Get regions data
+  const { regions: regionsData, fetchRegions } = useDatabase();
+
+  // Load regions on component mount
+  useEffect(() => {
+    if (regionsData.length === 0) {
+      fetchRegions();
+    }
+  }, [regionsData.length, fetchRegions]);
+
   // Find current adventure when data is loaded
   useEffect(() => {
-    if (adventures.length > 0 && adventureId) {
+    if (adventures.length > 0 && adventureId && !adventure) {
       const currentId = Array.isArray(adventureId) ? adventureId[0] : adventureId;
-      const foundAdventure = adventures.find(
-        (adv: DbAdventure) => adv.id.toString() === currentId.toString()
-      );
       
-      if (foundAdventure) {
-        setAdventure(foundAdventure);
+      // Debug logging
+      // console.log('Adventure Page Debug:');
+      // console.log('- Looking for adventure ID:', currentId);
+      // console.log('- Available adventures:', adventures.length);
+      // console.log('- Sample adventure IDs:', adventures.slice(0, 3).map((adv: any) => ({ 
+      //   ID: adv.ID, 
+      //   id: adv.id,
+      //   name: adv.name 
+      // })));
+      
+      const foundDbAdventure = adventures.find((adv: DbAdventure) => {
+        const advAny = adv as any;
+        const advId = adv.ID || advAny.id;
+        const idMatch = advId && (advId.toString() === currentId || advId === parseInt(currentId));
+        
+        if (idMatch) {
+          console.log('Found matching adventure:', { ID: advId, name: adv.name });
+        }
+        
+        return idMatch;
+      });
+      
+      if (foundDbAdventure) {
+        console.log('Successfully found adventure:', foundDbAdventure.name);
+        const transformedAdventure = transformAdventureToFrontend(foundDbAdventure, regionsData || []);
+        setAdventure(transformedAdventure);
+        setIsInitializing(false);
         // Fetch tokens for this adventure
-        fetchTokens(foundAdventure.id);
+        const adventureIdForTokens = foundDbAdventure.ID || (foundDbAdventure as any).id;
+        if (adventureIdForTokens) {
+          fetchTokens(adventureIdForTokens);
+        }
       } else {
-        setLocalError('Adventure not found');
+        console.log('Adventure not found. Available IDs:', adventures.map((adv: any) => adv.ID || adv.id));
+        setLocalError(`Adventure not found (ID: ${currentId})`);
+        setIsInitializing(false);
       }
+    } else if (adventures.length > 0 && adventureId) {
+      setIsInitializing(false);
     }
-  }, [adventures, adventureId, fetchTokens]);
+  }, [adventures, regionsData, adventureId, fetchTokens, adventure]);
 
   // Update adventure tokens when tokens are loaded
   useEffect(() => {
     if (adventure && tokens.length > 0) {
       const adventureSpecificTokens = tokens.filter(
-        (token: any) => token.adventureId === adventure.id
+        (token: any) => token.adventureId && token.adventureId.toString() === adventure.id
       );
       setAdventureTokens(adventureSpecificTokens);
     }
   }, [tokens, adventure]);
 
   const handlePlayPress = () => {
-    if (displayAdventure) {
-      console.log(`Starting adventure: ${displayAdventure.name}`);
+    if (adventure) {
+      console.log(`Starting adventure: ${adventure.title}`);
       // TODO: Navigate to adventure gameplay
-      // router.push(`/adventure/${displayAdventure.id}/play`);
+      // router.push(`/adventure/${adventure.id}/play`);
     }
   };
 
@@ -89,11 +144,8 @@ export default function AdventurePageTemplate() {
     router.replace("/home");
   };
 
-  // Transform current adventure for display
-  const displayAdventure = adventure ? transformAdventureForDisplay(adventure) : null;
-
   // Loading state
-  if (loading.adventures || loading.tokens || !displayAdventure) {
+  if (loading.adventures || isInitializing) {
     return (
       <View style={styles.loadingContainer}>
         <View style={styles.loadingTopRow}>
@@ -106,7 +158,7 @@ export default function AdventurePageTemplate() {
   }
 
   // Error state
-  if (errors.adventures || localError || !displayAdventure) {
+  if (errors.adventures || localError || (!loading.adventures && !isInitializing && !adventure)) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>{localError || errors.adventures || "Adventure not found"}</Text>
@@ -117,25 +169,28 @@ export default function AdventurePageTemplate() {
     );
   }
 
+  // Final safety check - this shouldn't happen due to loading/error conditions above
+  if (!adventure) {
+    return null;
+  }
+
   return (
     <ScrollView style={styles.container}>
       {/* Adventure Content Container */}
       <View style={styles.contentContainer}>
         {/* Title Section */}
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>{displayAdventure.name}</Text>
+          <Text style={styles.title}>{adventure.title}</Text>
           <View style={styles.metaInfo}>
-            <Text style={styles.metaText}>Difficulty: {displayAdventure.difficulty}</Text>
-            <Text style={styles.metaText}>Time: {displayAdventure.estimatedTime}</Text>
-            <Text style={styles.metaText}>Rewards: {displayAdventure.rewards}</Text>
-            <Text style={styles.metaText}>Tokens: {adventureTokens.length} available</Text>
+            <Text style={styles.metaText}>Region: {adventure.region.name}</Text>
+            <Text style={styles.metaText}>Tokens: {adventure.tokenCount}</Text>
           </View>
         </View>
 
         {/* Image Section */}
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: displayAdventure.image }}
+            source={{ uri: adventure.image_url || "https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Adventure+Image" }}
             style={styles.adventureImage}
             resizeMode="cover"
           />
@@ -144,7 +199,7 @@ export default function AdventurePageTemplate() {
         {/* Description Section */}
         <View style={styles.descriptionContainer}>
           <Text style={styles.descriptionTitle}>About this Adventure</Text>
-          <Text style={styles.description}>{displayAdventure.description}</Text>
+          <Text style={styles.description}>{adventure.description}</Text>
         </View>
 
         {/* Play Button Section */}
