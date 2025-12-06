@@ -141,30 +141,33 @@ export default function HomePage() {
   // Transform database adventures to match the FrontendAdventure interface
   const transformedAdventures: Adventure[] = adventures.map((item: DbAdventure) => {
     // Debug: Log the raw adventure data to understand the structure
-    if (__DEV__) {
-      console.log('Raw adventure data:', JSON.stringify(item, null, 2));
-    }
+    // if (__DEV__) {
+    //   console.log('Raw adventure data:', JSON.stringify(item, null, 2));
+    // }
     
     // Handle both camelCase and snake_case field names from database
     const itemAny = item as any;
-    const regionId = item.regionId || itemAny.regionid || itemAny.regionID;
+    const regionId = item.regionID || itemAny.regionid || itemAny.regionID;
     const numTokens = item.numTokens || itemAny.numtokens || itemAny.num_tokens;
+    
+    // Handle adventure name with flexible field mapping
+    const adventureName = item.name || itemAny.adventurename || itemAny.adventure_name || itemAny.Name;
     
     // Find the corresponding region data
     const region = regionsData.find((r: any) => r.id === regionId || r.ID === regionId);
     
-    if (__DEV__) {
-      console.log(`Adventure "${item.name}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
-      if (region) {
-        console.log('Found region:', JSON.stringify(region, null, 2));
-      }
-    }
+    // if (__DEV__) {
+    //   console.log(`Adventure "${adventureName}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
+    //   if (region) {
+    //     console.log('Found region:', JSON.stringify(region, null, 2));
+    //   }
+    // }
     
     return {
-      id: item.id?.toString() || '',
-      title: item.name || 'Unnamed Adventure',
-      summary: item.name || 'No description available',
-      description: item.name || 'No description available',
+      id: item.ID?.toString() || `adventure-${Date.now()}-${Math.random()}`,
+      title: adventureName || 'Unnamed Adventure',
+      summary: adventureName || 'No description available',
+      description: adventureName || 'No description available',
       image_url: null,
       region: {
         id: regionId?.toString() || '1',
@@ -182,12 +185,12 @@ export default function HomePage() {
   });
 
   // Debug: Log regions data
-  if (__DEV__) {
-    console.log('Regions data loaded:', regionsData?.length || 0, 'regions');
-    if (regionsData?.length > 0) {
-      console.log('Sample region:', JSON.stringify(regionsData[0], null, 2));
-    }
-  }
+  // if (__DEV__) {
+  //   console.log('Regions data loaded:', regionsData?.length || 0, 'regions');
+  //   if (regionsData?.length > 0) {
+  //     console.log('Sample region:', JSON.stringify(regionsData[0], null, 2));
+  //   }
+  // }
 
   // Use transformed adventures or fallback to mock data if empty
   const displayAdventures = transformedAdventures.length > 0 ? transformedAdventures : (errors.adventures && __DEV__ ? MOCK_ADVENTURES : []);
@@ -242,9 +245,6 @@ export default function HomePage() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.appTitle}>WayFind</Text>
-        <Text style={styles.subtitle}>Discover campus adventures</Text>
-
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <FontAwesome6
@@ -336,9 +336,9 @@ export default function HomePage() {
           {regions.length > 1 && (
             <>
               <View style={styles.filterDivider} />
-              {regions.map((region) => (
+              {regions.map((region, index) => (
                 <FilterChip
-                  key={region}
+                  key={`${region}-${index}`}
                   label={region}
                   selected={selectedRegion === region}
                   onPress={() =>
@@ -410,9 +410,9 @@ export default function HomePage() {
             )}
           </View>
         ) : (
-          filteredAdventures.map((adventure: Adventure) => (
+          filteredAdventures.map((adventure: Adventure, index: number) => (
             <TouchableOpacity
-              key={adventure.id}
+              key={`${adventure.id}-${index}`}
               style={styles.card}
               onPress={() => handleAdventurePress(adventure)}
               activeOpacity={0.8}

@@ -49,31 +49,52 @@ export default function AdventureRecord() {
   }, [user?.id, fetchCompletedAdventures, fetchAdventures, fetchRegions]);
 
   // Transform database data to UI format with enhanced region information
-  const transformedAdventures = completedAdventures?.map((completed: CompletedAdventure) => {
-    const adventure = adventures?.find((adv: DbAdventure) => adv.id === completed.adventureId);
-    const region = regions?.find((r: any) => r.id === adventure?.regionId);
+  const transformedAdventures = completedAdventures?.map((completed: CompletedAdventure, index: number) => {
+    // Handle different field naming conventions for completed adventure
+    const completedAny = completed as any;
+    const adventureId = completed.adventureId || completedAny.adventureid || completedAny.adventure_id;
+    const completionDate = completed.completionDate || completedAny.completiondate || completedAny.completion_date;
     
-    // Handle both camelCase and snake_case field names
+    const adventure = adventures?.find((adv: DbAdventure) => {
+      const advAny = adv as any;
+      const advId = adv.id || advAny.adventureid || advAny.adventure_id;
+      return advId === adventureId;
+    });
+    
+    // Handle different field naming conventions for adventure
     const adventureAny = adventure as any;
-    const regionId = adventure?.regionId || adventureAny?.regionid || adventureAny?.regionID;
-    const numTokens = adventure?.numTokens || adventureAny?.numtokens || adventureAny?.num_tokens;
+    const adventureName = adventure?.name || adventureAny?.adventurename || adventureAny?.adventure_name || adventureAny?.title;
+    const regionId = adventure?.regionId || adventureAny?.regionid || adventureAny?.region_id;
+    const numTokens = adventure?.numTokens || adventureAny?.numtokens || adventureAny?.num_tokens || adventureAny?.tokencount;
+    
+    const region = regions?.find((r: any) => {
+      const regionAny = r as any;
+      const rId = r.id || regionAny.regionid || regionAny.region_id;
+      return rId === regionId;
+    });
+    
+    const regionName = region?.name || (region as any)?.regionname || (region as any)?.region_name;
     
     if (__DEV__) {
-      console.log(`Completed Adventure ${completed.adventureId}:`, {
-        adventureName: adventure?.name,
+      console.log(`Completed Adventure ${adventureId}:`, {
+        adventureId,
+        adventureName,
         regionId,
-        regionName: region?.name,
+        regionName,
         tokens: numTokens,
-        completionDate: completed.completionDate
+        completionDate,
+        rawCompleted: completed,
+        rawAdventure: adventure,
+        rawRegion: region
       });
     }
     
     return {
-      id: completed.adventureId,
-      title: adventure?.name || `Adventure ${completed.adventureId}`,
+      id: adventureId || `unknown-${index}`, // Ensure ID is always defined
+      title: adventureName || `Adventure ${adventureId || index}`,
       tokens: numTokens || 0,
-      completionDate: completed.completionDate,
-      regionName: region?.name || `Region ${regionId || '?'}`,
+      completionDate: completionDate,
+      regionName: regionName || `Region ${regionId || '?'}`,
     };
   }) || [];
 
@@ -125,9 +146,9 @@ export default function AdventureRecord() {
             <Text style={styles.emptySubtext}>Start exploring to see your achievements here!</Text>
           </View>
         ) : (
-          displayAdventures.map((adventure: DisplayAdventure) => (
+          displayAdventures.map((adventure: DisplayAdventure, index: number) => (
           <TouchableOpacity
-            key={adventure.id}
+            key={`${adventure.id}-${index}`}
             style={styles.adventureCard}
             onPress={() => handleAdventurePress(adventure)}
             activeOpacity={0.7}

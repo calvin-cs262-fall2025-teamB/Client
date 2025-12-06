@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useReducer } from 'react';
+import { createContext, useCallback, useContext, useEffect, useReducer } from 'react';
 
 // Type definitions based on your PostgreSQL schema
 const DatabaseContext = createContext();
@@ -222,43 +222,141 @@ export function DatabaseProvider({ children }) {
     return `(${location.x},${location.y})`;
   };
 
-  // Base API URL - replace with your Azure web service URL
-  const API_BASE_URL = 'https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net/';
+  // Base API URL - using your working Azure service
+  const API_BASE_URL = 'https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net';
 
-  // Generic API call function
+  // Generic API call function with React Native network handling
   const apiCall = useCallback(async (endpoint, options = {}) => {
     const defaultOptions = {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        // Add headers that help with React Native networking
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
         ...options.headers,
       },
     };
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...defaultOptions,
-      ...options,
-    });
+    const fullUrl = `${API_BASE_URL}${endpoint}`;
+    
+    // if (__DEV__) {
+    //   console.log(`Making ${defaultOptions.method} request to:`, fullUrl);
+    //   console.log('Request headers:', defaultOptions.headers);
+    // }
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      // Add timeout for React Native
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch(fullUrl, {
+        ...defaultOptions,
+        ...options,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      // if (__DEV__) {
+      //   console.log(`Response status: ${response.status} ${response.statusText}`);
+      //   console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      //   console.log('Response URL:', response.url);
+      // }
+
+      if (!response.ok) {
+        let errorText = 'No error details available';
+        try {
+          errorText = await response.text();
+        } catch (e) {
+          console.log('Could not read error response body');
+        }
+        
+        if (__DEV__) {
+          console.log('Error response body:', errorText);
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        return data;
+      } else {
+        const text = await response.text();
+        if (__DEV__) {
+          console.log('Non-JSON response received:', text);
+        }
+        // Try to parse as JSON anyway
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          throw new Error('Response is not valid JSON');
+        }
+      }
+    } catch (fetchError) {
+      if (__DEV__) {
+        console.log('Fetch error type:', fetchError.name);
+        console.log('Fetch error message:', fetchError.message);
+        console.log('Full fetch error:', fetchError);
+        
+        if (fetchError.name === 'AbortError') {
+          console.log('Request timed out after 10 seconds');
+        } else if (fetchError.message.includes('Network request failed')) {
+          console.log('Network connectivity issue - check if you can access the URL in a browser');
+        }
+      }
+      throw fetchError;
     }
-
-    return response.json();
-  }, []);
+  }, [API_BASE_URL]);
 
   /* Data fetching functions */
 
   const fetchAdventurers = useCallback(async () => {
     dispatch({ type: ActionTypes.SET_LOADING, entity: 'adventurers', isLoading: true });
     try {
+      const fullUrl = `${API_BASE_URL}/adventurers`;
+      // if (__DEV__) {
+      //   console.log('Fetching adventurers from:', fullUrl);
+      // }
+      
       const data = await apiCall('/adventurers');
-      dispatch({ type: ActionTypes.SET_ADVENTURERS, data });
+      
+      // if (__DEV__) {
+      //   console.log('Adventurers response received:', typeof data, Array.isArray(data));
+      //   console.log('Adventurers fetched successfully:', data?.length || 0);
+      //   if (data && data.length > 0) {
+      //     console.log('Sample adventurer data:', data[0]);
+      //   } else {
+      //     console.log('No adventurers returned or empty array');
+      //   }
+      // }
+      
+      // Ensure data is an array
+      const adventurersArray = Array.isArray(data) ? data : [];
+      dispatch({ type: ActionTypes.SET_ADVENTURERS, data: adventurersArray });
     } catch (error) {
       console.error('Error fetching adventurers:', error);
+      if (__DEV__) {
+        console.log('Error type:', typeof error);
+        console.log('Error message:', error.message);
+        console.log('Error status:', error.status);
+        console.log('Full error object:', JSON.stringify(error, null, 2));
+        
+        // Try to check if it's a network issue
+        if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
+          console.log('This appears to be a network connectivity issue');
+        } else if (error.message.includes('HTTP error')) {
+          console.log('This appears to be an HTTP status error (404, 500, etc.)');
+        }
+      }
+      
+      // Fallback to empty array if fetch fails
+      dispatch({ type: ActionTypes.SET_ADVENTURERS, data: [] });
       dispatch({ type: ActionTypes.SET_ERROR, entity: 'adventurers', error: error.message });
     }
-  }, [apiCall]);
+  }, [apiCall, API_BASE_URL]);
 
   const fetchRegions = useCallback(async () => {
     dispatch({ type: ActionTypes.SET_LOADING, entity: 'regions', isLoading: true });
@@ -315,10 +413,51 @@ export function DatabaseProvider({ children }) {
   const fetchCompletedAdventures = useCallback(async (adventurerId) => {
     dispatch({ type: ActionTypes.SET_LOADING, entity: 'completedAdventures', isLoading: true });
     try {
+      if (__DEV__) {
+        console.log('Fetching completed adventures for adventurer:', adventurerId);
+      }
+      
       const data = await apiCall(`/completedAdventures/adventurer/${adventurerId}`);
-      dispatch({ type: ActionTypes.SET_COMPLETED_ADVENTURES, data });
+      
+      if (__DEV__) {
+        console.log('Completed adventures response:', data);
+        console.log('Completed adventures type:', typeof data, Array.isArray(data));
+        if (data && data.length > 0) {
+          console.log('Sample completed adventure:', data[0]);
+          console.log('Available fields:', Object.keys(data[0]));
+        } else {
+          console.log('No completed adventures found for user:', adventurerId);
+        }
+      }
+      
+      // Ensure data is an array
+      const completedArray = Array.isArray(data) ? data : [];
+      dispatch({ type: ActionTypes.SET_COMPLETED_ADVENTURES, data: completedArray });
     } catch (error) {
       console.error('Error fetching completed adventures:', error);
+      if (__DEV__) {
+        console.log('Completed adventures fetch failed, using empty array');
+        
+        // For development, provide mock data if the endpoint fails
+        const mockCompletedAdventures = [
+          {
+            adventureId: 1,
+            completionDate: new Date().toISOString(),
+            tokens: 25
+          },
+          {
+            adventureId: 2, 
+            completionDate: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+            tokens: 30
+          }
+        ];
+        
+        console.log('Using mock completed adventures for development:', mockCompletedAdventures);
+        dispatch({ type: ActionTypes.SET_COMPLETED_ADVENTURES, data: mockCompletedAdventures });
+      } else {
+        dispatch({ type: ActionTypes.SET_COMPLETED_ADVENTURES, data: [] });
+      }
+      
       dispatch({ type: ActionTypes.SET_ERROR, entity: 'completedAdventures', error: error.message });
     }
   }, [apiCall]);
@@ -326,6 +465,15 @@ export function DatabaseProvider({ children }) {
   // Create/Update functions
   const createAdventurer = useCallback(async (adventurerData) => {
     try {
+      // Validate ID range to prevent PostgreSQL integer overflow
+      if (adventurerData.id && adventurerData.id > 2147483647) {
+        if (__DEV__) {
+          console.warn('Adventurer ID too large for PostgreSQL integer, removing ID to let DB generate it');
+        }
+        const { id, ...dataWithoutId } = adventurerData;
+        adventurerData = dataWithoutId;
+      }
+      
       const data = await apiCall('/adventurers', {
         method: 'POST',
         body: JSON.stringify(adventurerData),
@@ -334,6 +482,9 @@ export function DatabaseProvider({ children }) {
       return data;
     } catch (error) {
       console.error('Error creating adventurer:', error);
+      if (__DEV__) {
+        console.log('Adventurer data that failed:', adventurerData);
+      }
       throw error;
     }
   }, [apiCall]);
@@ -467,6 +618,61 @@ export function DatabaseProvider({ children }) {
   const clearError = useCallback((entity) => {
     dispatch({ type: ActionTypes.CLEAR_ERROR, entity });
   }, []);
+
+  // Test connectivity function
+  const testConnectivity = useCallback(async () => {
+    if (__DEV__) {
+      console.log('Testing API connectivity...');
+      try {
+        // Test with a simple endpoint first
+        const testResponse = await fetch(API_BASE_URL);
+        console.log('Base URL test response:', testResponse.status, testResponse.statusText);
+        
+        // Try the adventures endpoint that we know works
+        const adventuresResponse = await fetch(`${API_BASE_URL}/adventures`);
+        console.log('Adventures endpoint test:', adventuresResponse.status, adventuresResponse.statusText);
+        
+      } catch (error) {
+        console.log('Connectivity test failed:', error);
+      }
+    }
+  }, [API_BASE_URL]);
+
+  // Initialize data on mount
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('DatabaseProvider initializing...');
+      console.log('API Base URL:', API_BASE_URL);
+    }
+    
+    // Initialize data with error handling to prevent server crashes
+    const initializeData = async () => {
+      // Test connectivity first
+      if (__DEV__) {
+        await testConnectivity();
+      }
+      
+      try {
+        await fetchAdventurers();
+      } catch (error) {
+        console.error('Failed to initialize adventurers:', error);
+      }
+      
+      try {
+        await fetchRegions();
+      } catch (error) {
+        console.error('Failed to initialize regions:', error); 
+      }
+      
+      try {
+        await fetchAdventures();
+      } catch (error) {
+        console.error('Failed to initialize adventures:', error);
+      }
+    };
+    
+    initializeData();
+  }, [fetchAdventurers, fetchRegions, fetchAdventures, testConnectivity]);
 
   // Context value
   const contextValue = {

@@ -317,7 +317,7 @@ export default function MapScreen() {
     setIsCreatingRegion(true);
 
     try {
-      // === Circle approach: Direct mapping to backend! ===
+      // === Circle approach: Direct mapping to backend! === 
       const regionData = {
         adventurerId: user.id,
         name: regionName.trim(),
