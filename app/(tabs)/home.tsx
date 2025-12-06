@@ -150,11 +150,14 @@ export default function HomePage() {
     const regionId = item.regionID || itemAny.regionid || itemAny.regionID;
     const numTokens = item.numTokens || itemAny.numtokens || itemAny.num_tokens;
     
+    // Handle adventure name with flexible field mapping
+    const adventureName = item.name || itemAny.adventurename || itemAny.adventure_name || itemAny.Name;
+    
     // Find the corresponding region data
     const region = regionsData.find((r: any) => r.id === regionId || r.ID === regionId);
     
     // if (__DEV__) {
-    //   console.log(`Adventure "${item.name}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
+    //   console.log(`Adventure "${adventureName}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
     //   if (region) {
     //     console.log('Found region:', JSON.stringify(region, null, 2));
     //   }
@@ -162,9 +165,9 @@ export default function HomePage() {
     
     return {
       id: item.ID?.toString() || `adventure-${Date.now()}-${Math.random()}`,
-      title: item.name || 'Unnamed Adventure',
-      summary: item.name || 'No description available',
-      description: item.name || 'No description available',
+      title: adventureName || 'Unnamed Adventure',
+      summary: adventureName || 'No description available',
+      description: adventureName || 'No description available',
       image_url: null,
       region: {
         id: regionId?.toString() || '1',
@@ -242,9 +245,6 @@ export default function HomePage() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.appTitle}>WayFind</Text>
-        <Text style={styles.subtitle}>Discover campus adventures</Text>
-
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <FontAwesome6

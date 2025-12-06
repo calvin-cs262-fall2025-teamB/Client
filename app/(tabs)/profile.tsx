@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -88,6 +89,17 @@ export default function Profile() {
       // });
     } else {
       alert("You did not select any image.");
+    }
+  };
+
+  const openHelpWebsite = async () => {
+    const url = "https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net/";
+    const supported = await Linking.canOpenURL(url);
+
+    if (supported) {
+      await Linking.openURL(url);
+    } else {
+      alert("Don't know how to open this URL: " + url);
     }
   };
 
@@ -210,6 +222,15 @@ export default function Profile() {
             </View>
           </View>
         </LinearGradient>
+        
+        {/* Help Button */}
+        <View style={styles.helpButtonContainer}>
+          <TouchableOpacity onPress={openHelpWebsite} style={styles.helpButton}>
+            <FontAwesome6 name="question-circle" size={16} color="#fff" />
+            <Text style={styles.helpButtonText}>Help</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* TODO: Set Hover and active nav*/}
         <View style={styles.tabs}>
           <TouchableOpacity
@@ -326,6 +347,30 @@ const styles = StyleSheet.create({
     paddingTop: 15,
     paddingBottom: 15,
     paddingHorizontal: 15,
+  },
+  helpButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: themes.primaryColor,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  helpButtonContainer: {
+    alignItems: "flex-end",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  helpButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   imageSection: {
     alignItems: "center",
