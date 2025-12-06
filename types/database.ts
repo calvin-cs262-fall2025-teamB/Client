@@ -33,7 +33,7 @@ export interface Coordinates {
  * Adventurer entity - represents a user in the system
  */
 export interface Adventurer {
-  id: number;
+  ID: number;
   username: string;
   password: string;
   profilePicture?: string | null;
@@ -43,7 +43,8 @@ export interface Adventurer {
  * Region entity - represents a geographic region containing adventures
  */
 export interface Region {
-  id: number;
+  ID: number;
+
   adventurerID: number;
   name: string;
   description?: string | null;
@@ -55,7 +56,8 @@ export interface Region {
  * Landmark entity - represents notable locations within a region
  */
 export interface Landmark {
-  id: number;
+  ID: number;
+
   regionID: number;
   name: string;
   location?: Point | null;
@@ -65,7 +67,8 @@ export interface Landmark {
  * Adventure entity - represents a treasure hunt adventure
  */
 export interface Adventure {
-  id: number;
+  ID: number;
+
   adventurerID: number;
   regionID: number;
   name: string;
@@ -77,7 +80,8 @@ export interface Adventure {
  * Token entity - represents collectible items within an adventure
  */
 export interface Token {
-  id: number;
+  ID: number;
+
   adventureID: number;
   location?: Point | null;
   hint?: string | null;
@@ -88,9 +92,10 @@ export interface Token {
  * CompletedAdventure entity - tracks completed adventures by users
  */
 export interface CompletedAdventure {
-  id: number;
+  ID: number;
   adventurerID: number;
-  adventureId: number;
+  adventureID: number;
+
   completionDate?: string | null; // ISO date string
   completionTime?: string | null; // PostgreSQL interval as string
 }

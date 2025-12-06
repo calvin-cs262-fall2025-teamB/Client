@@ -40,6 +40,7 @@ export default function DebugPage() {
     createAdventure,
     createToken,
     createCompletedAdventure,
+    createAdventurer,
     updateAdventurer,
   } = useDatabase();
 
@@ -70,9 +71,15 @@ export default function DebugPage() {
     location: { x: 42.9634, y: -85.6681 },
   });
 
+  const [testAdventurer, setTestAdventurer] = useState({
+    username: 'DebugTestUser',
+    password: 'testpassword123',
+    profilePicture: null,
+  });
+
   const addTestResult = (test: string, success: boolean, data: any = null, error: string | null = null) => {
     const result = {
-      id: Date.now(),
+      id: Date.now() + Math.random(), // Make ID unique to prevent duplicate keys
       test,
       success,
       data,
@@ -180,6 +187,18 @@ export default function DebugPage() {
       }
     } else {
       addTestResult('Create Token', false, null, 'No adventures available');
+    }
+  };
+
+  const testCreateAdventurer = async () => {
+    try {
+      const result = await createAdventurer({
+        ...testAdventurer,
+        username: `${testAdventurer.username}_${Date.now()}`, // Make unique to avoid conflicts
+      });
+      addTestResult('Create Adventurer', true, result);
+    } catch (error) {
+      addTestResult('Create Adventurer', false, null, error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
@@ -327,6 +346,10 @@ export default function DebugPage() {
           <Text style={styles.testButtonText}>Create Test Token</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateAdventurer}>
+          <Text style={styles.testButtonText}>Create Test Adventurer</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.clearButton} onPress={clearResults}>
           <Text style={styles.clearButtonText}>Clear Results</Text>
         </TouchableOpacity>
@@ -361,9 +384,15 @@ export default function DebugPage() {
             )}
             
             {result.data && (
-              <Text style={styles.dataPreview}>
-                Data: {JSON.stringify(result.data).substring(0, 100)}...
-              </Text>
+              <ScrollView 
+                style={styles.dataScrollContainer} 
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={true}
+              >
+                <Text style={styles.dataPreview}>
+                  Data: {JSON.stringify(result.data, null, 2)}
+                </Text>
+              </ScrollView>
             )}
           </View>
         ))}
@@ -522,6 +551,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#666',
     fontFamily: 'monospace',
+  },
+  dataScrollContainer: {
+    maxHeight: 120,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 4,
+    padding: 8,
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   noResults: {
     textAlign: 'center',

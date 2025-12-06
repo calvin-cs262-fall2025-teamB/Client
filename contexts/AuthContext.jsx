@@ -2,6 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
+
 import { createContext, useContext, useReducer, useState } from "react";
 import { Alert } from "react-native";
 
@@ -21,6 +22,7 @@ import { Alert } from "react-native";
 // });
 
 //API Functions
+
 import { useDatabase } from "./DatabaseContext";
 
 const AuthContext = createContext();
@@ -30,34 +32,60 @@ const initialState = {
   username: null,
   email: null,
   // TODO: figure out how to store image urls
-  image: null,
+  profilePicture: null,
+
   isAuthenticated: false,
+  isLoading: false,
 };
 
 function reducer(state, action) {
-  console.log(action.payload);
+  if (__DEV__) {
+    console.log("AuthContext action:", action.type, action.payload);
+  }
+
   switch (action.type) {
+    case "set_loading":
+      return { ...state, isLoading: action.payload };
+
+    case "set_user_data":
+      return {
+        ...state,
+        user: action.payload.user,
+        username: action.payload.user?.username || null,
+        profilePicture: action.payload.user?.profilePicture || null,
+      };
+
     case "edit/username":
       return { ...state, username: action.payload };
+
     case "edit/email":
       return { ...state, email: action.payload };
+
     case "signup":
       return {
         ...state,
         username: action.payload.username,
         user: action.payload.user,
+
         email: action.payload.email,
 
         isAuthenticated: true,
+        isLoading: false,
       };
+
     case "login":
       return {
         ...state,
         user: action.payload.user,
+
         username: action.payload.username,
+
         email: action.payload.email,
+        profilePicture: action.payload.user?.profilePicture || null,
         isAuthenticated: true,
+        isLoading: false,
       };
+
     case "logout":
       return {
         ...state,
@@ -65,20 +93,26 @@ function reducer(state, action) {
         username: null,
         email: null,
         password: null,
+        profilePicture: null,
         isAuthenticated: false,
+        isLoading: false,
       };
+
     default:
-      throw Error("Unkown Action.");
+      throw Error("Unknown Action: " + action.type);
   }
 }
 
 function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { user, email, username, isAuthenticated } = state;
+
+  const { user, email, username, isAuthenticated, profilePicture } = state;
   const [isLoading, setIsLoading] = useState(false);
+
   const router = useRouter();
 
-  const { createAdventurer, fetchAdventurers, updateAdventurer } =
+  // Get database context functions
+  const { fetchAdventurers, createAdventurer, updateAdventurer } =
     useDatabase();
 
   async function signup(fullName, email, password) {
@@ -89,6 +123,7 @@ function AuthProvider({ children }) {
     //TODO: Add loader while password is loading
     //Make image field optional
 
+    setIsLoading(true);
     const res = await createAdventurer({
       username: fullName,
       password,
@@ -96,6 +131,7 @@ function AuthProvider({ children }) {
     });
 
     const data = await fetchAdventurers();
+    setIsLoading(false);
 
     const user = data.find((el) => el.id === res.id);
 
@@ -131,9 +167,11 @@ function AuthProvider({ children }) {
     // ============================================================================
 
     // TEMPORARY: Extract username from email for demo purposes
+    setIsLoading(true);
     const res = await fetchAdventurers();
     // console.log(res);
     const user = res.find((el) => el.username === email);
+    setIsLoading(false);
 
     if (user) {
       if (user.password === password)
@@ -227,17 +265,23 @@ function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
+        // User data
         user,
         username,
         email,
+        profilePicture,
         isAuthenticated,
-        login,
-        editUsername,
-        editEmail,
-        logout,
-        signup,
         isLoading,
         setIsLoading,
+
+        // Authentication functions
+        login,
+        signup,
+        logout,
+
+        // Profile management functions
+        editUsername,
+        editEmail,
       }}
     >
       {children}

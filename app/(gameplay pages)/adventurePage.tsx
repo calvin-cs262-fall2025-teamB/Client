@@ -29,7 +29,7 @@ export default function AdventurePageTemplate() {
   // Transform database adventure to display format
   const transformAdventureForDisplay = (dbAdventure: DbAdventure) => {
     return {
-      id: dbAdventure.id,
+      id: dbAdventure.ID,
       name: dbAdventure.name || "Unnamed Adventure",
       description: dbAdventure.name || "No description available",
       image:
@@ -56,7 +56,7 @@ export default function AdventurePageTemplate() {
         ? adventureId[0]
         : adventureId;
       const foundAdventure = adventures.find(
-        (adv: DbAdventure) => adv.id.toString() === currentId.toString()
+        (adv: DbAdventure) => adv.ID.toString() === currentId.toString()
       );
 
       if (foundAdventure) {
@@ -73,7 +73,7 @@ export default function AdventurePageTemplate() {
   useEffect(() => {
     if (adventure && tokens.length > 0) {
       const adventureSpecificTokens = tokens.filter(
-        (token: any) => token.adventureId === adventure.id
+        (token: any) => token.adventureId === adventure.ID
       );
       setAdventureTokens(adventureSpecificTokens);
     }

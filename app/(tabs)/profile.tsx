@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -92,6 +93,18 @@ export default function Profile() {
     }
   };
 
+  const openHelpWebsite = async () => {
+    const url =
+      "https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net/";
+    const supported = await Linking.canOpenURL(url);
+
+    if (supported) {
+      await Linking.openURL(url);
+    } else {
+      alert("Don't know how to open this URL: " + url);
+    }
+  };
+
   // Calculate user stats from database context
   const userStats = useMemo(() => {
     const userCompletedAdventures = completedAdventures || [];
@@ -99,6 +112,7 @@ export default function Profile() {
       adventures?.filter((adv: any) => adv.adventurerId === user?.id) || [];
 
     // Debug logging
+
     if (__DEV__) {
       console.log("Profile stats calculation:");
       console.log("- User ID:", user?.id);
@@ -142,8 +156,34 @@ export default function Profile() {
         Math.floor(totalTokens / 10) // 1 upvote per 10 tokens
     );
 
+    // Alternative token calculation: check if tokens are directly in completed adventures
+    const alternativeTokens = userCompletedAdventures.reduce(
+      (sum: number, completed: any) => {
+        const directTokens =
+          completed.tokens ||
+          completed.tokencount ||
+          completed.token_count ||
+          0;
+        return sum + directTokens;
+      },
+      0
+    );
+
+    // Use the higher of the two calculations (in case one method works better)
+    const finalTokens = Math.max(totalTokens, alternativeTokens);
+
+    // if (__DEV__) {
+    //   console.log('Token calculation results:', {
+    //     fromAdventureData: totalTokens,
+    //     fromCompletedData: alternativeTokens,
+    //     finalTotal: finalTokens,
+    //     completedAdventures: userCompletedAdventures.length,
+    //     availableAdventures: totalAvailableAdventures
+    //   });
+    // }
+
     return {
-      totalTokens,
+      totalTokens: finalTokens,
       adventuresCompleted: userCompletedAdventures.length,
       adventuresTotal: totalAvailableAdventures,
       upvotes, // Type transformation: not in database but required for UI
@@ -185,6 +225,15 @@ export default function Profile() {
             </View>
           </View>
         </LinearGradient>
+
+        {/* Help Button */}
+        <View style={styles.helpButtonContainer}>
+          <TouchableOpacity onPress={openHelpWebsite} style={styles.helpButton}>
+            <FontAwesome6 name="question-circle" size={16} color="#fff" />
+            <Text style={styles.helpButtonText}>Help</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* TODO: Set Hover and active nav*/}
         <View style={styles.tabs}>
           <TouchableOpacity
@@ -301,6 +350,30 @@ const styles = StyleSheet.create({
     paddingTop: 15,
     paddingBottom: 15,
     paddingHorizontal: 15,
+  },
+  helpButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: themes.primaryColor,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  helpButtonContainer: {
+    alignItems: "flex-end",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  helpButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   imageSection: {
     alignItems: "center",
