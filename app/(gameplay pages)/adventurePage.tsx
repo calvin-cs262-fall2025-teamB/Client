@@ -18,12 +18,11 @@ export default function AdventurePageTemplate() {
   const { adventureId } = useLocalSearchParams();
 
   // Use DatabaseContext
-  const { adventures, tokens, loading, errors, fetchAdventures, fetchTokens } =
+  const { adventures, loading, errors, fetchAdventures } =
     useDatabase();
 
   // State for current adventure
   const [adventure, setAdventure] = useState<FrontendAdventure | null>(null);
-  const [adventureTokens, setAdventureTokens] = useState<any[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -78,39 +77,18 @@ export default function AdventurePageTemplate() {
   useEffect(() => {
     if (adventures.length > 0 && adventureId && !adventure) {
       const currentId = Array.isArray(adventureId) ? adventureId[0] : adventureId;
-      
-      // Debug logging
-      // console.log('Adventure Page Debug:');
-      // console.log('- Looking for adventure ID:', currentId);
-      // console.log('- Available adventures:', adventures.length);
-      // console.log('- Sample adventure IDs:', adventures.slice(0, 3).map((adv: any) => ({ 
-      //   ID: adv.ID, 
-      //   id: adv.id,
-      //   name: adv.name 
-      // })));
-      
       const foundDbAdventure = adventures.find((adv: DbAdventure) => {
         const advAny = adv as any;
         const advId = adv.ID || advAny.id;
         const idMatch = advId && (advId.toString() === currentId || advId === parseInt(currentId));
         
-        // if (idMatch) {
-        //   console.log('Found matching adventure:', { ID: advId, name: adv.name });
-        // }
-        
         return idMatch;
       });
       
       if (foundDbAdventure) {
-        // console.log('Successfully found adventure:', foundDbAdventure.name);
         const transformedAdventure = transformAdventureToFrontend(foundDbAdventure, regionsData || []);
         setAdventure(transformedAdventure);
         setIsInitializing(false);
-        // Fetch tokens for this adventure
-        const adventureIdForTokens = foundDbAdventure.ID || (foundDbAdventure as any).id;
-        if (adventureIdForTokens) {
-          fetchTokens(adventureIdForTokens);
-        }
       } else {
         console.log('Adventure not found. Available IDs:', adventures.map((adv: any) => adv.ID || adv.id));
         setLocalError(`Adventure not found (ID: ${currentId})`);
@@ -119,17 +97,9 @@ export default function AdventurePageTemplate() {
     } else if (adventures.length > 0 && adventureId) {
       setIsInitializing(false);
     }
-  }, [adventures, regionsData, adventureId, fetchTokens, adventure]);
+  }, [adventures, regionsData, adventureId, adventure]);
 
-  // Update adventure tokens when tokens are loaded
-  useEffect(() => {
-    if (adventure && tokens.length > 0) {
-      const adventureSpecificTokens = tokens.filter(
-        (token: any) => token.adventureId && token.adventureId.toString() === adventure.id
-      );
-      setAdventureTokens(adventureSpecificTokens);
-    }
-  }, [tokens, adventure]);
+
 
   const handlePlayPress = () => {
     if (adventure) {
@@ -142,11 +112,6 @@ export default function AdventurePageTemplate() {
   const handleBackPress = () => {
     router.replace("/home");
   };
-
-  // Transform current adventure for display
-  const displayAdventure = adventure
-    ? transformAdventureForDisplay(adventure)
-    : null;
 
   // Loading state
   if (loading.adventures || isInitializing) {
@@ -189,16 +154,7 @@ export default function AdventurePageTemplate() {
           <Text style={styles.title}>{adventure.title}</Text>
           <View style={styles.metaInfo}>
             <Text style={styles.metaText}>
-              Difficulty: {displayAdventure.difficulty}
-            </Text>
-            <Text style={styles.metaText}>
-              Time: {displayAdventure.estimatedTime}
-            </Text>
-            <Text style={styles.metaText}>
-              Rewards: {displayAdventure.rewards}
-            </Text>
-            <Text style={styles.metaText}>
-              Tokens: {adventureTokens.length} available
+              Tokens: {adventure.tokenCount} available
             </Text>
           </View>
         </View>

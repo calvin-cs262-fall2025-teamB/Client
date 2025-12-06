@@ -283,15 +283,6 @@ export default function Profile() {
                       color="#34c759"
                     />
                   </View>
-                  <View style={styles.statsGrid}>
-                    <StatCard
-                      icon="trophy"
-                      iconFamily="fontawesome"
-                      value={userStats.upvotes}
-                      label="Upvotes"
-                      color="#FF9500"
-                    />
-                  </View>
                 </>
               )}
             </View>
