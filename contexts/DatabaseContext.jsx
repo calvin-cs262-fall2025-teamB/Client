@@ -413,18 +413,18 @@ export function DatabaseProvider({ children }) {
   const fetchCompletedAdventures = useCallback(async (adventurerId) => {
     dispatch({ type: ActionTypes.SET_LOADING, entity: 'completedAdventures', isLoading: true });
     try {
-      if (__DEV__) {
-        console.log('Fetching completed adventures for adventurer:', adventurerId);
-      }
+      // if (__DEV__) {
+      //   console.log('Fetching completed adventures for adventurer:', adventurerId);
+      // }
       
       const data = await apiCall(`/completedAdventures/adventurer/${adventurerId}`);
       
       if (__DEV__) {
-        console.log('Completed adventures response:', data);
-        console.log('Completed adventures type:', typeof data, Array.isArray(data));
+        // console.log('Completed adventures response:', data);
+        // console.log('Completed adventures type:', typeof data, Array.isArray(data));
         if (data && data.length > 0) {
-          console.log('Sample completed adventure:', data[0]);
-          console.log('Available fields:', Object.keys(data[0]));
+          // console.log('Sample completed adventure:', data[0]);
+          // console.log('Available fields:', Object.keys(data[0]));
         } else {
           console.log('No completed adventures found for user:', adventurerId);
         }

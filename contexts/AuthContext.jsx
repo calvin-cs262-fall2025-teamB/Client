@@ -18,9 +18,9 @@ const initialState = {
 };
 
 function reducer(state, action) {
-  if (__DEV__) {
-    console.log('AuthContext action:', action.type, action.payload);
-  }
+  // if (__DEV__) {
+  //   console.log('AuthContext action:', action.type, action.payload);
+  // }
   
   switch (action.type) {
     case "set_loading":
