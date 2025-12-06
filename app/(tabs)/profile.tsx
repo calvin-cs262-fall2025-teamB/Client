@@ -126,34 +126,34 @@ export default function Profile() {
       // });
     }
 
-    // Calculate total tokens from completed adventures
+    // Calculate total tokens from completed adventures with enhanced field mapping
     const totalTokens = userCompletedAdventures.reduce(
-      (sum: number, completed: any) => {
-        const adventure = adventures?.find(
-          (adv: any) => adv.id === completed.adventureId
-        );
-        return sum + (adventure?.numTokens || 0);
+      (sum: number, completed: any, index: number) => {
+        // Handle different field naming conventions for adventure ID
+        const adventureId = completed.adventureID || completed.adventureid || completed.adventure_id || completed.adventureId;
+        
+        // Find matching adventure with flexible ID matching
+        const adventure = adventures?.find((adv: any) => {
+          const advId = adv.ID || adv.id || adv.adventureid || adv.adventure_id;
+          return advId === adventureId || advId?.toString() === adventureId?.toString();
+        });
+        
+        // Handle different field naming conventions for token count
+        const tokenCount = adventure?.numTokens || adventure?.numtokens || adventure?.num_tokens || adventure?.tokencount || 0;
+        
+        // if (__DEV__ && index < 3) { // Log first 3 for debugging
+        //   console.log(`Token calculation ${index + 1}:`, {
+        //     completedAdventureId: adventureId,
+        //     foundAdventure: !!adventure,
+        //     adventureName: adventure?.name || adventure?.adventurename,
+        //     tokenCount,
+        //     runningSum: sum + tokenCount
+        //   });
+        // }
+        
+        return sum + tokenCount;
       },
       0
-    );
-
-    // Calculate completion rate
-    const totalAvailableAdventures = adventures?.length || 0;
-    const completionRate =
-      totalAvailableAdventures > 0
-        ? Math.round(
-            (userCompletedAdventures.length / totalAvailableAdventures) * 100
-          )
-        : 0;
-
-    // Type transformation: Add upvote property (not in database data)
-    // Generate upvotes based on completed adventures and created adventures
-    // This is a mock calculation since upvotes aren't stored in the database
-    const upvotes = Math.max(
-      0,
-      userCompletedAdventures.length * 3 + // 3 upvotes per completed adventure
-        userCreatedAdventures.length * 5 + // 5 upvotes per created adventure
-        Math.floor(totalTokens / 10) // 1 upvote per 10 tokens
     );
 
     // Alternative token calculation: check if tokens are directly in completed adventures
@@ -185,9 +185,6 @@ export default function Profile() {
     return {
       totalTokens: finalTokens,
       adventuresCompleted: userCompletedAdventures.length,
-      adventuresTotal: totalAvailableAdventures,
-      upvotes, // Type transformation: not in database but required for UI
-      completionRate,
     };
   }, [completedAdventures, adventures, user?.id]);
 
@@ -281,15 +278,6 @@ export default function Profile() {
                       value={userStats.adventuresCompleted}
                       label="Completed"
                       color="#34c759"
-                    />
-                  </View>
-                  <View style={styles.statsGrid}>
-                    <StatCard
-                      icon="trophy"
-                      iconFamily="fontawesome"
-                      value={userStats.upvotes}
-                      label="Upvotes"
-                      color="#FF9500"
                     />
                   </View>
                 </>

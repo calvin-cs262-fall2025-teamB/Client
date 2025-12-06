@@ -26,7 +26,7 @@ import AppTitle from "../../components/reusable/AppTitle";
 
 export default function Login() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const { login, isAuthenticated, isLoading, setIsLoading } = useAuth();
@@ -39,15 +39,15 @@ export default function Login() {
   }, [isAuthenticated, router]);
 
   const handleSubmit = async () => {
-    if (email && password) {
-      //TODO: add email validation
-      // if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      //   Alert.alert(
-      //     "Validation",
-      //     "Email is not in the correct format (user@gmail.com)"
-      //   );
-      //   return;
-      // }
+    if (username && password) {
+      // Validate username format (alphanumeric, underscores, hyphens)
+      if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        Alert.alert(
+          "Validation",
+          "Username can only contain letters, numbers, underscores, and hyphens"
+        );
+        return;
+      }
       if (!/[A-Za-z0-9]/.test(password) || !(password.length >= 10)) {
         Alert.alert(
           "Validation",
@@ -58,14 +58,14 @@ export default function Login() {
 
       setIsLoading(true);
       try {
-        login(email.toLowerCase(), password);
+        login(username.toLowerCase(), password);
       } catch (err: any) {
         Alert.alert("Login failed", err.message || "Unknown error");
       } finally {
         setIsLoading(false);
       }
     } else {
-      Alert.alert("Validation", "Please enter email and password.");
+      Alert.alert("Validation", "Please enter username and password.");
     }
   };
 
@@ -77,15 +77,16 @@ export default function Login() {
       >
         <View style={styles.form}>
           <AppTitle />
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Username</Text>
           <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            autoComplete={"email"}
+            value={username}
+            onChangeText={setUsername}
+            placeholder="your_username"
+            autoComplete={"username"}
             style={styles.input}
             returnKeyType="next"
             onSubmitEditing={() => {}}
+            autoCapitalize="none"
           />
 
           <Text style={styles.label}>Password</Text>
@@ -107,7 +108,7 @@ export default function Login() {
           <View style={styles.authenticationHelp}>
             <View style={{ gap: 2 }}>
               <TouchableOpacity onPress={() => router.push("/signin")}>
-                <Text style={styles.authenticationHelpText}>Sign in</Text>
+                <Text style={styles.authenticationHelpText}>Sign Up</Text>
               </TouchableOpacity>
               <Text style={styles.authenticationHelpText}>
                 Forgot password?

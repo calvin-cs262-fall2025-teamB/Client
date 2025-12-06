@@ -33,19 +33,18 @@ export interface Coordinates {
  * Adventurer entity - represents a user in the system
  */
 export interface Adventurer {
-  ID: number;
+  id: number;
   username: string;
   password: string;
-  profilePicture?: string | null;
+  profilepicture?: string | null;
 }
 
 /**
  * Region entity - represents a geographic region containing adventures
  */
 export interface Region {
-  ID: number;
-
-  adventurerID: number;
+  id: number;
+  adventurerid: number;
   name: string;
   description?: string | null;
   location: Point;
@@ -56,9 +55,8 @@ export interface Region {
  * Landmark entity - represents notable locations within a region
  */
 export interface Landmark {
-  ID: number;
-
-  regionID: number;
+  id: number;
+  regionid: number;
   name: string;
   location?: Point | null;
 }
@@ -67,12 +65,11 @@ export interface Landmark {
  * Adventure entity - represents a treasure hunt adventure
  */
 export interface Adventure {
-  ID: number;
-
-  adventurerID: number;
-  regionID: number;
+  id: number;
+  adventurerid: number;
+  regionid: number;
   name: string;
-  numTokens?: number | null;
+  numtokens?: number;
   location?: Point | null;
 }
 
@@ -80,24 +77,22 @@ export interface Adventure {
  * Token entity - represents collectible items within an adventure
  */
 export interface Token {
-  ID: number;
-
-  adventureID: number;
+  id: number;
+  adventureid: number;
   location?: Point | null;
   hint?: string | null;
-  tokenOrder?: number | null;
+  tokenorder?: number | null;
 }
 
 /**
  * CompletedAdventure entity - tracks completed adventures by users
  */
 export interface CompletedAdventure {
-  ID: number;
-  adventurerID: number;
-  adventureID: number;
-
-  completionDate?: string | null; // ISO date string
-  completionTime?: string | null; // PostgreSQL interval as string
+  id: number;
+  adventurerid: number;
+  adventureid: number;
+  completiondate?: string | null; // ISO date string
+  completiontime?: string | null; // PostgreSQL interval as string
 }
 
 // ============================================================================
@@ -192,9 +187,6 @@ export interface FrontendAdventure {
     center: Coordinates;
   };
   tokenCount: number;
-  difficulty: "Easy" | "Medium" | "Hard";
-  estimatedTime: string;
-  status: "draft" | "published" | "archived";
 }
 
 /**
@@ -203,7 +195,7 @@ export interface FrontendAdventure {
 export interface AuthUser {
   id: number;
   username: string;
-  profilePicture?: string | null;
+  profilepicture?: string | null;
   token?: string;
 }
 
@@ -222,7 +214,7 @@ export interface RegisterData {
   username: string;
   password: string;
   confirmPassword: string;
-  profilePicture?: string;
+  profilepicture?: string;
 }
 
 // ============================================================================
@@ -259,12 +251,12 @@ export type UpdateCompletedAdventure = Partial<CompletedAdventure> & {
  * Adventure search and filter parameters
  */
 export interface AdventureFilters {
-  regionId?: number;
-  adventurerId?: number;
+  regionid?: number;
+  adventurerid?: number;
   difficulty?: string;
-  minTokens?: number;
-  maxTokens?: number;
-  searchQuery?: string;
+  mintokens?: number;
+  maxtokens?: number;
+  searchquery?: string;
 }
 
 /**

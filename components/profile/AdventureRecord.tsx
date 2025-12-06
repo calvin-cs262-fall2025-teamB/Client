@@ -75,19 +75,19 @@ export default function AdventureRecord() {
     
     const regionName = region?.name || (region as any)?.regionname || (region as any)?.region_name;
     
-    if (__DEV__) {
-      console.log(`Completed Adventure ${adventureId}:`, {
-        adventureId,
-        adventureName,
-        regionId,
-        regionName,
-        tokens: numTokens,
-        completionDate,
-        rawCompleted: completed,
-        rawAdventure: adventure,
-        rawRegion: region
-      });
-    }
+    // if (__DEV__) {
+    //   console.log(`Completed Adventure ${adventureId}:`, {
+    //     adventureId,
+    //     adventureName,
+    //     regionId,
+    //     regionName,
+    //     tokens: numTokens,
+    //     completionDate,
+    //     rawCompleted: completed,
+    //     rawAdventure: adventure,
+    //     rawRegion: region
+    //   });
+    // }
     
     return {
       id: adventureId || `unknown-${index}`, // Ensure ID is always defined

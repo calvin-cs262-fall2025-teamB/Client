@@ -1,8 +1,7 @@
 import themes from "@/assets/utils/themes";
-import DifficultyBadge from "@/components/home/DifficultyBadge";
 import FilterChip from "@/components/home/FilterChip";
 import MapPlaceholder from "@/components/home/MapPlaceholder";
-import { Adventure as DbAdventure, FrontendAdventure } from "@/types";
+import { Adventure as DbAdventure } from "@/types";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -17,119 +16,18 @@ import {
 } from "react-native";
 import { useDatabase } from "../../contexts/DatabaseContext";
 
-// Use FrontendAdventure as the main Adventure type for UI components
-type Adventure = FrontendAdventure;
-
 // Filter type definitions
-type DifficultyFilter = "Easy" | "Medium" | "Hard" | null;
-type DurationFilter = "quick" | "medium" | "long" | null;
 type RegionFilter = string | null;
-
-// ============================================================================
-// MOCK DATA - Fallback for if Azure Web Service fetch fails
-// ============================================================================
-const MOCK_ADVENTURES: Adventure[] = [
-  {
-    id: "1",
-    title: "Campus History Tour",
-    summary:
-      "Discover the rich history of Calvin University through iconic landmarks",
-    description:
-      "Explore historic buildings, memorable locations, and hidden gems that tell the story of our campus. Learn about the university's founding and significant events.",
-    image_url: null,
-    region: {
-      id: "1",
-      name: "North Campus",
-      center: { lat: 42.9301, lng: -85.5883 },
-    },
-    tokenCount: 5,
-    difficulty: "Easy",
-    estimatedTime: "30 min",
-    status: "published",
-  },
-  {
-    id: "2",
-    title: "Hidden Art Walk",
-    summary: "Find secret art installations scattered across campus",
-    description:
-      "Discover beautiful murals, sculptures, and installations that many students walk past every day. Each piece has a story about the artists and their inspiration.",
-    image_url: null,
-    region: {
-      id: "2",
-      name: "South Campus",
-      center: { lat: 42.929, lng: -85.587 },
-    },
-    tokenCount: 8,
-    difficulty: "Medium",
-    estimatedTime: "60 min",
-    status: "published",
-  },
-  {
-    id: "3",
-    title: "Science Building Quest",
-    summary: "Explore the wonders of our science facilities",
-    description:
-      "Visit laboratories, planetariums, and experimental spaces while learning about groundbreaking discoveries made right here at Calvin. Perfect for curious minds.",
-    image_url: null,
-    region: {
-      id: "1",
-      name: "North Campus",
-      center: { lat: 42.9301, lng: -85.5883 },
-    },
-    tokenCount: 6,
-    difficulty: "Medium",
-    estimatedTime: "45 min",
-    status: "published",
-  },
-  {
-    id: "4",
-    title: "Athletic Heritage Trail",
-    summary: "Journey through Calvin's sports history and achievements",
-    description:
-      "Visit iconic sports venues and learn about legendary athletes who made their mark. Experience the pride and tradition of Calvin athletics.",
-    image_url: null,
-    region: {
-      id: "3",
-      name: "Athletic Complex",
-      center: { lat: 42.9315, lng: -85.5895 },
-    },
-    tokenCount: 4,
-    difficulty: "Easy",
-    estimatedTime: "25 min",
-    status: "published",
-  },
-  {
-    id: "5",
-    title: "Ecosystem Discovery",
-    summary: "Explore Calvin's natural habitats and biodiversity",
-    description:
-      "A challenging adventure through various ecosystems on campus. Learn about local flora and fauna while collecting tokens at ecological points of interest.",
-    image_url: null,
-    region: {
-      id: "4",
-      name: "Ecosystem Preserve",
-      center: { lat: 42.9285, lng: -85.587 },
-    },
-    tokenCount: 10,
-    difficulty: "Hard",
-    estimatedTime: "90 min",
-    status: "published",
-  },
-];
 
 export default function HomePage() {
   const router = useRouter();
-  const [selectedAdventure, setSelectedAdventure] = useState<Adventure | null>(
+  const [selectedAdventure, setSelectedAdventure] = useState<DbAdventure | null>(
     null
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Filter states with proper typing
-  const [selectedDifficulty, setSelectedDifficulty] =
-    useState<DifficultyFilter>(null);
-  const [selectedDuration, setSelectedDuration] =
-    useState<DurationFilter>(null);
   const [selectedRegion, setSelectedRegion] = useState<RegionFilter>(null);
 
   // API state from DatabaseContext
@@ -148,110 +46,36 @@ export default function HomePage() {
     fetchRegions();
   }, [fetchAdventures, fetchRegions]);
 
-  // Transform database adventures to match the FrontendAdventure interface
+  // Use adventures directly from database
+  const displayAdventures = adventures;
 
-  const transformedAdventures: Adventure[] = adventures.map(
-    (item: DbAdventure) => {
-      // Debug: Log the raw adventure data to understand the structure
-      // if (__DEV__) {
-      //   console.log('Raw adventure data:', JSON.stringify(item, null, 2));
-      // }
-
-      // Handle both camelCase and snake_case field names from database
-      const itemAny = item as any;
-      const regionId = item.regionID || itemAny.regionid || itemAny.regionID;
-      const numTokens =
-        item.numTokens || itemAny.numtokens || itemAny.num_tokens;
-
-      // Handle adventure name with flexible field mapping
-      const adventureName =
-        item.name ||
-        itemAny.adventurename ||
-        itemAny.adventure_name ||
-        itemAny.Name;
-
-      // Find the corresponding region data
-      const region = regionsData.find(
-        (r: any) => r.id === regionId || r.ID === regionId
-      );
-
-      // if (__DEV__) {
-      //   console.log(`Adventure "${adventureName}": regionId=${regionId}, numTokens=${numTokens}, foundRegion=${!!region}`);
-      //   if (region) {
-      //     console.log('Found region:', JSON.stringify(region, null, 2));
-      //   }
-      // }
-
-      return {
-        id: item?.ID?.toString() || `adventure-${Date.now()}-${Math.random()}`,
-        title: adventureName || "Unnamed Adventure",
-        summary: adventureName || "No description available",
-        description: adventureName || "No description available",
-        image_url: null,
-        region: {
-          id: regionId?.toString() || "1",
-          name: region?.name || `Region ${regionId || 1}`,
-          center: {
-            lat: region?.location?.x || item.location?.x || 42.9301,
-            lng: region?.location?.y || item.location?.y || -85.5883,
-          },
-          tokenCount: numTokens || 0,
-          difficulty: "Medium" as const,
-          estimatedTime: "30 min",
-          status: "published" as const,
-        },
-      };
-    }
-  );
-
-  // Debug: Log regions data
-
-  if (__DEV__) {
-    // console.log("Regions data loaded:", regionsData?.length || 0, "regions");
-    // if (regionsData?.length > 0) {
-    //   console.log("Sample region:", JSON.stringify(regionsData[0], null, 2));
-    // }
-  }
-
-  // Use transformed adventures or fallback to mock data if empty
-  const displayAdventures =
-    transformedAdventures.length > 0
-      ? transformedAdventures
-      : errors.adventures && __DEV__
-      ? MOCK_ADVENTURES
-      : [];
+  // Helper function to get region name for an adventure
+  const getRegionName = (adventure: DbAdventure): string => {
+    const advAny = adventure as any;
+    // Handle both lowercase (PostgreSQL default) and camelCase field names
+    const regionId = advAny.regionid || adventure.regionid || advAny.region_id;
+    const region = regionsData.find((r: any) => (r.id || r.ID) === regionId);
+    return region?.name || `Region ${regionId}`;
+  };
 
   // Get unique regions for filter
   const regions: string[] = Array.from(
-    new Set(displayAdventures.map((adv: Adventure) => adv.region.name))
+    new Set(displayAdventures.map((adv: DbAdventure) => getRegionName(adv)))
   );
 
   // Apply filters
-  const filteredAdventures = displayAdventures.filter((adv: Adventure) => {
-    const matchesSearch =
-      adv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      adv.summary.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredAdventures = displayAdventures.filter((adv: DbAdventure) => {
+    const advAny = adv as any;
+    // Handle lowercase field names from PostgreSQL
+    const adventureName = advAny.name || adv.name || '';
+    const matchesSearch = adventureName.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesDifficulty =
-      !selectedDifficulty ||
-      adv.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
+    const matchesRegion = !selectedRegion || getRegionName(adv) === selectedRegion;
 
-    const matchesDuration =
-      !selectedDuration ||
-      (selectedDuration === "quick" && parseInt(adv.estimatedTime) < 30) ||
-      (selectedDuration === "medium" &&
-        parseInt(adv.estimatedTime) >= 30 &&
-        parseInt(adv.estimatedTime) <= 60) ||
-      (selectedDuration === "long" && parseInt(adv.estimatedTime) > 60);
-
-    const matchesRegion = !selectedRegion || adv.region.name === selectedRegion;
-
-    return (
-      matchesSearch && matchesDifficulty && matchesDuration && matchesRegion
-    );
+    return matchesSearch && matchesRegion;
   });
 
-  const handleAdventurePress = (adventure: Adventure) => {
+  const handleAdventurePress = (adventure: DbAdventure) => {
     setSelectedAdventure(adventure);
     setIsModalOpen(true);
   };
@@ -259,17 +83,16 @@ export default function HomePage() {
   const handleStartAdventure = () => {
     if (!selectedAdventure) return;
     setIsModalOpen(false);
-    router.push(`/adventurePage?adventureId=${selectedAdventure.id}`);
+    const advAny = selectedAdventure;
+    const adventureId = advAny.id || selectedAdventure.id;
+    router.push(`/adventurePage?adventureId=${adventureId}`);
   };
 
   const clearFilters = () => {
-    setSelectedDifficulty(null);
-    setSelectedDuration(null);
     setSelectedRegion(null);
   };
 
-  const hasActiveFilters =
-    selectedDifficulty || selectedDuration || selectedRegion;
+  const hasActiveFilters = selectedRegion;
 
   return (
     <View style={styles.container}>
@@ -300,81 +123,24 @@ export default function HomePage() {
 
       {/* Filter Chips */}
       <View style={styles.filtersSection}>
+        <Text style={styles.filtersLabel}>Regions</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersContainer}
         >
-          {/* Difficulty Filters */}
-          <FilterChip
-            label="Easy"
-            selected={selectedDifficulty === "Easy"}
-            onPress={() =>
-              setSelectedDifficulty(
-                selectedDifficulty === "Easy" ? null : "Easy"
-              )
-            }
-          />
-          <FilterChip
-            label="Medium"
-            selected={selectedDifficulty === "Medium"}
-            onPress={() =>
-              setSelectedDifficulty(
-                selectedDifficulty === "Medium" ? null : "Medium"
-              )
-            }
-          />
-          <FilterChip
-            label="Hard"
-            selected={selectedDifficulty === "Hard"}
-            onPress={() =>
-              setSelectedDifficulty(
-                selectedDifficulty === "Hard" ? null : "Hard"
-              )
-            }
-          />
-
-          {/* Duration Filters */}
-          <View style={styles.filterDivider} />
-          <FilterChip
-            label="< 30 min"
-            selected={selectedDuration === "quick"}
-            onPress={() =>
-              setSelectedDuration(selectedDuration === "quick" ? null : "quick")
-            }
-          />
-          <FilterChip
-            label="30-60 min"
-            selected={selectedDuration === "medium"}
-            onPress={() =>
-              setSelectedDuration(
-                selectedDuration === "medium" ? null : "medium"
-              )
-            }
-          />
-          <FilterChip
-            label="> 60 min"
-            selected={selectedDuration === "long"}
-            onPress={() =>
-              setSelectedDuration(selectedDuration === "long" ? null : "long")
-            }
-          />
-
           {/* Region Filters */}
           {regions.length > 1 && (
-            <>
-              <View style={styles.filterDivider} />
-              {regions.map((region, index) => (
-                <FilterChip
-                  key={`${region}-${index}`}
-                  label={region}
-                  selected={selectedRegion === region}
-                  onPress={() =>
-                    setSelectedRegion(selectedRegion === region ? null : region)
-                  }
-                />
-              ))}
-            </>
+            regions.map((region, index) => (
+              <FilterChip
+                key={`${region}-${index}`}
+                label={region}
+                selected={selectedRegion === region}
+                onPress={() =>
+                  setSelectedRegion(selectedRegion === region ? null : region)
+                }
+              />
+            ))
           )}
         </ScrollView>
 
@@ -442,26 +208,22 @@ export default function HomePage() {
             )}
           </View>
         ) : (
-          filteredAdventures.map((adventure: Adventure, index: number) => (
+          filteredAdventures.map((adventure: DbAdventure, index: number) => (
             <TouchableOpacity
               key={`${adventure.id}-${index}`}
               style={styles.card}
               onPress={() => handleAdventurePress(adventure)}
               activeOpacity={0.8}
             >
-              <MapPlaceholder regionName={adventure.region.name} height={160} />
+              <MapPlaceholder regionName={getRegionName(adventure)} height={160} />
               <View style={styles.cardContent}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle} numberOfLines={1}>
-                    {adventure.title}
+                    {adventure.name || 'Unnamed Adventure'}
                   </Text>
-                  <DifficultyBadge
-                    difficulty={adventure.difficulty}
-                    size="small"
-                  />
                 </View>
                 <Text style={styles.cardSummary} numberOfLines={2}>
-                  {adventure.summary}
+                  {adventure.name || 'No description available'}
                 </Text>
                 <View style={styles.cardFooter}>
                   <View style={styles.badge}>
@@ -470,19 +232,12 @@ export default function HomePage() {
                       size={12}
                       color="#6B7280"
                     />
-                    <Text style={styles.badgeText}>
-                      {adventure.region.name}
-                    </Text>
+                    <Text style={styles.badgeText}>{getRegionName(adventure)}</Text>
                   </View>
-                  <View style={styles.badge}>
-                    <FontAwesome6 name="clock" size={12} color="#6B7280" />
-                    <Text style={styles.badgeText}>
-                      {adventure.estimatedTime}
-                    </Text>
-                  </View>
+
                   <View style={styles.badge}>
                     <FontAwesome6 name="coins" size={12} color="#FFD700" />
-                    <Text style={styles.badgeText}>{adventure.tokenCount}</Text>
+                    <Text style={styles.badgeText}>{adventure.numtokens}</Text>
                   </View>
                 </View>
               </View>
@@ -499,7 +254,7 @@ export default function HomePage() {
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
                 <Text style={styles.modalTitle} numberOfLines={2}>
-                  {selectedAdventure.title}
+                  {selectedAdventure.name || 'Unnamed Adventure'}
                 </Text>
                 <TouchableOpacity
                   onPress={() => setIsModalOpen(false)}
@@ -508,25 +263,10 @@ export default function HomePage() {
                   <FontAwesome6 name="xmark" size={20} color="#6B7280" />
                 </TouchableOpacity>
               </View>
-              <DifficultyBadge
-                difficulty={selectedAdventure.difficulty}
-                size="medium"
-              />
             </View>
 
             {/* Key Info Bar */}
             <View style={styles.modalInfoBar}>
-              <View style={styles.modalInfoItem}>
-                <FontAwesome6
-                  name="clock"
-                  size={16}
-                  color={themes.primaryColor}
-                />
-                <Text style={styles.modalInfoText}>
-                  {selectedAdventure.estimatedTime}
-                </Text>
-              </View>
-              <View style={styles.modalInfoDivider} />
               <View style={styles.modalInfoItem}>
                 <FontAwesome6
                   name="location-dot"
@@ -534,14 +274,14 @@ export default function HomePage() {
                   color={themes.primaryColor}
                 />
                 <Text style={styles.modalInfoText}>
-                  {selectedAdventure.region.name}
+                  {getRegionName(selectedAdventure)}
                 </Text>
               </View>
               <View style={styles.modalInfoDivider} />
               <View style={styles.modalInfoItem}>
                 <FontAwesome6 name="coins" size={16} color="#FFD700" />
                 <Text style={styles.modalInfoText}>
-                  {selectedAdventure.tokenCount} tokens
+                  {selectedAdventure.numtokens} tokens
                 </Text>
               </View>
             </View>
@@ -552,7 +292,7 @@ export default function HomePage() {
                 What you will discover
               </Text>
               <Text style={styles.modalDescription}>
-                {selectedAdventure.description || selectedAdventure.summary}
+                {selectedAdventure.name || 'No description available'}
               </Text>
             </View>
 
@@ -628,6 +368,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
+  },
+  filtersLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
   filtersContainer: {
     paddingHorizontal: 20,

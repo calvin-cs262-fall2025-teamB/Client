@@ -24,14 +24,10 @@ import AppTitle from "../../components/reusable/AppTitle";
 
 export default function Signup() {
   const router = useRouter();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmedPassword, seConfirmedtPassword] = useState("");
   const { signup, isAuthenticated, setIsLoading } = useAuth();
-
-  let fullName = "";
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -40,31 +36,25 @@ export default function Signup() {
   }, [isAuthenticated]);
 
   const handleSubmit = async () => {
-    if (email && password && firstName && lastName) {
-      //Step 1: Make sure user enters the right password
-      if (!/^[A-Za-z]+$/.test(firstName) || !/^[A-Za-z]+$/.test(lastName)) {
+    if (username && password) {
+      // Validate username
+      if (username.length < 3) {
         Alert.alert(
           "Validation",
-          "No numeric values allowed in 'First Name' or 'Last Name'."
+          "Username must be at least 3 characters long"
         );
         return;
       }
 
-      if (firstName.length < 2 || lastName.length < 2) {
+      if (!/^[A-Za-z0-9_]+$/.test(username)) {
         Alert.alert(
           "Validation",
-          "First and last name must each have two or more characters"
+          "Username can only contain letters, numbers, and underscores"
         );
         return;
       }
 
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        Alert.alert(
-          "Validation",
-          "Email is not in the correct format (user@gmail.com)"
-        );
-        return;
-      }
+      // Validate password
       if (!/[A-Za-z0-9]/.test(password) || !(password.length >= 10)) {
         Alert.alert(
           "Validation",
@@ -80,11 +70,7 @@ export default function Signup() {
 
       setIsLoading(true);
       try {
-        fullName =
-          firstName.replace(/\s+/g, "").toLowerCase() +
-          " " +
-          lastName.replace(/\s+/g, "").toLowerCase();
-        signup(fullName, email, password);
+        signup(username, password);
       } catch (err: any) {
         Alert.alert("Signup failed", err.message || "Unknown error");
       } finally {
@@ -102,40 +88,14 @@ export default function Signup() {
     >
       <View style={styles.form}>
         <AppTitle />
-        <Text style={styles.label}>First Name</Text>
+        <Text style={styles.label}>Username</Text>
         <TextInput
-          value={firstName}
-          onChangeText={setFirstName}
+          value={username}
+          onChangeText={setUsername}
           keyboardType="default"
           autoCapitalize="none"
-          autoComplete="name-given"
-          placeholder="John"
-          style={styles.input}
-          returnKeyType="next"
-          onSubmitEditing={() => {
-            // Focus password next — you can use refs for nicer UX
-          }}
-        />
-        <Text style={styles.label}>Last Name</Text>
-        <TextInput
-          value={lastName}
-          onChangeText={setLastName}
-          keyboardType="default"
-          autoCapitalize="none"
-          autoComplete="name-family"
-          placeholder="Doe"
-          style={styles.input}
-          returnKeyType="next"
-        />
-
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-          placeholder="you@example.com"
+          autoComplete="username"
+          placeholder="Enter your username"
           style={styles.input}
           returnKeyType="next"
           onSubmitEditing={() => {

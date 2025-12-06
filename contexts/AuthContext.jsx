@@ -39,10 +39,10 @@ const initialState = {
 };
 
 function reducer(state, action) {
-  if (__DEV__) {
-    console.log("AuthContext action:", action.type, action.payload);
-  }
-
+  // if (__DEV__) {
+  //   console.log('AuthContext action:', action.type, action.payload);
+  // }
+  
   switch (action.type) {
     case "set_loading":
       return { ...state, isLoading: action.payload };
@@ -52,23 +52,18 @@ function reducer(state, action) {
         ...state,
         user: action.payload.user,
         username: action.payload.user?.username || null,
-        profilePicture: action.payload.user?.profilePicture || null,
+        profilePicture: action.payload.user?.profilepicture || null, // Use lowercase field name
       };
 
     case "edit/username":
       return { ...state, username: action.payload };
-
-    case "edit/email":
-      return { ...state, email: action.payload };
 
     case "signup":
       return {
         ...state,
         username: action.payload.username,
         user: action.payload.user,
-
-        email: action.payload.email,
-
+        email: null, // Email no longer used
         isAuthenticated: true,
         isLoading: false,
       };
@@ -77,11 +72,9 @@ function reducer(state, action) {
       return {
         ...state,
         user: action.payload.user,
-
         username: action.payload.username,
-
-        email: action.payload.email,
-        profilePicture: action.payload.user?.profilePicture || null,
+        email: null, // Email no longer used
+        profilepicture: action.payload.user?.profilepicture || null, // Use lowercase field name
         isAuthenticated: true,
         isLoading: false,
       };
@@ -115,130 +108,71 @@ function AuthProvider({ children }) {
   const { fetchAdventurers, createAdventurer, updateAdventurer } =
     useDatabase();
 
-  async function signup(fullName, email, password) {
-    // const BCRYPT_ROUNDS = 8; //Change to 13 to improve efficiency
-
-    // const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-
-    //TODO: Add loader while password is loading
-    //Make image field optional
-
+  async function signup(username, password) {
     setIsLoading(true);
-    const res = await createAdventurer({
-      username: fullName,
-      password,
-      profilePicture: null,
-    });
+    
+    try {
+      const res = await createAdventurer({
+        username,
+        password,
+        profilepicture: null, // Use lowercase to match database schema
+      });
 
-    const data = await fetchAdventurers();
-    setIsLoading(false);
+      const data = await fetchAdventurers();
+      const user = data.find((el) => el.id === res.id);
 
-    const user = data.find((el) => el.id === res.id);
-
-    // console.log(data);
-    dispatch({
-      type: "signup",
-      payload: { username: fullName, email, user },
-    });
+      dispatch({
+        type: "signup",
+        payload: { username, email: null, user },
+      });
+    } catch (error) {
+      console.error("Signup failed:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  async function login(email, password) {
-    // ============================================================================
-    // TODO: Replace with Azure API call to PostgreSQL backend
-    // ============================================================================
-    // Expected API endpoint: POST https://your-app.azurewebsites.net/api/auth/login
-    // Expected PostgreSQL query:
-    // SELECT id, full_name, email, profile_image_url
-    // FROM users
-    // WHERE email = $1 AND password_hash = crypt($2, password_hash);
-    //
-    // Implementation example:
-    // const response = await fetch('https://your-app.azurewebsites.net/api/auth/login', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email, password })
-    // });
-    // const data = await response.json();
-    // if (data.success) {
-    //   // Store auth token in secure storage
-    //   await SecureStore.setItemAsync('authToken', data.token);
-    //   dispatch({ type: "login", payload: data.user.full_name });
-    // }
-    // ============================================================================
-
-    // TEMPORARY: Extract username from email for demo purposes
+  async function login(username, password) {
     setIsLoading(true);
-    const res = await fetchAdventurers();
-    // console.log(res);
-    const user = res.find((el) => el.username === email);
-    setIsLoading(false);
+    
+    try {
+      const res = await fetchAdventurers();
+      const user = res.find((el) => el.username === username);
 
-    if (user) {
-      if (user.password === password)
-        dispatch({
-          type: "login",
-          payload: { user, username: user.username, email },
-        });
-      else Alert.alert("Validation", "Invalid Password.");
-    } else {
-      Alert.alert(
-        "Validation",
-        "Account not found, sign up with the link below."
-      );
+      if (user) {
+        if (user.password === password) {
+          dispatch({
+            type: "login",
+            payload: { user, username: user.username, email: null },
+          });
+        } else {
+          Alert.alert("Validation", "Invalid Password.");
+        }
+      } else {
+        Alert.alert(
+          "Validation",
+          "Account not found, sign up with the link below."
+        );
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+      Alert.alert("Error", "Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
   async function editUsername(newUsername) {
-    // ============================================================================
-    // TODO: Update username via Azure API call to PostgreSQL backend
-    // ============================================================================
-    // Expected API endpoint: PATCH https://your-app.azurewebsites.net/api/users/{userId}
-    // Expected PostgreSQL query:
-    // UPDATE users SET full_name = $1, updated_at = NOW() WHERE id = $2;
-    //
-    // Implementation example:
-    // await fetch(`https://your-app.azurewebsites.net/api/users/${userId}`, {
-    //   method: 'PATCH',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${authToken}`
-    //   },
-    //   body: JSON.stringify({ fullName: newUsername })
-    // });
-    // ============================================================================
-    // console.log("here", user.id);
-    const res = await updateAdventurer(user.id, { username: newUsername });
-    // console.log("email :", res);
-    dispatch({ type: "edit/username", payload: newUsername });
+    try {
+      const res = await updateAdventurer(user.id, { username: newUsername });
+      dispatch({ type: "edit/username", payload: newUsername });
+    } catch (error) {
+      console.error("Failed to update username:", error);
+      Alert.alert("Error", "Failed to update username. Please try again.");
+    }
   }
-  async function editEmail(newEmail) {
-    // ============================================================================
-    // TODO: Upload image to Azure Blob Storage and update user profile
-    // ============================================================================
-    // Expected Azure Blob Storage container: profile-images
-    // Expected API endpoint: POST https://your-app.azurewebsites.net/api/users/{userId}/image
-    // Expected PostgreSQL query:
-    // UPDATE users SET profile_image_url = $1, updated_at = NOW() WHERE id = $2;
-    //
-    // Implementation example:
-    // 1. Upload to Azure Blob Storage
-    // const blobUrl = await uploadToAzureBlob(imageURL);
-    //
-    // 2. Update user profile in PostgreSQL
-    // await fetch(`https://your-app.azurewebsites.net/api/users/${userId}/image`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${authToken}`
-    //   },
-    //   body: JSON.stringify({ imageUrl: blobUrl })
-    // });
-    // ============================================================================
-
-    await updateAdventurer(user.id, { email: newEmail });
-
-    dispatch({ type: "edit/email", payload: newEmail });
-  }
+  // Email functionality removed - app now uses username-only authentication
 
   async function logout() {
     try {
@@ -281,7 +215,6 @@ function AuthProvider({ children }) {
 
         // Profile management functions
         editUsername,
-        editEmail,
       }}
     >
       {children}
@@ -298,3 +231,4 @@ function useAuth() {
 }
 
 export { AuthProvider, useAuth };
+

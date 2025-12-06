@@ -1,30 +1,26 @@
-import { View, StyleSheet, Text, TextInput } from "react-native";
-import { useState } from "react";
 import themes from "@/assets/utils/themes";
-import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/contexts/ProfileContext";
+import { useState } from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import GreenButton from "@/components/reusable/GreenButton";
 
 export default function ProfileForm() {
-  const [fullname, setFullname] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
+  const [newUsername, setNewUsername] = useState<string>("");
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const { email: userEmail, editUsername, editEmail, username } = useProfile();
+  const { editUsername, username } = useProfile();
   const { logout } = useAuth();
-  //   console.log("ProfileForm userEmail:", userEmail);
 
   function handleSubmit() {
     if (isEditing) {
-      if (!fullname && !email) {
+      if (!newUsername) {
         setIsEditing(isEditing ? false : true);
         return;
       }
-      if (fullname) editUsername(fullname);
-      if (email) editEmail(email);
+      if (newUsername) editUsername(newUsername);
 
-      setFullname("");
-      setEmail("");
+      setNewUsername("");
     }
 
     setIsEditing(isEditing ? false : true);
@@ -34,26 +30,13 @@ export default function ProfileForm() {
     <View style={styles.formContainer}>
       <View style={styles.form}>
         <View>
-          <Text style={styles.formLabel}>Full Name</Text>
+          <Text style={styles.formLabel}>Username</Text>
           <TextInput
             style={styles.formInput}
-            placeholder={username}
-            value={fullname}
-            onChangeText={setFullname}
-            accessibilityLabel="Profile form text input"
-            editable={isEditing}
-            returnKeyType="next"
-            onSubmitEditing={() => {}}
-          />
-        </View>
-        <View>
-          <Text style={styles.formLabel}>Email Address</Text>
-          <TextInput
-            style={styles.formInput}
-            placeholder={userEmail}
-            value={email}
-            onChangeText={setEmail}
-            accessibilityLabel="Profile form email input"
+            placeholder={username || "Enter your username"}
+            value={newUsername}
+            onChangeText={setNewUsername}
+            accessibilityLabel="Profile form username input"
             editable={isEditing}
             returnKeyType="go"
             onSubmitEditing={handleSubmit}
