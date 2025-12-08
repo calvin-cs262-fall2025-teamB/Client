@@ -1,21 +1,22 @@
-import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
-import { useEffect, useRef, useState, useCallback } from "react";
+import * as Location from "expo-location";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  PanResponder,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  PanResponder,
 } from "react-native";
 import MapView, {
+  Circle,
   LatLng,
   MapPressEvent,
   Marker,
   Polygon,
-  Circle,
   UrlTile,
 } from "react-native-maps";
 
@@ -35,6 +36,42 @@ type AdventureRegion = {
   id: number;
   name: string;
   coords: LatLng[];
+};
+
+// Cross-platform prompt function
+const showPrompt = (
+  title: string,
+  message: string,
+  callback: (text?: string) => void,
+  type: 'plain-text' | 'secure-text' = 'plain-text',
+  defaultValue?: string
+) => {
+  if (Platform.OS === 'ios') {
+    Alert.prompt(title, message, callback, type, defaultValue);
+  } else {
+    // Android fallback using Alert with predefined options
+    Alert.alert(
+      title,
+      message,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => callback(undefined),
+        },
+        {
+          text: 'OK',
+          onPress: () => {
+            // For Android, we'll use a simple default or show an input modal
+            // This is a simplified approach - in production you might want to use a proper modal
+            const defaultText = defaultValue || (title.includes('Token') ? 'New Token' : 'New Region');
+            callback(defaultText);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  }
 };
 
 async function fetchAdventureData(): Promise<{
@@ -169,7 +206,7 @@ export default function MapScreen() {
       const touches = evt.nativeEvent.touches;
       if (touches.length === 2) {
         const distance = getTouchDistance(touches);
-        console.log(`✌️ Pinch started! Initial distance: ${distance}px`);
+        // console.log(`✌️ Pinch started! Initial distance: ${distance}px`);
 
         // Only proceed if we got a valid distance
         if (distance > 0) {
@@ -222,17 +259,17 @@ export default function MapScreen() {
           Math.min(5000, Math.round(newRadius))
         );
 
-        console.log(
-          `🤏 Pinching: ${clampedRadius}m (pixel distance: ${Math.round(
-            currentDistance
-          )}px, change: ${Math.round(distanceChange)}px)`
-        );
+        // console.log(
+        //   `🤏 Pinching: ${clampedRadius}m (pixel distance: ${Math.round(
+        //     currentDistance
+        //   )}px, change: ${Math.round(distanceChange)}px)`
+        // );
         setRegionRadius(clampedRadius);
       }
     },
 
     onPanResponderRelease: () => {
-      console.log("✅ Pinch released!");
+      // console.log("✅ Pinch released!");
       // Haptic feedback when pinch ends
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setIsPinching(false);
@@ -314,7 +351,7 @@ export default function MapScreen() {
       // If already in adjusting mode, just update the center (stay in adjusting)
     } else if (creationStep === "idle") {
       // Add token (existing functionality)
-      Alert.prompt("Add Custom Token", "Enter a name:", (tokenName) => {
+      showPrompt("Add Custom Token", "Enter a name:", (tokenName) => {
         if (!tokenName) return;
         Alert.alert(
           "Set Visibility",
@@ -454,7 +491,7 @@ export default function MapScreen() {
 
   // === ADDED: Start region creation flow ===
   const startCreation = () => {
-    Alert.prompt(
+    showPrompt(
       "New Region",
       "What would you like to name this region?",
       (name) => {
@@ -604,7 +641,7 @@ export default function MapScreen() {
                 if (coord && coord.latitude && coord.longitude) {
                   setRegionCenter(coord);
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  console.log("📍 Center repositioned via touch overlay");
+                  // console.log("📍 Center repositioned via touch overlay");
                 }
               } catch (error) {
                 console.log("Touch overlay coordinate conversion failed (MapView.onPress will handle):", error);
