@@ -24,6 +24,7 @@ import MapView, {
 // === ADDED: Import contexts for backend integration ===
 import { useAuth } from "@/contexts/AuthContext";
 import { useDatabase } from "@/contexts/DatabaseContext";
+import { CreateLandmark, CreateRegion, Point } from "@/types";
 
 type Token = {
   id: number;
@@ -365,21 +366,21 @@ export default function MapScreen() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  // === ADDED: Helper to calculate distance between two points (Haversine formula) ===
-  const calculateDistance = (point1: LatLng, point2: LatLng): number => {
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = (point1.latitude * Math.PI) / 180;
-    const φ2 = (point2.latitude * Math.PI) / 180;
-    const Δφ = ((point2.latitude - point1.latitude) * Math.PI) / 180;
-    const Δλ = ((point2.longitude - point1.longitude) * Math.PI) / 180;
+  // // === ADDED: Helper to calculate distance between two points (Haversine formula) ===
+  // const calculateDistance = (point1: LatLng, point2: LatLng): number => {
+  //   const R = 6371e3; // Earth's radius in meters
+  //   const φ1 = (point1.latitude * Math.PI) / 180;
+  //   const φ2 = (point2.latitude * Math.PI) / 180;
+  //   const Δφ = ((point2.latitude - point1.latitude) * Math.PI) / 180;
+  //   const Δλ = ((point2.longitude - point1.longitude) * Math.PI) / 180;
 
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  //   const a =
+  //     Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+  //     Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  //   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return R * c; // Distance in meters
-  };
+  //   return R * c; // Distance in meters
+  // };
 
   // --- Handle map press ---
   // === IMPROVED: Allow re-tapping to reposition center ===
@@ -453,15 +454,17 @@ export default function MapScreen() {
     setIsCreatingRegion(true);
 
     try {
-      // === Circle approach: Direct mapping to backend! ===
-      const regionData = {
-        adventurerId: user.id,
+      // === Circle approach: Use proper database types ===
+      const location: Point = {
+        x: regionCenter.latitude,
+        y: regionCenter.longitude,
+      };
+
+      const regionData: CreateRegion = {
+        adventurerid: user.id,
         name: regionName.trim(),
         description: `Circular region with ${regionRadius}m radius`,
-        location: {
-          x: regionCenter.latitude,
-          y: regionCenter.longitude,
-        },
+        location,
         radius: regionRadius,
       };
 
@@ -485,8 +488,8 @@ export default function MapScreen() {
           (radiusInDegrees * Math.sin(angle)) /
             Math.cos((regionCenter.latitude * Math.PI) / 180);
 
-        const landmarkData = {
-          regionId: savedRegion.id,
+        const landmarkData: CreateLandmark = {
+          regionid: savedRegion.id,
           name: `${regionName} - Perimeter ${i + 1}`,
           location: { x: lat, y: lng },
         };
