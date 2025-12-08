@@ -4,12 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   PanResponder,
-  Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import MapView, {
   Circle,
@@ -38,40 +39,71 @@ type AdventureRegion = {
   coords: LatLng[];
 };
 
-// Cross-platform prompt function
-const showPrompt = (
-  title: string,
-  message: string,
-  callback: (text?: string) => void,
-  type: 'plain-text' | 'secure-text' = 'plain-text',
-  defaultValue?: string
-) => {
-  if (Platform.OS === 'ios') {
-    Alert.prompt(title, message, callback, type, defaultValue);
-  } else {
-    // Android fallback using Alert with predefined options
-    Alert.alert(
-      title,
-      message,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-          onPress: () => callback(undefined),
-        },
-        {
-          text: 'OK',
-          onPress: () => {
-            // For Android, we'll use a simple default or show an input modal
-            // This is a simplified approach - in production you might want to use a proper modal
-            const defaultText = defaultValue || (title.includes('Token') ? 'New Token' : 'New Region');
-            callback(defaultText);
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  }
+// Cross-platform prompt function component
+const PromptModal = ({ 
+  visible, 
+  title, 
+  message, 
+  onSubmit, 
+  onCancel, 
+  defaultValue = '' 
+}: {
+  visible: boolean;
+  title: string;
+  message: string;
+  onSubmit: (text: string) => void;
+  onCancel: () => void;
+  defaultValue?: string;
+}) => {
+  const [inputValue, setInputValue] = useState(defaultValue);
+  
+  const handleSubmit = () => {
+    onSubmit(inputValue.trim());
+    setInputValue('');
+  };
+  
+  const handleCancel = () => {
+    onCancel();
+    setInputValue('');
+  };
+  
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={handleCancel}
+    >
+      <View style={promptStyles.overlay}>
+        <View style={promptStyles.container}>
+          <Text style={promptStyles.title}>{title}</Text>
+          <Text style={promptStyles.message}>{message}</Text>
+          <TextInput
+            style={promptStyles.input}
+            value={inputValue}
+            onChangeText={setInputValue}
+            placeholder="Enter name..."
+            autoFocus
+            selectTextOnFocus
+          />
+          <View style={promptStyles.buttonContainer}>
+            <TouchableOpacity 
+              style={[promptStyles.button, promptStyles.cancelButton]} 
+              onPress={handleCancel}
+            >
+              <Text style={promptStyles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[promptStyles.button, promptStyles.submitButton]} 
+              onPress={handleSubmit}
+            >
+              <Text style={promptStyles.submitButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 };
 
 async function fetchAdventureData(): Promise<{
@@ -137,6 +169,27 @@ export default function MapScreen() {
   const [creationStep, setCreationStep] = useState<
     "idle" | "placing" | "adjusting"
   >("idle");
+
+  // === ADDED: Prompt modal state for Android ===
+  const [promptVisible, setPromptVisible] = useState(false);
+  const [promptConfig, setPromptConfig] = useState<{
+    title: string;
+    message: string;
+    callback: (text?: string) => void;
+    defaultValue?: string;
+  } | null>(null);
+
+  // === ADDED: Cross-platform prompt helper ===
+  const showPromptDialog = (
+    title: string,
+    message: string,
+    callback: (text?: string) => void,
+    defaultValue?: string
+  ) => {
+    // Use custom modal on both platforms for consistency
+    setPromptConfig({ title, message, callback, defaultValue });
+    setPromptVisible(true);
+  };
 
   const mapRef = useRef<MapView>(null);
   const [isPinching, setIsPinching] = useState(false);
@@ -351,7 +404,7 @@ export default function MapScreen() {
       // If already in adjusting mode, just update the center (stay in adjusting)
     } else if (creationStep === "idle") {
       // Add token (existing functionality)
-      showPrompt("Add Custom Token", "Enter a name:", (tokenName) => {
+      showPromptDialog("Add Custom Token", "Enter a name:", (tokenName) => {
         if (!tokenName) return;
         Alert.alert(
           "Set Visibility",
@@ -491,7 +544,7 @@ export default function MapScreen() {
 
   // === ADDED: Start region creation flow ===
   const startCreation = () => {
-    showPrompt(
+    showPromptDialog(
       "New Region",
       "What would you like to name this region?",
       (name) => {
@@ -747,6 +800,26 @@ export default function MapScreen() {
           </View>
         ) : null}
       </View>
+
+      {/* Prompt Modal for Android */}
+      {promptConfig && (
+        <PromptModal
+          visible={promptVisible}
+          title={promptConfig.title}
+          message={promptConfig.message}
+          defaultValue={promptConfig.defaultValue}
+          onSubmit={(text) => {
+            promptConfig.callback(text);
+            setPromptVisible(false);
+            setPromptConfig(null);
+          }}
+          onCancel={() => {
+            promptConfig.callback(undefined);
+            setPromptVisible(false);
+            setPromptConfig(null);
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -889,5 +962,82 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
+  },
+});
+
+// Prompt modal styles
+const promptStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  container: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: '100%',
+    maxWidth: 300,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+    color: '#333',
+  },
+  message: {
+    fontSize: 14,
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#666',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: '#fff',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  button: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  submitButton: {
+    backgroundColor: '#007AFF',
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
