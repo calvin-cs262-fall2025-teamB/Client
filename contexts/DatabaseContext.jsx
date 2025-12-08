@@ -428,15 +428,15 @@ export function DatabaseProvider({ children }) {
   }, [apiCall]);
 
   const fetchLandmarks = useCallback(
-    async (regionId = null) => {
+    async (regionid = null) => {
       dispatch({
         type: ActionTypes.SET_LOADING,
         entity: "landmarks",
         isLoading: true,
       });
       try {
-        const endpoint = regionId
-          ? `/landmarks?regionId=${regionId}`
+        const endpoint = regionid
+          ? `/landmarks?regionid=${regionid}`
           : "/landmarks";
         const data = await apiCall(endpoint);
         dispatch({ type: ActionTypes.SET_LANDMARKS, data });
@@ -453,7 +453,7 @@ export function DatabaseProvider({ children }) {
   );
 
   const fetchAdventures = useCallback(
-    async (regionId = null, adventurerId = null) => {
+    async (regionid = null, adventurerid = null) => {
       dispatch({
         type: ActionTypes.SET_LOADING,
         entity: "adventures",
@@ -462,9 +462,9 @@ export function DatabaseProvider({ children }) {
       try {
         let endpoint = "/adventures";
         const params = new URLSearchParams();
-        // Use snake_case for query parameters (matches PostgreSQL conventions)
-        if (regionId) params.append("region_id", regionId);
-        if (adventurerId) params.append("adventurer_id", adventurerId);
+        // Use lowercase for query parameters (matches PostgreSQL conventions)
+        if (regionid) params.append("regionid", regionid);
+        if (adventurerid) params.append("adventurerid", adventurerid);
         if (params.toString()) endpoint += `?${params.toString()}`;
 
         const data = await apiCall(endpoint);
@@ -482,7 +482,7 @@ export function DatabaseProvider({ children }) {
   );
 
   const fetchCompletedAdventures = useCallback(
-    async (adventurerId) => {
+    async (adventurerid) => {
       dispatch({
         type: ActionTypes.SET_LOADING,
         entity: "completedAdventures",
@@ -492,12 +492,12 @@ export function DatabaseProvider({ children }) {
         if (__DEV__) {
           console.log(
             "Fetching completed adventures for adventurer:",
-            adventurerId
+            adventurerid
           );
         }
 
         const data = await apiCall(
-          `/completedAdventures/adventurer/${adventurerId}`
+          `/completedAdventures/adventurer/${adventurerid}`
         );
 
         if (__DEV__) {
@@ -513,7 +513,7 @@ export function DatabaseProvider({ children }) {
           } else {
             console.log(
               "No completed adventures found for user:",
-              adventurerId
+              adventurerid
             );
           }
         }
@@ -732,34 +732,34 @@ export function DatabaseProvider({ children }) {
 
   // Helper functions for common queries
   const getAdventuresByRegion = useCallback(
-    (regionId) => {
+    (regionid) => {
       return state.adventures.filter(
-        (adventure) => adventure.regionid === regionId
+        (adventure) => adventure.regionid === regionid
       );
     },
     [state.adventures]
   );
 
   const getTokensByAdventure = useCallback(
-    (adventureId) => {
-      return state.tokens.filter((token) => token.adventureid === adventureId);
+    (adventureid) => {
+      return state.tokens.filter((token) => token.adventureid === adventureid);
     },
     [state.tokens]
   );
 
   const getCompletedAdventuresByUser = useCallback(
-    (adventurerId) => {
+    (adventurerid) => {
       return state.completedAdventures.filter(
-        (completed) => completed.adventurerid === adventurerId
+        (completed) => completed.adventurerid === adventurerid
       );
     },
     [state.completedAdventures]
   );
 
   const getLandmarksByRegion = useCallback(
-    (regionId) => {
+    (regionid) => {
       return state.landmarks.filter(
-        (landmark) => landmark.regionid === regionId
+        (landmark) => landmark.regionid === regionid
       );
     },
     [state.landmarks]

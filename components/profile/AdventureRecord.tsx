@@ -1,4 +1,4 @@
-import { CompletedAdventure, Adventure as DbAdventure } from "@/types";
+import { CompletedAdventure, Adventure as DbAdventure, Region } from "@/types";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
@@ -7,23 +7,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useDatabase } from "../../contexts/DatabaseContext";
 
 import themes from "../../assets/utils/themes";
-
-// Interface for display adventures
-interface DisplayAdventure {
-  id: number;
-  title: string;
-  tokens: number;
-  completionDate?: string | null;
-  regionName?: string;
-}
-// Mock data fallback for development
-const MOCK_COMPLETED_ADVENTURES = [
-  { id: 1, title: "Campus History Tour", tokens: 25 },
-  { id: 2, title: "Hidden Art Walk", tokens: 30 },
-  { id: 3, title: "Science Building Quest", tokens: 20 },
-  { id: 4, title: "Athletic Heritage Trail", tokens: 35 },
-  { id: 5, title: "Ecosystem Discovery", tokens: 15 },
-];
 
 export default function AdventureRecord() {
   const router = useRouter();
@@ -48,62 +31,19 @@ export default function AdventureRecord() {
     }
   }, [user?.id, fetchCompletedAdventures, fetchAdventures, fetchRegions]);
 
-  // Transform database data to UI format with enhanced region information
-  const transformedAdventures = completedAdventures?.map((completed: CompletedAdventure, index: number) => {
-    // Handle different field naming conventions for completed adventure
-    const completedAny = completed as any;
-    const adventureId = completed.adventureId || completedAny.adventureid || completedAny.adventure_id;
-    const completionDate = completed.completionDate || completedAny.completiondate || completedAny.completion_date;
-    
-    const adventure = adventures?.find((adv: DbAdventure) => {
-      const advAny = adv as any;
-      const advId = adv.id || advAny.adventureid || advAny.adventure_id;
-      return advId === adventureId;
-    });
-    
-    // Handle different field naming conventions for adventure
-    const adventureAny = adventure as any;
-    const adventureName = adventure?.name || adventureAny?.adventurename || adventureAny?.adventure_name || adventureAny?.title;
-    const regionId = adventure?.regionId || adventureAny?.regionid || adventureAny?.region_id;
-    const numTokens = adventure?.numTokens || adventureAny?.numtokens || adventureAny?.num_tokens || adventureAny?.tokencount;
-    
-    const region = regions?.find((r: any) => {
-      const regionAny = r as any;
-      const rId = r.id || regionAny.regionid || regionAny.region_id;
-      return rId === regionId;
-    });
-    
-    const regionName = region?.name || (region as any)?.regionname || (region as any)?.region_name;
-    
-    // if (__DEV__) {
-    //   console.log(`Completed Adventure ${adventureId}:`, {
-    //     adventureId,
-    //     adventureName,
-    //     regionId,
-    //     regionName,
-    //     tokens: numTokens,
-    //     completionDate,
-    //     rawCompleted: completed,
-    //     rawAdventure: adventure,
-    //     rawRegion: region
-    //   });
-    // }
+  // Get completed adventure data with proper joins
+  const completedAdventureData = completedAdventures?.map((completed: CompletedAdventure) => {
+    const adventure = adventures?.find((adv: DbAdventure) => adv.id === completed.adventureid);
+    const region = regions?.find((r: Region) => r.id === adventure?.regionid);
     
     return {
-      id: adventureId || `unknown-${index}`, // Ensure ID is always defined
-      title: adventureName || `Adventure ${adventureId || index}`,
-      tokens: numTokens || 0,
-      completionDate: completionDate,
-      regionName: regionName || `Region ${regionId || '?'}`,
+      completed,
+      adventure,
+      region,
     };
-  }) || [];
+  }).filter((item: { completed: CompletedAdventure; adventure: DbAdventure | undefined; region: Region | undefined }) => item.adventure) || [];
 
-  // Use transformed data or fallback to mock data if empty or in development
-  const displayAdventures = transformedAdventures.length > 0 
-    ? transformedAdventures 
-    : (errors.completedAdventures && __DEV__ ? MOCK_COMPLETED_ADVENTURES : []);
-
-  const handleAdventurePress = (adventure: DisplayAdventure) => {
+  const handleAdventurePress = (adventure: DbAdventure) => {
     // Navigate using expo-router to the AdventureView screen with the adventureId as a query param
     router.push(
       `/adventureView?adventureId=${adventure.id}&completed=true`
@@ -123,8 +63,8 @@ export default function AdventureRecord() {
     );
   }
 
-  // Show error state if API fails and no fallback data
-  if (errors.completedAdventures && displayAdventures.length === 0) {
+  // Show error state if API fails
+  if (errors.completedAdventures) {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Completed Adventures</Text>
@@ -140,17 +80,17 @@ export default function AdventureRecord() {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Completed Adventures</Text>
       <View style={styles.adventuresContainer}>
-        {displayAdventures.length === 0 ? (
+        {completedAdventureData.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No completed adventures yet</Text>
             <Text style={styles.emptySubtext}>Start exploring to see your achievements here!</Text>
           </View>
         ) : (
-          displayAdventures.map((adventure: DisplayAdventure, index: number) => (
+          completedAdventureData.map((item: { completed: CompletedAdventure; adventure: DbAdventure; region?: Region }, index: number) => (
           <TouchableOpacity
-            key={`${adventure.id}-${index}`}
+            key={`${item.adventure.id}-${index}`}
             style={styles.adventureCard}
-            onPress={() => handleAdventurePress(adventure)}
+            onPress={() => handleAdventurePress(item.adventure)}
             activeOpacity={0.7}
           >
             <View style={styles.cardContent}>
@@ -162,11 +102,11 @@ export default function AdventureRecord() {
               {/* Title and Info */}
               <View style={styles.textContainer}>
                 <Text style={styles.adventureTitle}>
-                  {adventure.title}
+                  {item.adventure.name}
                 </Text>
                 
                 {/* Region information */}
-                {adventure.regionName && (
+                {item.region && (
                   <View style={styles.regionContainer}>
                     <FontAwesome6
                       name="location-dot"
@@ -174,7 +114,7 @@ export default function AdventureRecord() {
                       color={themes.primaryColor}
                     />
                     <Text style={styles.regionText}>
-                      {adventure.regionName}
+                      {item.region.name}
                     </Text>
                   </View>
                 )}
@@ -187,15 +127,15 @@ export default function AdventureRecord() {
                     solid
                   />
                   <Text style={styles.rewardText}>
-                    {adventure.tokens} tokens earned
+                    {item.adventure.numtokens || 0} tokens earned
                   </Text>
                   
                   {/* Completion date */}
-                  {adventure.completionDate && (
+                  {item.completed.completiondate && (
                     <>
                       <Text style={styles.divider}>•</Text>
                       <Text style={styles.dateText}>
-                        {new Date(adventure.completionDate).toLocaleDateString()}
+                        {new Date(item.completed.completiondate).toLocaleDateString()}
                       </Text>
                     </>
                   )}
