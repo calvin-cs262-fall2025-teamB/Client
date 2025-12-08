@@ -109,14 +109,21 @@ export default function MapScreen() {
   const THROTTLE_MS = 16; // ~60fps - update at most every 16ms
 
   // === ADDED: Calculate distance between two touch points ===
+  // Platform-aware: Android may not have pageX/pageY, use locationX/Y as fallback
   const getTouchDistance = (touches: any[]) => {
     if (touches.length < 2) return 0;
 
     const touch1 = touches[0];
     const touch2 = touches[1];
 
-    const dx = touch1.pageX - touch2.pageX;
-    const dy = touch1.pageY - touch2.pageY;
+    // Use pageX/pageY if available (iOS), fall back to locationX/Y (Android)
+    const x1 = touch1.pageX ?? touch1.locationX ?? 0;
+    const y1 = touch1.pageY ?? touch1.locationY ?? 0;
+    const x2 = touch2.pageX ?? touch2.locationX ?? 0;
+    const y2 = touch2.pageY ?? touch2.locationY ?? 0;
+
+    const dx = x1 - x2;
+    const dy = y1 - y2;
 
     return Math.sqrt(dx * dx + dy * dy);
   };
@@ -146,36 +153,42 @@ export default function MapScreen() {
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: (evt) => {
       const touchCount = evt.nativeEvent.touches.length;
-      // Only capture two-finger gestures for pinching
-      if (touchCount === 2) {
-        return true; // Capture pinch
+      // Capture gesture if in adjusting mode and 2 fingers detected
+      if (creationStep === "adjusting" && touchCount === 2) {
+        return true;
       }
-      // For single tap, handle it here and don't capture
-      if (touchCount === 1 && creationStep === "adjusting") {
-        const touch = evt.nativeEvent.touches[0];
-        // We'll handle this in onPanResponderGrant if needed
-      }
-      return touchCount === 2; // Only capture if 2 fingers
+      return false;
     },
-    onMoveShouldSetPanResponder: (evt) => evt.nativeEvent.touches.length === 2,
+    // More forgiving for Android: allow gesture to be captured on move if 2 fingers present
+    onMoveShouldSetPanResponder: (evt) => {
+      const touchCount = evt.nativeEvent.touches.length;
+      return creationStep === "adjusting" && touchCount === 2;
+    },
 
     onPanResponderGrant: (evt) => {
       const touches = evt.nativeEvent.touches;
       if (touches.length === 2) {
-        console.log("✌️ Pinch started!");
-        // Haptic feedback when pinch starts
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setIsPinching(true);
-        initialPinchDistance.current = getTouchDistance(touches);
-        initialRadius.current = regionRadius;
-        lastUpdateTime.current = Date.now();
+        const distance = getTouchDistance(touches);
+        console.log(`✌️ Pinch started! Initial distance: ${distance}px`);
+
+        // Only proceed if we got a valid distance
+        if (distance > 0) {
+          // Haptic feedback when pinch starts
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setIsPinching(true);
+          initialPinchDistance.current = distance;
+          initialRadius.current = regionRadius;
+          lastUpdateTime.current = Date.now();
+        } else {
+          console.warn("⚠️ Touch distance is 0 - touch coordinates may be unavailable");
+        }
       }
     },
 
     onPanResponderMove: (evt) => {
       const touches = evt.nativeEvent.touches;
 
-      if (touches.length === 2 && regionCenter) {
+      if (touches.length === 2 && regionCenter && isPinching) {
         // Throttle updates to ~60fps for smoother performance
         const now = Date.now();
         if (now - lastUpdateTime.current < THROTTLE_MS) {
@@ -185,6 +198,12 @@ export default function MapScreen() {
 
         // Calculate current distance between fingers
         const currentDistance = getTouchDistance(touches);
+
+        // Validate distance to prevent NaN/0 issues on Android
+        if (currentDistance === 0 || initialPinchDistance.current === 0) {
+          console.warn("⚠️ Invalid touch distance detected");
+          return;
+        }
 
         // Calculate change from initial pinch
         const distanceChange = currentDistance - initialPinchDistance.current;
@@ -206,7 +225,7 @@ export default function MapScreen() {
         console.log(
           `🤏 Pinching: ${clampedRadius}m (pixel distance: ${Math.round(
             currentDistance
-          )}px)`
+          )}px, change: ${Math.round(distanceChange)}px)`
         );
         setRegionRadius(clampedRadius);
       }
@@ -275,6 +294,11 @@ export default function MapScreen() {
   // --- Handle map press ---
   // === IMPROVED: Allow re-tapping to reposition center ===
   const handleMapPress = (event: MapPressEvent) => {
+    // Don't handle if currently pinching (prevents conflicts with gesture)
+    if (isPinching) {
+      return;
+    }
+
     const coord = event.nativeEvent.coordinate;
 
     if (creationStep === "placing" || creationStep === "adjusting") {
@@ -490,7 +514,7 @@ export default function MapScreen() {
         zoomEnabled={creationStep === "idle"}
         rotateEnabled={creationStep === "idle"}
         pitchEnabled={creationStep === "idle"}
-        onPress={creationStep !== "adjusting" ? handleMapPress : undefined}
+        onPress={handleMapPress}
         initialRegion={{
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
@@ -555,7 +579,8 @@ export default function MapScreen() {
           style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
           {...panResponder.panHandlers}
           onTouchEnd={async (evt) => {
-            // Handle single taps for repositioning
+            // Handle single taps for repositioning (fallback if MapView.onPress doesn't fire)
+            // MapView.onPress should handle this in most cases now
             if (
               evt.nativeEvent.touches.length === 0 &&
               !isPinching &&
@@ -564,15 +589,25 @@ export default function MapScreen() {
             ) {
               try {
                 const { locationX, locationY } = evt.nativeEvent;
+
+                // Validate coordinates exist (may be undefined on some Android versions)
+                if (locationX === undefined || locationY === undefined) {
+                  console.log("📍 Touch coordinates unavailable, MapView.onPress will handle");
+                  return;
+                }
+
                 const coord = await mapRef.current.coordinateForPoint({
                   x: locationX,
                   y: locationY,
                 });
-                setRegionCenter(coord);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                console.log("📍 Center repositioned");
+
+                if (coord && coord.latitude && coord.longitude) {
+                  setRegionCenter(coord);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  console.log("📍 Center repositioned via touch overlay");
+                }
               } catch (error) {
-                console.error("Error getting coordinate:", error);
+                console.log("Touch overlay coordinate conversion failed (MapView.onPress will handle):", error);
               }
             }
           }}
