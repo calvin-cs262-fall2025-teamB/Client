@@ -86,7 +86,7 @@ function reducer(state, action) {
         username: null,
         email: null,
         password: null,
-        profilePicture: null,
+        profilepicture: null,
         isAuthenticated: false,
         isLoading: false,
       };
@@ -99,7 +99,7 @@ function reducer(state, action) {
 function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const { user, email, username, isAuthenticated, profilePicture } = state;
+  const { user, email, username, isAuthenticated, profilepicture } = state;
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
@@ -110,7 +110,7 @@ function AuthProvider({ children }) {
 
   async function signup(username, password) {
     setIsLoading(true);
-    
+
     try {
       const res = await createAdventurer({
         username,
@@ -125,9 +125,11 @@ function AuthProvider({ children }) {
         type: "signup",
         payload: { username, email: null, user },
       });
+
+      return user; // Return user on success
     } catch (error) {
       console.error("Signup failed:", error);
-      throw error;
+      throw error; // Re-throw so caller can handle
     } finally {
       setIsLoading(false);
     }
@@ -135,7 +137,7 @@ function AuthProvider({ children }) {
 
   async function login(username, password) {
     setIsLoading(true);
-    
+
     try {
       const res = await fetchAdventurers();
       const user = res.find((el) => el.username === username);
@@ -146,18 +148,22 @@ function AuthProvider({ children }) {
             type: "login",
             payload: { user, username: user.username, email: null },
           });
+          return true; // Login successful
         } else {
           Alert.alert("Validation", "Invalid Password.");
+          return false; // Wrong password
         }
       } else {
         Alert.alert(
           "Validation",
           "Account not found, sign up with the link below."
         );
+        return false; // User not found
       }
     } catch (error) {
       console.error("Login failed:", error);
       Alert.alert("Error", "Login failed. Please try again.");
+      throw error; // Re-throw for caller to handle
     } finally {
       setIsLoading(false);
     }
@@ -203,7 +209,7 @@ function AuthProvider({ children }) {
         user,
         username,
         email,
-        profilePicture,
+        profilepicture,
         isAuthenticated,
         isLoading,
         setIsLoading,

@@ -113,10 +113,10 @@ export default function CreateAdventureScreen() {
 
       // Create adventure data matching backend schema
       const adventureData = {
-        adventurerID: user.id,
-        regionID: selectedRegionId,
+        adventurerid: user.id,
+        regionid: selectedRegionId,
         name: adventureName.trim(),
-        numTokens: tokens.length, // Will be updated when tokens are added
+        numtokens: tokens.length, // Will be updated when tokens are added
         location: selectedRegion.location, // Use region's center as adventure location
       };
 

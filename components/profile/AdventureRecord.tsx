@@ -29,7 +29,9 @@ export default function AdventureRecord() {
       fetchAdventures(); // Also fetch adventures for full data
       fetchRegions(); // Fetch regions for region names
     }
-  }, [user?.id, fetchCompletedAdventures, fetchAdventures, fetchRegions]);
+    // ESLint disable: fetch functions are stable from DatabaseContext
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Get completed adventure data with proper joins
   const completedAdventureData = completedAdventures?.map((completed: CompletedAdventure) => {
@@ -44,9 +46,9 @@ export default function AdventureRecord() {
   }).filter((item: { completed: CompletedAdventure; adventure: DbAdventure | undefined; region: Region | undefined }) => item.adventure) || [];
 
   const handleAdventurePress = (adventure: DbAdventure) => {
-    // Navigate using expo-router to the AdventureView screen with the adventureId as a query param
+    // Navigate using expo-router to the AdventurePage screen with the adventureId as a query param
     router.push(
-      `/adventureView?adventureId=${adventure.id}&completed=true`
+      `/adventurePage?adventureId=${adventure.id}&completed=true`
     );
   };
 

@@ -26,7 +26,7 @@ function reducer(state, action) {
 }
 
 function ProfileProvider({ children }) {
-  const { user, username, email, editEmail, editUsername } = useAuth();
+  const { user, username, email, editUsername } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
   const { image } = state;
 
@@ -70,7 +70,6 @@ function ProfileProvider({ children }) {
         image,
         editUsername,
         editImage,
-        editEmail,
         logout,
         isLoading,
       }}

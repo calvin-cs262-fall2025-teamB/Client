@@ -5,6 +5,14 @@ import {
   useEffect,
   useReducer,
 } from "react";
+import {
+  mockData,
+  getLandmarksByRegion,
+  getAdventuresByRegion,
+  getAdventuresByCreator,
+  getTokensByAdventure,
+  getCompletedAdventuresByUser,
+} from "@/data/mockData";
 
 // Type definitions based on your PostgreSQL schema
 const DatabaseContext = createContext();
@@ -398,8 +406,9 @@ export function DatabaseProvider({ children }) {
         }
       }
 
-      // Fallback to empty array if fetch fails
-      dispatch({ type: ActionTypes.SET_ADVENTURERS, data: [] });
+      // Fallback to mock data if fetch fails
+      console.log("Using mock adventurers data as fallback");
+      dispatch({ type: ActionTypes.SET_ADVENTURERS, data: mockData.adventurers });
       dispatch({
         type: ActionTypes.SET_ERROR,
         entity: "adventurers",
@@ -419,6 +428,9 @@ export function DatabaseProvider({ children }) {
       dispatch({ type: ActionTypes.SET_REGIONS, data });
     } catch (error) {
       console.error("Error fetching regions:", error);
+      // Fallback to mock data if fetch fails
+      console.log("Using mock regions data as fallback");
+      dispatch({ type: ActionTypes.SET_REGIONS, data: mockData.regions });
       dispatch({
         type: ActionTypes.SET_ERROR,
         entity: "regions",
@@ -442,6 +454,12 @@ export function DatabaseProvider({ children }) {
         dispatch({ type: ActionTypes.SET_LANDMARKS, data });
       } catch (error) {
         console.error("Error fetching landmarks:", error);
+        // Fallback to mock data if fetch fails
+        const fallbackData = regionid
+          ? getLandmarksByRegion(regionid)
+          : mockData.landmarks;
+        console.log("Using mock landmarks data as fallback");
+        dispatch({ type: ActionTypes.SET_LANDMARKS, data: fallbackData });
         dispatch({
           type: ActionTypes.SET_ERROR,
           entity: "landmarks",
@@ -471,6 +489,15 @@ export function DatabaseProvider({ children }) {
         dispatch({ type: ActionTypes.SET_ADVENTURES, data });
       } catch (error) {
         console.error("Error fetching adventures:", error);
+        // Fallback to mock data if fetch fails
+        let fallbackData = mockData.adventures;
+        if (regionid) {
+          fallbackData = getAdventuresByRegion(regionid);
+        } else if (adventurerid) {
+          fallbackData = getAdventuresByCreator(adventurerid);
+        }
+        console.log("Using mock adventures data as fallback");
+        dispatch({ type: ActionTypes.SET_ADVENTURES, data: fallbackData });
         dispatch({
           type: ActionTypes.SET_ERROR,
           entity: "adventures",
@@ -526,35 +553,15 @@ export function DatabaseProvider({ children }) {
         });
       } catch (error) {
         console.error("Error fetching completed adventures:", error);
-        if (__DEV__) {
-          console.log("Completed adventures fetch failed, using empty array");
-
-          // For development, provide mock data if the endpoint fails
-          const mockCompletedAdventures = [
-            {
-              adventureId: 1,
-              completionDate: new Date().toISOString(),
-              tokens: 25,
-            },
-            {
-              adventureId: 2,
-              completionDate: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-              tokens: 30,
-            },
-          ];
-
-          console.log(
-            "Using mock completed adventures for development:",
-            mockCompletedAdventures
-          );
-          dispatch({
-            type: ActionTypes.SET_COMPLETED_ADVENTURES,
-            data: mockCompletedAdventures,
-          });
-        } else {
-          dispatch({ type: ActionTypes.SET_COMPLETED_ADVENTURES, data: [] });
-        }
-
+        // Fallback to mock data if fetch fails
+        const fallbackData = adventurerid
+          ? getCompletedAdventuresByUser(adventurerid)
+          : mockData.completedAdventures;
+        console.log("Using mock completed adventures data as fallback");
+        dispatch({
+          type: ActionTypes.SET_COMPLETED_ADVENTURES,
+          data: fallbackData,
+        });
         dispatch({
           type: ActionTypes.SET_ERROR,
           entity: "completedAdventures",
@@ -607,7 +614,7 @@ export function DatabaseProvider({ children }) {
         //   "body =",
         //   request.body
         // );
-        const data = await apiCall(`/adventurer/${id}`, {
+        const data = await apiCall(`/adventurers/${id}`, {
           method: "PUT",
           body: JSON.stringify(adventurerData),
         });
