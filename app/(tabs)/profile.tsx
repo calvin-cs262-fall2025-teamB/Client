@@ -4,6 +4,7 @@ import { ProfileProvider } from "@/contexts/ProfileContext";
 import { CompletedAdventure, Adventure as DbAdventure } from "@/types";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -41,6 +42,7 @@ CollectedTokens: number, Associated with adventures completed
 */
 
 export default function Profile() {
+  const router = useRouter();
   const { user } = useAuth();
   const {
     adventures,
@@ -123,16 +125,8 @@ export default function Profile() {
     }
   };
 
-  const openHelpWebsite = async () => {
-    const url =
-      "https://beautifulguys-bsayggeve3c6esba.canadacentral-01.azurewebsites.net/";
-    const supported = await Linking.canOpenURL(url);
-
-    if (supported) {
-      await Linking.openURL(url);
-    } else {
-      alert("Don't know how to open this URL: " + url);
-    }
+  const openHelpScreen = () => {
+    router.push("/help");
   };
 
   // Show loading state while data is being fetched
@@ -172,7 +166,7 @@ export default function Profile() {
 
         {/* Help Button */}
         <View style={styles.helpButtonContainer}>
-          <TouchableOpacity onPress={openHelpWebsite} style={styles.helpButton}>
+          <TouchableOpacity onPress={openHelpScreen} style={styles.helpButton}>
             <FontAwesome6 name="question-circle" size={16} color="#fff" />
             <Text style={styles.helpButtonText}>Help</Text>
           </TouchableOpacity>
