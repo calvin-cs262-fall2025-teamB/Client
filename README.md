@@ -52,7 +52,6 @@ my-app/
 | **README.md** | Quick start and navigation | Getting started |
 | **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** | Tech stack, architecture, custom hooks | Developing features |
 | **[API_GUIDE.md](./API_GUIDE.md)** | Complete API documentation & backend integration | Implementing backend |
-| **[CLAUDE.md](./CLAUDE.md)** | AI assistant instructions | Using Claude Code |
 
 ### 🔧 Technical Specifications
 
