@@ -1,38 +1,60 @@
-import { createContext, useContext, useReducer, useState } from "react";
-import { useAuth } from "./AuthContext.jsx";
+import { createContext, useContext, useReducer, ReactNode } from "react";
+import { useAuth } from "./AuthContext";
+import { Adventurer } from "@/types/database";
 
-const initialState = {
+// State interface
+interface ProfileState {
+  image: string | null;
+}
+
+// Action types
+type ProfileAction =
+  | { type: "edit/image"; payload: string | null }
+  | { type: "logout" };
+
+// Context value interface
+interface ProfileContextValue {
+  user: Adventurer | null;
+  username: string | null;
+  email: string | null;
+  image: string | null;
+  editUsername: (newUsername: string) => Promise<void>;
+  editImage: (imageURL: string | null) => void;
+  logout: () => void;
+}
+
+const initialState: ProfileState = {
   image: null,
 };
 
-const ProfileContext = createContext();
+const ProfileContext = createContext<ProfileContextValue | undefined>(
+  undefined
+);
 
-function reducer(state, action) {
-  // console.log(action.payload);
+function reducer(state: ProfileState, action: ProfileAction): ProfileState {
   switch (action.type) {
     case "edit/image":
       return { ...state, image: action.payload };
     case "logout":
       return {
         ...state,
-        user: null,
-        email: null,
-        password: null,
-        isAuthenticated: false,
+        image: null,
       };
     default:
-      throw Error("Unkown Action.");
+      return state;
   }
 }
 
-function ProfileProvider({ children }) {
-  const { user, username, email, editEmail, editUsername } = useAuth();
+interface ProfileProviderProps {
+  children: ReactNode;
+}
+
+function ProfileProvider({ children }: ProfileProviderProps) {
+  const { user, username, email, editUsername } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState);
   const { image } = state;
 
-  const [isLoading, setIsLoading] = useState(false);
-
-  function editImage(imageURL) {
+  function editImage(imageURL: string | null): void {
     // ============================================================================
     // TODO: Upload image to Azure Blob Storage and update user profile
     // ============================================================================
@@ -58,9 +80,10 @@ function ProfileProvider({ children }) {
     dispatch({ type: "edit/image", payload: imageURL });
   }
 
-  function logout() {
+  function logout(): void {
     dispatch({ type: "logout" });
   }
+
   return (
     <ProfileContext.Provider
       value={{
@@ -70,9 +93,7 @@ function ProfileProvider({ children }) {
         image,
         editUsername,
         editImage,
-        editEmail,
         logout,
-        isLoading,
       }}
     >
       {children}
@@ -80,11 +101,11 @@ function ProfileProvider({ children }) {
   );
 }
 
-function useProfile() {
+function useProfile(): ProfileContextValue {
   const context = useContext(ProfileContext);
 
   if (context === undefined)
-    throw new Error("Context was used outside the AuthProvider");
+    throw new Error("useProfile was used outside the ProfileProvider");
   return context;
 }
 

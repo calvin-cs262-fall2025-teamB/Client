@@ -1,4 +1,5 @@
-# WayFind Usability Test Script
+v# WayFind Usability Test Script
+
 **Duration:** 15-20 minutes
 **Protocol:** Thinking-Aloud
 **Date:** ___________
@@ -18,17 +19,20 @@ For the test, we'll ask you to do certain tasks and we'd like you to **think out
 
 **What is WayFind?**
 
-WayFind is a mobile game that turns real-world locations into interactive treasure hunts. Think geocaching meets mobile gaming. Users can:
-- Discover adventures created by others near their location
-- Follow GPS-guided paths to find hidden "tokens" at specific places
-- Create their own adventures for others to explore
-- Earn achievements by completing different adventure paths
+WayFind is a mobile game that turns real-world locations into interactive treasure hunts. Think geocaching meets mobile gaming. In this prototype, you can:
+
+- Browse and search for adventures created by others
+- View adventure details including difficulty, duration, and token counts
+- See your profile statistics (tokens collected, adventures completed)
+- Explore the map and creation tools for building new adventures
+- Filter adventures by difficulty, duration, and region
 
 **Key terms you'll encounter:**
+
 - **Region:** A geographic area (like "Calvin Campus") that contains adventures
-- **Adventure:** A sequence of locations you visit to collect tokens
-- **Token:** A collectible item found at a specific GPS location
-- **Proximity:** The app detects when you're close enough to collect a token
+- **Adventure:** A planned route with specific locations to visit and tokens to collect
+- **Token:** A collectible item at a specific GPS location (collected during adventure gameplay)
+- **Difficulty:** How challenging the adventure is (Easy, Medium, Hard)
 
 ---
 
@@ -51,39 +55,45 @@ Before we begin, do you have any questions for me?
 ## The Test
 
 ### 1. First Impressions
+
 Open the WayFind app for the first time and tell us your general impression. What do you notice? Are you tempted to tap on anything? Is it clear what the app does?
 
 ### 2. General Tasks
+
 I'll ask you to do some of the following tasks, depending on how much time we have:
 
 **a) Getting Started**
-You've just downloaded WayFind. Get to the point where you could start exploring adventures.
+You've just downloaded WayFind. Create an account and get to the main screen where you can explore adventures.
 
-**b) Finding an Adventure**
-Find an adventure near your current location that looks interesting to you. What makes it appealing (or not)?
+**b) Browsing Adventures**
+Look through the available adventures. What information do you see about each adventure? What makes one adventure more appealing than another?
 
-**c) Understanding Adventure Details**
-Pick an adventure and figure out what it involves. How many locations would you visit? Where are they? How difficult is it?
+**c) Searching for Adventures**
+Find an adventure that sounds interesting to you using the search feature. Try searching for keywords that appeal to you.
 
-**d) Viewing the Route**
-For the adventure you selected, find out where you would need to go to complete it. Can you see the path or locations on a map?
+**d) Filtering Adventures**
+You want to find a short, easy adventure. Use the filter system to narrow down the list. Can you find adventures based on difficulty or time commitment?
 
-**e) Starting an Adventure**
-You've decided to try this adventure. Start it and figure out what you need to do first.
+**e) Understanding Adventure Details**
+Pick an adventure and view its full details. What information can you find about it? How many tokens would you collect? How difficult is it? How long would it take?
 
-**f) Checking Your Progress**
-Find out how many adventures you've completed and what achievements you've earned.
+**f) Checking Your Profile**
+Find out how many adventures you've completed and how many tokens you've collected. Where can you see your personal statistics?
 
-**g) Creating Your Own Adventure**
-You want to create a treasure hunt around campus for your friends. Start the process of creating an adventure and tell us what information you think you need to provide.
+**g) Viewing Your Completed Adventures**
+Look at the list of adventures you've already completed. Can you see what adventures you've finished?
 
-**h) Finding Help or Instructions**
-Imagine you're stuck during an adventure and can't find a token. Where would you look for help or hints?
+**h) Exploring the Map**
+Navigate to the map screen. What do you see? Can you tell where you are? What features or tools are available on the map?
 
-**i) Sharing with Friends**
-You've completed an adventure and want to tell your friend about it. How would you share it with them?
+**i) Understanding Creation Features**
+You want to create your own adventure for others to explore. Find where you would start this process. What options or tools are available for creating content?
+
+**j) Managing Your Account**
+Find where you can view or edit your personal information (name, email). Where would you go to log out of the app?
 
 ### 3. Final Observations
+
 Do you have any final observations on the app? Would you consider using it? What would make you want to use it regularly or recommend it to friends?
 
 ---
@@ -101,15 +111,17 @@ If you're interested, we'd love to have you try the app again once we've made im
 ## Tester Notes
 
 **Task Completion:**
+
 - [ ] Task a - Getting Started: ⃝ Success  ⃝ Partial  ⃝ Failed
-- [ ] Task b - Finding Adventure: ⃝ Success  ⃝ Partial  ⃝ Failed
-- [ ] Task c - Adventure Details: ⃝ Success  ⃝ Partial  ⃝ Failed
-- [ ] Task d - Viewing Route: ⃝ Success  ⃝ Partial  ⃝ Failed
-- [ ] Task e - Starting Adventure: ⃝ Success  ⃝ Partial  ⃝ Failed
-- [ ] Task f - Checking Progress: ⃝ Success  ⃝ Partial  ⃝ Failed
-- [ ] Task g - Creating Adventure: ⃝ Success  ⃝ Partial  ⃝ Failed
-- [ ] Task h - Finding Help: ⃝ Success  ⃝ Partial  ⃝ Failed
-- [ ] Task i - Sharing: ⃝ Success  ⃝ Partial  ⃝ Failed
+- [ ] Task b - Browsing Adventures: ⃝ Success  ⃝ Partial  ⃝ Failed
+- [ ] Task c - Searching Adventures: ⃝ Success  ⃝ Partial  ⃝ Failed
+- [ ] Task d - Filtering Adventures: ⃝ Success  ⃝ Partial  ⃝ Failed
+- [ ] Task e - Adventure Details: ⃝ Success  ⃝ Partial  ⃝ Failed
+- [ ] Task f - Checking Profile: ⃝ Success  ⃝ Partial  ⃝ Failed
+- [ ] Task g - Completed Adventures: ⃝ Success  ⃝ Partial  ⃝ Failed
+- [ ] Task h - Exploring Map: ⃝ Success  ⃝ Partial  ⃝ Failed
+- [ ] Task i - Creation Features: ⃝ Success  ⃝ Partial  ⃝ Failed
+- [ ] Task j - Account Management: ⃝ Success  ⃝ Partial  ⃝ Failed
 
 **Critical Issues Observed:**
 

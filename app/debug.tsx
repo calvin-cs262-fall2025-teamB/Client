@@ -32,14 +32,13 @@ export default function DebugPage() {
     fetchRegions,
     fetchLandmarks,
     fetchAdventures,
-    fetchTokens,
     fetchCompletedAdventures,
-    
+
     // Create/Update functions
     createRegion,
     createAdventure,
     createToken,
-    createCompletedAdventure,
+    completeAdventure,
     createAdventurer,
     updateAdventurer,
   } = useDatabase();
@@ -66,15 +65,15 @@ export default function DebugPage() {
 
   const [testAdventure, setTestAdventure] = useState({
     name: 'Debug Test Adventure',
-    numTokens: 3,
-    regionID: 1,
+    numtokens: 3,
+    regionid: 1,
     location: { x: 42.9634, y: -85.6681 },
   });
 
   const [testAdventurer, setTestAdventurer] = useState({
     username: 'DebugTestUser',
     password: 'testpassword123',
-    profilePicture: null,
+    profilepicture: null,
   });
 
   const addTestResult = (test: string, success: boolean, data: any = null, error: string | null = null) => {
@@ -112,28 +111,29 @@ export default function DebugPage() {
     }
   };
 
-  const testFetchTokens = async () => {
-    try {
-      await fetchTokens();
-      addTestResult('Fetch All Tokens', true, tokens);
-    } catch (error) {
-      addTestResult('Fetch All Tokens', false, null, error instanceof Error ? error.message : 'Unknown error');
-    }
-  };
+  // Note: fetchTokens is not implemented in DatabaseContext yet
+  // const testFetchTokens = async () => {
+  //   try {
+  //     await fetchTokens();
+  //     addTestResult('Fetch All Tokens', true, tokens);
+  //   } catch (error) {
+  //     addTestResult('Fetch All Tokens', false, null, error instanceof Error ? error.message : 'Unknown error');
+  //   }
+  // };
 
-  const testFetchTokensForAdventure = async () => {
-    if (adventures && adventures.length > 0) {
-      try {
-        const adventureId = adventures[0].id;
-        await fetchTokens(adventureId);
-        addTestResult(`Fetch Tokens for Adventure ${adventureId}`, true, tokens);
-      } catch (error) {
-        addTestResult('Fetch Tokens for Adventure', false, null, error instanceof Error ? error.message : 'Unknown error');
-      }
-    } else {
-      addTestResult('Fetch Tokens for Adventure', false, null, 'No adventures available');
-    }
-  };
+  // const testFetchTokensForAdventure = async () => {
+  //   if (adventures && adventures.length > 0) {
+  //     try {
+  //       const adventureId = adventures[0].id;
+  //       await fetchTokens(adventureId);
+  //       addTestResult(`Fetch Tokens for Adventure ${adventureId}`, true, tokens);
+  //     } catch (error) {
+  //       addTestResult('Fetch Tokens for Adventure', false, null, error instanceof Error ? error.message : 'Unknown error');
+  //     }
+  //   } else {
+  //     addTestResult('Fetch Tokens for Adventure', false, null, 'No adventures available');
+  //   }
+  // };
 
   const testFetchCompletedAdventures = async () => {
     if (user?.id) {
@@ -152,7 +152,7 @@ export default function DebugPage() {
     try {
       const result = await createRegion({
         ...testRegion,
-        adventurerID: user?.id || 1,
+        adventurerid: user?.id || 1,
       });
       addTestResult('Create Region', true, result);
     } catch (error) {
@@ -164,7 +164,7 @@ export default function DebugPage() {
     try {
       const result = await createAdventure({
         ...testAdventure,
-        adventurerID: user?.id || 1,
+        adventurerid: user?.id || 1,
       });
       addTestResult('Create Adventure', true, result);
     } catch (error) {
@@ -176,10 +176,10 @@ export default function DebugPage() {
     if (adventures && adventures.length > 0) {
       try {
         const result = await createToken({
-          adventureID: adventures[0].id,
+          adventureid: adventures[0].id,
           location: { x: 42.9634, y: -85.6681 },
           hint: 'Debug test token hint',
-          tokenOrder: 1,
+          tokenorder: 1,
         });
         addTestResult('Create Token', true, result);
       } catch (error) {
@@ -209,8 +209,8 @@ export default function DebugPage() {
     const tests = [
       testFetchRegions,
       testFetchAdventures,
-      testFetchTokens,
-      testFetchTokensForAdventure,
+      // testFetchTokens, // Not implemented yet
+      // testFetchTokensForAdventure, // Not implemented yet
       testFetchCompletedAdventures,
       // Note: Skipping create tests in "run all" to avoid creating duplicate data
     ];
@@ -312,15 +312,17 @@ export default function DebugPage() {
           </TouchableOpacity>
         </View>
 
+        {/* Token fetching not implemented yet
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.testButton} onPress={testFetchTokens}>
             <Text style={styles.testButtonText}>Fetch All Tokens</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.testButton} onPress={testFetchTokensForAdventure}>
             <Text style={styles.testButtonText}>Fetch Adventure Tokens</Text>
           </TouchableOpacity>
         </View>
+        */}
 
         <TouchableOpacity style={styles.testButton} onPress={testFetchCompletedAdventures}>
           <Text style={styles.testButtonText}>Fetch Completed Adventures</Text>

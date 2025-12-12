@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -117,6 +117,38 @@ export default function GameMap() {
   );
   const mapRef = useRef<MapView | null>(null);
 
+  // Define proximity check function before useEffect
+  const checkLandmarkProximity = useCallback((loc: Location.LocationObject) => {
+    const { latitude, longitude } = loc.coords;
+
+    LANDMARKS.forEach((landmark) => {
+      if (!landmark.location) return;
+      if (visitedLandmarks.has(landmark.id)) return;
+
+      const distance = getDistanceMeters(
+        latitude,
+        longitude,
+        landmark.location.latitude,
+        landmark.location.longitude
+      );
+
+      if (distance <= landmark.radius) {
+        setVisitedLandmarks((prev) => {
+          const updated = new Set(prev);
+          updated.add(landmark.id);
+          return updated;
+        });
+
+        setScore((prev) => prev + landmark.points);
+
+        Alert.alert(
+          "Landmark found!",
+          `You discovered ${landmark.name} and earned ${landmark.points} points!`
+        );
+      }
+    });
+  }, [visitedLandmarks]);
+
   // Request user location & start watching
   useEffect(() => {
     (async () => {
@@ -169,38 +201,7 @@ export default function GameMap() {
         locationSubscription.current.remove();
       }
     };
-  }, []);
-
-  const checkLandmarkProximity = (loc: Location.LocationObject) => {
-    const { latitude, longitude } = loc.coords;
-
-    LANDMARKS.forEach((landmark) => {
-      if (!landmark.location) return;
-      if (visitedLandmarks.has(landmark.id)) return;
-
-      const distance = getDistanceMeters(
-        latitude,
-        longitude,
-        landmark.location.latitude,
-        landmark.location.longitude
-      );
-
-      if (distance <= landmark.radius) {
-        setVisitedLandmarks((prev) => {
-          const updated = new Set(prev);
-          updated.add(landmark.id);
-          return updated;
-        });
-
-        setScore((prev) => prev + landmark.points);
-
-        Alert.alert(
-          "Landmark found!",
-          `You discovered ${landmark.name} and earned ${landmark.points} points!`
-        );
-      }
-    });
-  };
+  }, [checkLandmarkProximity]);
 
   // 🔎 Search any location using OpenStreetMap Nominatim
   const searchAnyLocation = async () => {
