@@ -59,7 +59,7 @@ export default function HelpScreen() {
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Collect Tokens</Text>
             <Text style={styles.stepText}>
-              Walk close to token locations to collect them. You'll feel a vibration when you're near!
+              Walk close to token locations to collect them. You&apos;ll feel a vibration when you&apos;re near!
             </Text>
           </View>
         </View>
@@ -80,7 +80,7 @@ export default function HelpScreen() {
         <Text style={styles.sectionTitle}>🗺️ Creating Adventures</Text>
         <View style={styles.card}>
           <Text style={styles.cardText}>
-            <Text style={styles.bold}>Create a Region:</Text> Tap the Creator tab, choose "Create Region",
+            <Text style={styles.bold}>Create a Region:</Text> Tap the Creator tab, choose &quot;Create Region&quot;,
             name it, then tap the map to place the center point.
           </Text>
         </View>
@@ -110,7 +110,7 @@ export default function HelpScreen() {
         </View>
         <View style={styles.card}>
           <Text style={styles.cardText}>
-            • Your phone will vibrate when you're close to a token
+            • Your phone will vibrate when you&apos;re close to a token
           </Text>
         </View>
         <View style={styles.card}>
@@ -131,7 +131,7 @@ export default function HelpScreen() {
 
         <View style={styles.faqItem}>
           <Text style={styles.faqQuestion}>
-            What's the difference between regions and adventures?
+            What&apos;s the difference between regions and adventures?
           </Text>
           <Text style={styles.faqAnswer}>
             Regions are geographic areas you create. Adventures are quests within those regions that contain tokens to collect.
@@ -143,7 +143,7 @@ export default function HelpScreen() {
             How close do I need to be to collect a token?
           </Text>
           <Text style={styles.faqAnswer}>
-            You need to be within about 20-30 meters of a token. Your phone will vibrate when you're in range!
+            You need to be within about 20-30 meters of a token. Your phone will vibrate when you&apos;re in range!
           </Text>
         </View>
 

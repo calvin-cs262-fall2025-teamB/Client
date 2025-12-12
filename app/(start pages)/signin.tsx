@@ -33,7 +33,7 @@ export default function Signup() {
     if (isAuthenticated) {
       router.replace("../home");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async () => {
     if (username && password) {
@@ -70,7 +70,7 @@ export default function Signup() {
 
       setIsLoading(true);
       try {
-        signup(username, password);
+        await signup(username, password);
       } catch (err: any) {
         Alert.alert("Signup failed", err.message || "Unknown error");
       } finally {

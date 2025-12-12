@@ -8,7 +8,6 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -48,7 +47,6 @@ export default function Profile() {
     adventures,
     completedAdventures,
     loading,
-    errors,
     fetchAdventures,
     fetchCompletedAdventures,
   } = useDatabase();
@@ -76,9 +74,6 @@ export default function Profile() {
   useEffect(() => {
     if (completedAdventures && adventures && user?.id) {
       const userCompletedAdventures: CompletedAdventure[] = completedAdventures;
-      const userCreatedAdventures: DbAdventure[] = adventures.filter(
-        (adv: DbAdventure) => adv.adventurerid === user.id
-      );
 
       // Calculate total tokens from completed adventures
       const totalTokens = userCompletedAdventures.reduce(

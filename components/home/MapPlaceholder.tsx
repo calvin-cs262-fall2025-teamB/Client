@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 import Svg, { Path, Circle } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import themes from "@/assets/utils/themes";

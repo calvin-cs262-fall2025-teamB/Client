@@ -4,8 +4,19 @@ import { FontAwesome6 } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+interface AdventureCardData {
+  title: string;
+  difficulty: string;
+  summary: string;
+  estimatedTime: string;
+  tokenCount: number;
+  region: {
+    name: string;
+  };
+}
+
 type Props = {
-  adventure: any;
+  adventure: AdventureCardData;
   onPress: () => void;
 };
 
