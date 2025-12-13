@@ -26,14 +26,14 @@ export default function Signup() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmedPassword, seConfirmedtPassword] = useState("");
+  const [confirmedPassword, setConfirmedPassword] = useState("");
   const { signup, isAuthenticated, setIsLoading } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
       router.replace("../home");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async () => {
     if (username && password) {
@@ -70,7 +70,7 @@ export default function Signup() {
 
       setIsLoading(true);
       try {
-        signup(username, password);
+        await signup(username, password);
       } catch (err: any) {
         Alert.alert("Signup failed", err.message || "Unknown error");
       } finally {
@@ -116,7 +116,7 @@ export default function Signup() {
         <Text style={styles.label}>Re-Enter Password</Text>
         <TextInput
           value={confirmedPassword}
-          onChangeText={seConfirmedtPassword}
+          onChangeText={setConfirmedPassword}
           secureTextEntry
           placeholder="••••••••"
           style={styles.input}

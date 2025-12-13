@@ -27,26 +27,24 @@ import { useDatabase } from "@/contexts/DatabaseContext";
 import * as Haptics from "expo-haptics";
 
 // === TYPE DEFINITIONS ===
-type CreationStep = 'details' | 'tokens' | 'review';
+import { Region } from "@/types/database";
 
 export default function CreateAdventureScreen() {
   const router = useRouter();
 
   // === CONTEXT HOOKS ===
   const { user } = useAuth();
-  const { regions, fetchRegions, loading, errors, createAdventure, createToken } = useDatabase();
+  const { regions, fetchRegions, loading, errors, createAdventure } = useDatabase();
 
   // === STATE MANAGEMENT ===
-  // Step tracking
-  const [currentStep, setCurrentStep] = useState<CreationStep>('details');
-
   // Step 1: Adventure details
   const [adventureName, setAdventureName] = useState<string>("");
   const [selectedRegionId, setSelectedRegionId] = useState<number | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Step 2: Token placement (placeholder for now)
-  const [tokens, setTokens] = useState<any[]>([]);
+  // Step 2: Token placement (will be implemented when token placement feature is added)
+  // For now, we initialize with empty array and will add tokens in future update
+  const tokens: any[] = [];
 
   // Step 3: Saving state
   const [isSaving, setIsSaving] = useState(false);
@@ -57,7 +55,7 @@ export default function CreateAdventureScreen() {
     if (regions.length === 0) {
       fetchRegions();
     }
-  }, []);
+  }, [regions.length, fetchRegions]);
 
   // === STEP 1: DETAILS - HANDLERS ===
 
@@ -105,7 +103,7 @@ export default function CreateAdventureScreen() {
 
     try {
       // Get selected region data
-      const selectedRegion = regions.find(r => r.id === selectedRegionId);
+      const selectedRegion = regions.find((r: Region) => r.id === selectedRegionId);
 
       if (!selectedRegion) {
         throw new Error("Selected region not found");
@@ -113,16 +111,20 @@ export default function CreateAdventureScreen() {
 
       // Create adventure data matching backend schema
       const adventureData = {
-        adventurerID: user.id,
-        regionID: selectedRegionId,
+        adventurerid: user.id,
+        regionid: selectedRegionId,
         name: adventureName.trim(),
-        numTokens: tokens.length, // Will be updated when tokens are added
+        numtokens: tokens.length, // Will be updated when tokens are added
         location: selectedRegion.location, // Use region's center as adventure location
       };
 
-      console.log("Creating adventure:", adventureData);
+      if (__DEV__) {
+        console.log("Creating adventure:", adventureData);
+      }
       const savedAdventure = await createAdventure(adventureData);
-      console.log("Adventure created successfully:", savedAdventure);
+      if (__DEV__) {
+        console.log("Adventure created successfully:", savedAdventure);
+      }
 
       // Success feedback
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -134,7 +136,9 @@ export default function CreateAdventureScreen() {
       );
 
     } catch (error) {
-      console.error("Error creating adventure:", error);
+      if (__DEV__) {
+        console.error("Error creating adventure:", error);
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Error",
@@ -167,7 +171,7 @@ export default function CreateAdventureScreen() {
   }
 
   // === GET SELECTED REGION NAME FOR DISPLAY ===
-  const selectedRegionName = regions.find(r => r.id === selectedRegionId)?.name || "Select a region...";
+  const selectedRegionName = regions.find((r: Region) => r.id === selectedRegionId)?.name || "Select a region...";
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -230,7 +234,7 @@ export default function CreateAdventureScreen() {
                 <Text style={styles.optionSubtext}>Create a region first from the Map tab</Text>
               </View>
             ) : (
-              regions.map((region) => (
+              regions.map((region: Region) => (
                 <Pressable
                   key={region.id}
                   style={[
@@ -259,7 +263,7 @@ export default function CreateAdventureScreen() {
       <View style={styles.infoBox}>
         <FontAwesome6 name="circle-info" size={16} color={themes.primaryColor} />
         <Text style={styles.infoText}>
-          After selecting a region, you'll be able to place tokens on the map in Step 2.
+          After selecting a region, you&apos;ll be able to place tokens on the map in Step 2.
         </Text>
       </View>
 

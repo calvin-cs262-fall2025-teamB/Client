@@ -456,6 +456,11 @@ export default function MapScreen() {
       const savedRegion = await createRegion(regionData);
       console.log("Region created successfully:", savedRegion);
 
+      // Validate region was created successfully
+      if (!savedRegion || !savedRegion.id) {
+        throw new Error("Failed to create region - no region ID returned");
+      }
+
       // === Auto-generate evenly-spaced landmarks on circle perimeter ===
       const numLandmarks = 8;
       const perimeterPoints: LatLng[] = [];
