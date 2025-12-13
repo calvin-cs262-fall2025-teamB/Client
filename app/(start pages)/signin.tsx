@@ -103,6 +103,8 @@ export default function Signup() {
           }}
         />
 
+        <Text style={styles.warningText}>Warning: passwords are not encrypted, DO NOT use sensitive or reused passwords</Text>
+
         <Text style={styles.label}>Password</Text>
         <TextInput
           value={password}
@@ -176,4 +178,12 @@ const styles = StyleSheet.create({
   },
   input: { borderWidth: 1, borderColor: "#ddd", padding: 10, borderRadius: 6 },
   label: { fontSize: 14, fontWeight: "600" },
+  warningText: {
+    fontSize: 12,
+    color: "#d32f2f",
+    fontStyle: "italic",
+    textAlign: "center",
+    marginVertical: 8,
+    paddingHorizontal: 10,
+  },
 });
