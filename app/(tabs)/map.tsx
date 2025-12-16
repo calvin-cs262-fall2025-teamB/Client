@@ -153,7 +153,7 @@ async function fetchAdventureData(): Promise<{
 export default function MapScreen() {
   // === ADDED: Get contexts for backend integration ===
   const { user } = useAuth();
-  const { createRegion, createLandmark } = useDatabase();
+  const { createRegion, createLandmark, fetchRegions, fetchLandmarks } = useDatabase();
 
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null
@@ -487,6 +487,10 @@ export default function MapScreen() {
         perimeterPoints.push({ latitude: lat, longitude: lng });
         console.log(`Landmark ${i + 1} created on perimeter`);
       }
+
+      // === Refresh database data to include new region and landmarks ===
+      await fetchRegions();
+      await fetchLandmarks(savedRegion.id);
 
       // === Update local state to show the new region ===
       const newRegion: AdventureRegion = {

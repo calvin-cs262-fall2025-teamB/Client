@@ -3,7 +3,7 @@
 //TODO: install tailwind and use it for styling
 // TODO: Replace the link to Sign in with a sin2@calvin.edu
 //TODO: Make Help Page. Authentication Page. Forgot Password
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator, // Acts as a spinner while waiting for login
@@ -117,15 +117,6 @@ export default function Login() {
               </Text>
             </View>
           </View>
-
-          {/* Debug Button - Only show in development */}
-          {__DEV__ && (
-            <View style={styles.debugSection}>
-              <Link href="/debug" style={styles.debugButton}>
-                <Text style={styles.debugButtonText}>🔧 Database Debug</Text>
-              </Link>
-            </View>
-          )}
         </View>
       </KeyboardAvoidingView>
     </>
