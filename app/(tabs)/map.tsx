@@ -153,7 +153,7 @@ async function fetchAdventureData(): Promise<{
 export default function MapScreen() {
   // === ADDED: Get contexts for backend integration ===
   const { user } = useAuth();
-  const { createRegion, createLandmark } = useDatabase();
+  const { createRegion, createLandmark, fetchRegions, fetchLandmarks } = useDatabase();
 
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null
@@ -366,22 +366,6 @@ export default function MapScreen() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  // // === ADDED: Helper to calculate distance between two points (Haversine formula) ===
-  // const calculateDistance = (point1: LatLng, point2: LatLng): number => {
-  //   const R = 6371e3; // Earth's radius in meters
-  //   const φ1 = (point1.latitude * Math.PI) / 180;
-  //   const φ2 = (point2.latitude * Math.PI) / 180;
-  //   const Δφ = ((point2.latitude - point1.latitude) * Math.PI) / 180;
-  //   const Δλ = ((point2.longitude - point1.longitude) * Math.PI) / 180;
-
-  //   const a =
-  //     Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-  //     Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  //   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  //   return R * c; // Distance in meters
-  // };
-
   // --- Handle map press ---
   // === IMPROVED: Allow re-tapping to reposition center ===
   const handleMapPress = (event: MapPressEvent) => {
@@ -503,6 +487,10 @@ export default function MapScreen() {
         perimeterPoints.push({ latitude: lat, longitude: lng });
         console.log(`Landmark ${i + 1} created on perimeter`);
       }
+
+      // === Refresh database data to include new region and landmarks ===
+      await fetchRegions();
+      await fetchLandmarks(savedRegion.id);
 
       // === Update local state to show the new region ===
       const newRegion: AdventureRegion = {

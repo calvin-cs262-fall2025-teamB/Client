@@ -34,7 +34,7 @@ export default function CreateAdventureScreen() {
 
   // === CONTEXT HOOKS ===
   const { user } = useAuth();
-  const { regions, fetchRegions, loading, errors, createAdventure } = useDatabase();
+  const { regions, fetchRegions, fetchAdventures, loading, errors, createAdventure } = useDatabase();
 
   // === STATE MANAGEMENT ===
   // Step 1: Adventure details
@@ -118,13 +118,16 @@ export default function CreateAdventureScreen() {
         location: selectedRegion.location, // Use region's center as adventure location
       };
 
-      if (__DEV__) {
-        console.log("Creating adventure:", adventureData);
-      }
+      // if (__DEV__) {
+      //   console.log("Creating adventure:", adventureData);
+      // }
       const savedAdventure = await createAdventure(adventureData);
-      if (__DEV__) {
-        console.log("Adventure created successfully:", savedAdventure);
-      }
+      // if (__DEV__) {
+      //   console.log("Adventure created successfully:", savedAdventure);
+      // }
+
+      // Refresh adventures data to include the new adventure
+      await fetchAdventures();
 
       // Success feedback
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -228,33 +231,39 @@ export default function CreateAdventureScreen() {
         {/* Dropdown options */}
         {isDropdownOpen && (
           <View style={styles.options}>
-            {regions.length === 0 ? (
-              <View style={styles.option}>
-                <Text style={styles.optionTextEmpty}>No regions available</Text>
-                <Text style={styles.optionSubtext}>Create a region first from the Map tab</Text>
-              </View>
-            ) : (
-              regions.map((region: Region) => (
-                <Pressable
-                  key={region.id}
-                  style={[
-                    styles.option,
-                    selectedRegionId === region.id && styles.optionSelected
-                  ]}
-                  onPress={() => handleRegionSelect(region.id)}
-                >
-                  <Text style={[
-                    styles.optionText,
-                    selectedRegionId === region.id && styles.optionTextSelected
-                  ]}>
-                    {region.name}
-                  </Text>
-                  {region.description && (
-                    <Text style={styles.optionSubtext}>{region.description}</Text>
-                  )}
-                </Pressable>
-              ))
-            )}
+            <ScrollView
+              style={styles.optionsScrollView}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+            >
+              {regions.length === 0 ? (
+                <View style={styles.option}>
+                  <Text style={styles.optionTextEmpty}>No regions available</Text>
+                  <Text style={styles.optionSubtext}>Create a region first from the Map tab</Text>
+                </View>
+              ) : (
+                regions.map((region: Region) => (
+                  <Pressable
+                    key={region.id}
+                    style={[
+                      styles.option,
+                      selectedRegionId === region.id && styles.optionSelected
+                    ]}
+                    onPress={() => handleRegionSelect(region.id)}
+                  >
+                    <Text style={[
+                      styles.optionText,
+                      selectedRegionId === region.id && styles.optionTextSelected
+                    ]}>
+                      {region.name}
+                    </Text>
+                    {region.description && (
+                      <Text style={styles.optionSubtext}>{region.description}</Text>
+                    )}
+                  </Pressable>
+                ))
+              )}
+            </ScrollView>
           </View>
         )}
       </View>
@@ -402,6 +411,9 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb",
     maxHeight: 300,
     overflow: "hidden",
+  },
+  optionsScrollView: {
+    maxHeight: 300,
   },
   option: {
     padding: 14,

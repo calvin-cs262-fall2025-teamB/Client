@@ -3,7 +3,7 @@
 //TODO: install tailwind and use it for styling
 // TODO: Replace the link to Sign in with a sin2@calvin.edu
 //TODO: Make Help Page. Authentication Page. Forgot Password
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator, // Acts as a spinner while waiting for login
@@ -89,6 +89,8 @@ export default function Login() {
             autoCapitalize="none"
           />
 
+          <Text style={styles.warningText}>Warning: passwords are not encrypted, DO NOT use sensitive or reused passwords</Text>
+
           <Text style={styles.label}>Password</Text>
           <TextInput
             value={password}
@@ -115,15 +117,6 @@ export default function Login() {
               </Text>
             </View>
           </View>
-
-          {/* Debug Button - Only show in development */}
-          {__DEV__ && (
-            <View style={styles.debugSection}>
-              <Link href="/debug" style={styles.debugButton}>
-                <Text style={styles.debugButtonText}>🔧 Database Debug</Text>
-              </Link>
-            </View>
-          )}
         </View>
       </KeyboardAvoidingView>
     </>
@@ -170,6 +163,14 @@ const styles = StyleSheet.create({
   },
   input: { borderWidth: 1, borderColor: "#ddd", padding: 10, borderRadius: 6 },
   label: { fontSize: 14, fontWeight: "600" },
+  warningText: {
+    fontSize: 12,
+    color: "#d32f2f",
+    fontStyle: "italic",
+    textAlign: "center",
+    marginVertical: 8,
+    paddingHorizontal: 10,
+  },
   debugSection: {
     marginTop: 20,
     alignItems: "center",
