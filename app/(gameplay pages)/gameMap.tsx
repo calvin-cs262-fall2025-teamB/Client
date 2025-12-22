@@ -1,33 +1,21 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import * as Location from "expo-location";
+import { useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  StyleSheet,
-  View,
-  Text,
+  ActivityIndicator,
   Alert,
+  FlatList,
+  StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
+  View,
 } from "react-native";
-import MapView, { Marker, Circle, Region } from "react-native-maps";
-import * as Location from "expo-location";
+import MapView, { Circle, Marker, Region } from "react-native-maps";
 
 import { useAuth } from "../../contexts/AuthContext";
-
-type Point = {
-  latitude: number;
-  longitude: number;
-};
-
-type Landmark = {
-  id: number;
-  regionID: number;
-  name: string;
-  description?: string | null;
-  location?: Point | null;
-  radius: number; // meters
-  points: number;
-};
+import { useDatabase } from "../../contexts/DatabaseContext";
+import { Adventure, Landmark, Token } from "../../types/database";
 
 type GeocodeResult = {
   id: string;
@@ -36,36 +24,7 @@ type GeocodeResult = {
   lon: number;
 };
 
-// Calvin landmarks (example)
-const LANDMARKS: Landmark[] = [
-  {
-    id: 1,
-    regionID: 5,
-    name: "Commons Lawn",
-    description: "The heart of campus life at Calvin.",
-    location: { latitude: 42.93237, longitude: -85.58149 },
-    radius: 60,
-    points: 10,
-  },
-  {
-    id: 2,
-    regionID: 5,
-    name: "Hekman Library",
-    description: "Study spot and home to the Meeter Center.",
-    location: { latitude: 42.92985, longitude: -85.58743 },
-    radius: 50,
-    points: 15,
-  },
-  {
-    id: 3,
-    regionID: 5,
-    name: "Spoelhof Fieldhouse Complex",
-    description: "Home of the Knights and the fieldhouse facilities.",
-    location: { latitude: 42.93334, longitude: -85.58952 },
-    radius: 70,
-    points: 20,
-  },
-];
+// Database-driven landmarks and tokens
 
 // Haversine distance (in meters) between two lat/lng coordinates
 function getDistanceMeters(
@@ -89,12 +48,27 @@ function getDistanceMeters(
 }
 
 export default function GameMap() {
-  const { user } = useAuth(); // not used yet, but available
+  const { user } = useAuth();
+  const { adventureId } = useLocalSearchParams<{ adventureId: string }>();
+  const {
+    fetchAdventures,
+    fetchTokens,
+    fetchLandmarks,
+    getTokensByAdventure,
+    getLandmarksByRegion,
+    adventures,
+    tokens,
+    landmarks,
+    loading
+  } = useDatabase();
 
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [currentAdventure, setCurrentAdventure] = useState<Adventure | null>(null);
+  const [adventureLandmarks, setAdventureLandmarks] = useState<Landmark[]>([]);
+  const [adventureTokens, setAdventureTokens] = useState<Token[]>([]);
 
   const [score, setScore] = useState<number>(0);
   const [visitedLandmarks, setVisitedLandmarks] = useState<Set<number>>(
@@ -117,37 +91,100 @@ export default function GameMap() {
   );
   const mapRef = useRef<MapView | null>(null);
 
-  // Define proximity check function before useEffect
-  const checkLandmarkProximity = useCallback((loc: Location.LocationObject) => {
-    const { latitude, longitude } = loc.coords;
+  // Load adventure data when component mounts or adventureId changes
+  useEffect(() => {
+    if (!adventureId) return;
 
-    LANDMARKS.forEach((landmark) => {
+    const loadAdventureData = async () => {
+      try {
+        // Fetch adventure details
+        await fetchAdventures();
+        
+        // Find the current adventure
+        const adventure = adventures.find(a => a.id === parseInt(adventureId));
+        if (adventure) {
+          setCurrentAdventure(adventure);
+          
+          // Fetch tokens for this adventure
+          await fetchTokens(adventure.id);
+          const adventureTokensList = getTokensByAdventure(adventure.id);
+          setAdventureTokens(adventureTokensList);
+          
+          // Fetch landmarks for the adventure's region
+          await fetchLandmarks(adventure.regionid);
+          const regionLandmarks = getLandmarksByRegion(adventure.regionid);
+          setAdventureLandmarks(regionLandmarks);
+        }
+      } catch (error) {
+        console.error('Error loading adventure data:', error);
+        Alert.alert('Error', 'Failed to load adventure data');
+      }
+    };
+
+    loadAdventureData();
+  }, [adventureId, adventures, fetchAdventures, fetchTokens, fetchLandmarks, getTokensByAdventure, getLandmarksByRegion]);
+
+  // Define proximity check function for both landmarks and tokens
+  const checkProximity = useCallback((loc: Location.LocationObject) => {
+    const { latitude, longitude } = loc.coords;
+    const proximityRadius = 50; // meters
+
+    // Check landmarks
+    adventureLandmarks.forEach((landmark) => {
       if (!landmark.location) return;
       if (visitedLandmarks.has(landmark.id)) return;
 
       const distance = getDistanceMeters(
         latitude,
         longitude,
-        landmark.location.latitude,
-        landmark.location.longitude
+        landmark.location.x,
+        landmark.location.y
       );
 
-      if (distance <= landmark.radius) {
+      if (distance <= proximityRadius) {
         setVisitedLandmarks((prev) => {
           const updated = new Set(prev);
           updated.add(landmark.id);
           return updated;
         });
 
-        setScore((prev) => prev + landmark.points);
+        setScore((prev) => prev + 10); // Default 10 points for landmarks
 
         Alert.alert(
-          "Landmark found!",
-          `You discovered ${landmark.name} and earned ${landmark.points} points!`
+          "Landmark discovered!",
+          `You found ${landmark.name} and earned 10 points!`
         );
       }
     });
-  }, [visitedLandmarks]);
+
+    // Check tokens
+    adventureTokens.forEach((token) => {
+      if (!token.location) return;
+      if (visitedLandmarks.has(`token_${token.id}` as any)) return;
+
+      const distance = getDistanceMeters(
+        latitude,
+        longitude,
+        token.location.x,
+        token.location.y
+      );
+
+      if (distance <= proximityRadius) {
+        setVisitedLandmarks((prev) => {
+          const updated = new Set(prev);
+          updated.add(`token_${token.id}` as any);
+          return updated;
+        });
+
+        setScore((prev) => prev + 25); // 25 points for tokens
+
+        Alert.alert(
+          "Token collected!",
+          `You collected a token and earned 25 points!${token.hint ? ` Hint: ${token.hint}` : ''}`
+        );
+      }
+    });
+  }, [adventureLandmarks, adventureTokens, visitedLandmarks]);
 
   // Request user location & start watching
   useEffect(() => {
@@ -189,7 +226,7 @@ export default function GameMap() {
             longitudeDelta: prev?.longitudeDelta ?? 0.01,
           }));
 
-          checkLandmarkProximity(loc);
+          checkProximity(loc);
         }
       );
 
@@ -201,7 +238,7 @@ export default function GameMap() {
         locationSubscription.current.remove();
       }
     };
-  }, [checkLandmarkProximity]);
+  }, [checkProximity]);
 
   // 🔎 Search any location using OpenStreetMap Nominatim
   const searchAnyLocation = async () => {
@@ -270,13 +307,27 @@ export default function GameMap() {
     if (!lm.location) return;
 
     const region: Region = {
-      latitude: lm.location.latitude,
-      longitude: lm.location.longitude,
+      latitude: lm.location.x,
+      longitude: lm.location.y,
       latitudeDelta: 0.004,
       longitudeDelta: 0.004,
     };
 
     setMapRegion(region); // 👈 update map center
+    mapRef.current?.animateToRegion(region, 800);
+  };
+
+  const focusOnToken = (token: Token) => {
+    if (!token.location) return;
+
+    const region: Region = {
+      latitude: token.location.x,
+      longitude: token.location.y,
+      latitudeDelta: 0.004,
+      longitudeDelta: 0.004,
+    };
+
+    setMapRegion(region);
     mapRef.current?.animateToRegion(region, 800);
   };
 
@@ -289,7 +340,13 @@ export default function GameMap() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Landmark Hunt</Text>
+        <Text style={styles.title}>
+          {loading.adventures || loading.landmarks || loading.tokens
+            ? "Loading..."
+            : currentAdventure
+            ? currentAdventure.name
+            : "Adventure"}
+        </Text>
         <Text style={styles.score}>Score: {score}</Text>
       </View>
 
@@ -357,32 +414,67 @@ export default function GameMap() {
           onRegionChangeComplete={setMapRegion} // 👈 updates when you move the map
           showsUserLocation
         >
-          {LANDMARKS.map((lm) => {
+          {/* Landmarks */}
+          {adventureLandmarks.map((lm) => {
             if (!lm.location) return null;
             const visited = visitedLandmarks.has(lm.id);
+            const proximityRadius = 50; // meters
 
             return (
-              <View key={lm.id}>
+              <View key={`landmark_${lm.id}`}>
                 <Marker
                   coordinate={{
-                    latitude: lm.location.latitude,
-                    longitude: lm.location.longitude,
+                    latitude: lm.location.x,
+                    longitude: lm.location.y,
                   }}
                   title={lm.name}
+                  description={visited ? "(Visited) Landmark discovered!" : "Landmark"}
+                  pinColor={visited ? "green" : "blue"}
+                />
+                <Circle
+                  center={{
+                    latitude: lm.location.x,
+                    longitude: lm.location.y,
+                  }}
+                  radius={proximityRadius}
+                  strokeWidth={1}
+                  strokeColor="rgba(0, 150, 255, 0.8)"
+                  fillColor="rgba(0, 150, 255, 0.15)"
+                />
+              </View>
+            );
+          })}
+          
+          {/* Tokens */}
+          {adventureTokens.map((token) => {
+            if (!token.location) return null;
+            const visited = visitedLandmarks.has(`token_${token.id}` as any);
+            const proximityRadius = 50; // meters
+
+            return (
+              <View key={`token_${token.id}`}>
+                <Marker
+                  coordinate={{
+                    latitude: token.location.x,
+                    longitude: token.location.y,
+                  }}
+                  title={`Token ${token.tokenorder || token.id}`}
                   description={
-                    (visited ? "(Visited) " : "") + (lm.description ?? "")
+                    visited 
+                      ? "(Collected) Token found!" 
+                      : token.hint || "Collect this token!"
                   }
                   pinColor={visited ? "green" : "red"}
                 />
                 <Circle
                   center={{
-                    latitude: lm.location.latitude,
-                    longitude: lm.location.longitude,
+                    latitude: token.location.x,
+                    longitude: token.location.y,
                   }}
-                  radius={lm.radius}
+                  radius={proximityRadius}
                   strokeWidth={1}
-                  strokeColor="rgba(0, 150, 255, 0.8)"
-                  fillColor="rgba(0, 150, 255, 0.15)"
+                  strokeColor="rgba(255, 0, 0, 0.8)"
+                  fillColor="rgba(255, 0, 0, 0.15)"
                 />
               </View>
             );
@@ -404,7 +496,7 @@ export default function GameMap() {
           activeOpacity={0.8}
         >
           <Text style={styles.landmarkPanelTitle}>
-            Landmarks ({LANDMARKS.length})
+            Landmarks ({adventureLandmarks.length}) | Tokens ({adventureTokens.length})
           </Text>
           <Text style={styles.landmarkPanelToggle}>
             {landmarksExpanded ? "▾" : "▴"}
@@ -413,35 +505,72 @@ export default function GameMap() {
 
         {landmarksExpanded && (
           <View style={styles.landmarkListWrapper}>
-            <FlatList
-              data={LANDMARKS}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => {
-                const visited = visitedLandmarks.has(item.id);
-                return (
-                  <TouchableOpacity
-                    style={styles.landmarkItem}
-                    onPress={() => focusOnLandmark(item)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.landmarkName,
-                        visited && styles.landmarkVisited,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.name}
-                    </Text>
-                    {item.description ? (
-                      <Text style={styles.landmarkDesc} numberOfLines={1}>
-                        {item.description}
-                      </Text>
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              }}
-            />
+            {/* Landmarks Section */}
+            {adventureLandmarks.length > 0 && (
+              <>
+                <Text style={styles.sectionHeader}>Landmarks</Text>
+                <FlatList
+                  data={adventureLandmarks}
+                  keyExtractor={(item) => `landmark_${item.id}`}
+                  renderItem={({ item }) => {
+                    const visited = visitedLandmarks.has(item.id);
+                    return (
+                      <TouchableOpacity
+                        style={styles.landmarkItem}
+                        onPress={() => focusOnLandmark(item)}
+                        activeOpacity={0.8}
+                      >
+                        <Text
+                          style={[
+                            styles.landmarkName,
+                            visited && styles.landmarkVisited,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              </>
+            )}
+            
+            {/* Tokens Section */}
+            {adventureTokens.length > 0 && (
+              <>
+                <Text style={styles.sectionHeader}>Tokens</Text>
+                <FlatList
+                  data={adventureTokens}
+                  keyExtractor={(item) => `token_${item.id}`}
+                  renderItem={({ item }) => {
+                    const visited = visitedLandmarks.has(`token_${item.id}` as any);
+                    return (
+                      <TouchableOpacity
+                        style={styles.landmarkItem}
+                        onPress={() => focusOnToken(item)}
+                        activeOpacity={0.8}
+                      >
+                        <Text
+                          style={[
+                            styles.landmarkName,
+                            visited && styles.landmarkVisited,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          Token {item.tokenorder || item.id}
+                        </Text>
+                        {item.hint && (
+                          <Text style={styles.landmarkDesc} numberOfLines={1}>
+                            Hint: {item.hint}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              </>
+            )}
           </View>
         )}
       </View>
@@ -597,5 +726,13 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
     fontSize: 11,
     marginTop: 2,
+  },
+  sectionHeader: {
+    color: "#facc15",
+    fontSize: 12,
+    fontWeight: "700",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#1f2937",
   },
 });
