@@ -43,7 +43,11 @@ export default function AdventureRecord() {
       adventure,
       region,
     };
-  }).filter((item: { completed: CompletedAdventure; adventure: DbAdventure | undefined; region: Region | undefined }) => item.adventure) || [];
+  }).filter((item) => item.adventure) as Array<{ 
+    completed: CompletedAdventure; 
+    adventure: DbAdventure; 
+    region: Region | undefined 
+  }> || [];
 
   const handleAdventurePress = (adventure: DbAdventure) => {
     // Navigate using expo-router to the AdventurePage screen with the adventureId as a query param
@@ -88,7 +92,7 @@ export default function AdventureRecord() {
             <Text style={styles.emptySubtext}>Start exploring to see your achievements here!</Text>
           </View>
         ) : (
-          completedAdventureData.map((item: { completed: CompletedAdventure; adventure: DbAdventure; region?: Region }, index: number) => (
+          completedAdventureData.map((item, index: number) => (
           <TouchableOpacity
             key={`${item.adventure.id}-${index}`}
             style={styles.adventureCard}

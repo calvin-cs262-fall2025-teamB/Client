@@ -1,25 +1,39 @@
 import {
+  readAdventurers,
+  readAdventures,
+  readAdventuresByAdventurer,
+  readAdventuresByRegion,
+  readCompletedAdventuresByAdventurer,
+  readLandmarks,
+  readLandmarksInRegion,
+  readRegions,
+  readTokens,
+  readTokensInAdventure
+} from "@/data/mockData";
+import {
+  Adventure,
+  Adventurer,
+  CompletedAdventure,
+  CreateAdventure,
+  CreateAdventurer,
+  CreateCompletedAdventure,
+  CreateLandmark,
+  CreateRegion,
+  CreateToken,
+  Landmark,
+  Point,
+  Region,
+  Token,
+  UpdateAdventurer
+} from "@/types/database";
+import {
   createContext,
+  ReactNode,
   useCallback,
   useContext,
   useEffect,
   useReducer,
-  ReactNode,
 } from "react";
-import {
-  mockData,
-  getAdventuresByCreator,
-} from "@/data/mockData";
-import {
-  Adventurer,
-  Region,
-  Landmark,
-  Adventure,
-  Token,
-  CompletedAdventure,
-  CreateAdventurer,
-  Point,
-} from "@/types/database";
 
 // Entity type for loading/error state tracking
 type EntityType =
@@ -105,28 +119,29 @@ type DatabaseAction =
 interface DatabaseContextValue extends DatabaseState {
   // Fetch functions
   fetchAdventurers: () => Promise<Adventurer[] | undefined>;
-  fetchRegions: () => Promise<void>;
-  fetchLandmarks: (regionid?: number | null) => Promise<void>;
+  fetchRegions: () => Promise<Region[] | undefined>;
+  fetchLandmarks: (regionid?: number | null) => Promise<Landmark[] | undefined>;
   fetchAdventures: (
     regionid?: number | null,
     adventurerid?: number | null
-  ) => Promise<void>;
-  fetchCompletedAdventures: (adventurerid: number) => Promise<void>;
+  ) => Promise<Adventure[] | undefined>;
+  fetchTokens: (adventureid?: number | null) => Promise<Token[] | undefined>;
+  fetchCompletedAdventures: (adventurerid: number) => Promise<CompletedAdventure[] | undefined>;
 
   // Create/Update functions
   createAdventurer: (adventurerData: CreateAdventurer) => Promise<Adventurer>;
   updateAdventurer: (
     id: number,
-    adventurerData: Partial<Adventurer>
+    adventurerData: Omit<UpdateAdventurer, 'id'>
   ) => Promise<Adventurer>;
-  createRegion: (regionData: Omit<Region, "id">) => Promise<Region>;
-  createLandmark: (landmarkData: Omit<Landmark, "id">) => Promise<Landmark>;
+  createRegion: (regionData: CreateRegion) => Promise<Region>;
+  createLandmark: (landmarkData: CreateLandmark) => Promise<Landmark>;
   createAdventure: (
-    adventureData: Omit<Adventure, "id">
+    adventureData: CreateAdventure
   ) => Promise<Adventure>;
-  createToken: (tokenData: Omit<Token, "id">) => Promise<Token>;
+  createToken: (tokenData: CreateToken) => Promise<Token>;
   completeAdventure: (
-    completionData: Omit<CompletedAdventure, "id">
+    completionData: CreateCompletedAdventure
   ) => Promise<CompletedAdventure>;
 
   // Helper functions
@@ -472,16 +487,18 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
       }
 
       // Fallback to mock data if fetch fails
-      dispatch({ type: "SET_ADVENTURERS", data: mockData.adventurers });
+      const fallbackData = readAdventurers();
+      dispatch({ type: "SET_ADVENTURERS", data: fallbackData });
       // Clear any existing errors since fallback was successful
       dispatch({
         type: "CLEAR_ERROR",
         entity: "adventurers",
       });
+      return fallbackData;
     }
   }, [apiCall, API_BASE_URL]);
 
-  const fetchRegions = useCallback(async (): Promise<void> => {
+  const fetchRegions = useCallback(async (): Promise<Region[] | undefined> => {
     dispatch({
       type: "SET_LOADING",
       entity: "regions",
@@ -490,22 +507,25 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
     try {
       const data = await apiCall<Region[]>("/regions");
       dispatch({ type: "SET_REGIONS", data });
+      return data;
     } catch (error) {
       if (__DEV__) {
         console.log("Backend unavailable - using mock regions data");
       }
       // Fallback to mock data if fetch fails
-      dispatch({ type: "SET_REGIONS", data: mockData.regions });
+      const fallbackData = readRegions();
+      dispatch({ type: "SET_REGIONS", data: fallbackData });
       // Clear any existing errors since fallback was successful
       dispatch({
         type: "CLEAR_ERROR",
         entity: "regions",
       });
+      return fallbackData;
     }
   }, [apiCall]);
 
   const fetchLandmarks = useCallback(
-    async (regionid: number | null = null): Promise<void> => {
+    async (regionid: number | null = null): Promise<Landmark[] | undefined> => {
       dispatch({
         type: "SET_LOADING",
         entity: "landmarks",
@@ -517,20 +537,22 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
           : "/landmarks";
         const data = await apiCall<Landmark[]>(endpoint);
         dispatch({ type: "SET_LANDMARKS", data });
+        return data;
       } catch (error) {
         if (__DEV__) {
           console.log("Backend unavailable - using mock landmarks data");
         }
         // Fallback to mock data if fetch fails
         const fallbackData = regionid
-          ? getLandmarksByRegion(regionid)
-          : mockData.landmarks;
+          ? readLandmarksInRegion(regionid)
+          : readLandmarks();
         dispatch({ type: "SET_LANDMARKS", data: fallbackData });
         // Clear any existing errors since fallback was successful
         dispatch({
           type: "CLEAR_ERROR",
           entity: "landmarks",
         });
+        return fallbackData;
       }
     },
     [apiCall]
@@ -540,7 +562,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
     async (
       regionid: number | null = null,
       adventurerid: number | null = null
-    ): Promise<void> => {
+    ): Promise<Adventure[] | undefined> => {
       dispatch({
         type: "SET_LOADING",
         entity: "adventures",
@@ -556,16 +578,19 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
 
         const data = await apiCall<Adventure[]>(endpoint);
         dispatch({ type: "SET_ADVENTURES", data });
+        return data;
       } catch (error) {
         if (__DEV__) {
           console.log("Backend unavailable - using mock adventures data");
         }
         // Fallback to mock data if fetch fails
-        let fallbackData = mockData.adventures;
+        let fallbackData: Adventure[];
         if (regionid) {
-          fallbackData = getAdventuresByRegion(regionid);
+          fallbackData = readAdventuresByRegion(regionid);
         } else if (adventurerid) {
-          fallbackData = getAdventuresByCreator(adventurerid);
+          fallbackData = readAdventuresByAdventurer(adventurerid);
+        } else {
+          fallbackData = readAdventures();
         }
         dispatch({ type: "SET_ADVENTURES", data: fallbackData });
         // Clear any existing errors since fallback was successful
@@ -573,13 +598,14 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
           type: "CLEAR_ERROR",
           entity: "adventures",
         });
+        return fallbackData;
       }
     },
     [apiCall]
   );
 
   const fetchCompletedAdventures = useCallback(
-    async (adventurerid: number): Promise<void> => {
+    async (adventurerid: number): Promise<CompletedAdventure[] | undefined> => {
       dispatch({
         type: "SET_LOADING",
         entity: "completedAdventures",
@@ -621,14 +647,13 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
           type: "SET_COMPLETED_ADVENTURES",
           data: completedArray,
         });
+        return completedArray;
       } catch (error) {
         if (__DEV__) {
           console.log("Backend unavailable - using mock completed adventures data");
         }
         // Fallback to mock data if fetch fails
-        const fallbackData = adventurerid
-          ? getCompletedAdventuresByUser(adventurerid)
-          : mockData.completedAdventures;
+        const fallbackData = readCompletedAdventuresByAdventurer(adventurerid);
         dispatch({
           type: "SET_COMPLETED_ADVENTURES",
           data: fallbackData,
@@ -638,6 +663,41 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
           type: "CLEAR_ERROR",
           entity: "completedAdventures",
         });
+        return fallbackData;
+      }
+    },
+    [apiCall]
+  );
+
+  const fetchTokens = useCallback(
+    async (adventureid: number | null = null): Promise<Token[] | undefined> => {
+      dispatch({
+        type: "SET_LOADING",
+        entity: "tokens",
+        isLoading: true,
+      });
+      try {
+        const endpoint = adventureid
+          ? `/tokens?adventureid=${adventureid}`
+          : "/tokens";
+        const data = await apiCall<Token[]>(endpoint);
+        dispatch({ type: "SET_TOKENS", data });
+        return data;
+      } catch (error) {
+        if (__DEV__) {
+          console.log("Backend unavailable - using mock tokens data");
+        }
+        // Fallback to mock data if fetch fails
+        const fallbackData = adventureid
+          ? readTokensInAdventure(adventureid)
+          : readTokens();
+        dispatch({ type: "SET_TOKENS", data: fallbackData });
+        // Clear any existing errors since fallback was successful
+        dispatch({
+          type: "CLEAR_ERROR",
+          entity: "tokens",
+        });
+        return fallbackData;
       }
     },
     [apiCall]
@@ -674,7 +734,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
   const updateAdventurer = useCallback(
     async (
       id: number,
-      adventurerData: Partial<Adventurer>
+      adventurerData: Omit<UpdateAdventurer, 'id'>
     ): Promise<Adventurer> => {
       try {
         const data = await apiCall<Adventurer>(`/adventurers/${id}`, {
@@ -692,7 +752,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
   );
 
   const createRegion = useCallback(
-    async (regionData: Omit<Region, "id">): Promise<Region> => {
+    async (regionData: CreateRegion): Promise<Region> => {
       try {
         // Format location for PostgreSQL point type
         const formattedData = {
@@ -728,7 +788,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
   );
 
   const createLandmark = useCallback(
-    async (landmarkData: Omit<Landmark, "id">): Promise<Landmark> => {
+    async (landmarkData: CreateLandmark): Promise<Landmark> => {
       try {
         // Format location for PostgreSQL point type
         const formattedData = {
@@ -752,7 +812,6 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
           id: Math.floor(Math.random() * 10000) + 1000,
           regionid: landmarkData.regionid,
           name: landmarkData.name,
-          description: landmarkData.description || null,
           location: landmarkData.location,
         };
         dispatch({ type: "ADD_LANDMARK", data: mockLandmark });
@@ -763,7 +822,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
   );
 
   const createAdventure = useCallback(
-    async (adventureData: Omit<Adventure, "id">): Promise<Adventure> => {
+    async (adventureData: CreateAdventure): Promise<Adventure> => {
       try {
         // Format location for PostgreSQL point type
         const formattedData = {
@@ -799,7 +858,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
   );
 
   const createToken = useCallback(
-    async (tokenData: Omit<Token, "id">): Promise<Token> => {
+    async (tokenData: CreateToken): Promise<Token> => {
       try {
         // Format location for PostgreSQL point type
         const formattedData = {
@@ -822,9 +881,9 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         const mockToken: Token = {
           id: Math.floor(Math.random() * 10000) + 1000,
           adventureid: tokenData.adventureid,
-          name: tokenData.name,
           location: tokenData.location,
-          clue: tokenData.clue || null,
+          hint: tokenData.hint || null,
+          tokenorder: tokenData.tokenorder || null,
         };
         dispatch({ type: "ADD_TOKEN", data: mockToken });
         return mockToken;
@@ -835,7 +894,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
 
   const completeAdventure = useCallback(
     async (
-      completionData: Omit<CompletedAdventure, "id">
+      completionData: CreateCompletedAdventure
     ): Promise<CompletedAdventure> => {
       try {
         const data = await apiCall<CompletedAdventure>("/completed-adventures", {
@@ -852,8 +911,10 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         // Fallback: Create mock completion for offline/development use
         const mockCompletion: CompletedAdventure = {
           id: Math.floor(Math.random() * 10000) + 1000,
-          adventureid: completionData.adventureid,
           adventurerid: completionData.adventurerid,
+          adventureid: completionData.adventureid,
+          completiondate: completionData.completiondate || new Date().toISOString(),
+          completiontime: completionData.completiontime || "00:00:00",
         };
         dispatch({ type: "ADD_COMPLETED_ADVENTURE", data: mockCompletion });
         return mockCompletion;
@@ -974,6 +1035,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
     fetchRegions,
     fetchLandmarks,
     fetchAdventures,
+    fetchTokens,
     fetchCompletedAdventures,
 
     // Create/Update functions
@@ -1012,8 +1074,7 @@ export function useDatabase(): DatabaseContextValue {
 }
 
 export type {
-  DatabaseState,
   DatabaseAction,
-  DatabaseContextValue,
-  EntityType,
+  DatabaseContextValue, DatabaseState, EntityType
 };
+
