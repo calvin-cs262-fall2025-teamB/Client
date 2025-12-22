@@ -72,6 +72,8 @@ export default function GameMap() {
     () => new Set()
   );
 
+  const [tokenNum, setTokenNum] = useState<number>(1);
+
   // Search any location state
   // const [searchQuery, setSearchQuery] = useState("");
   // const [geoResults, setGeoResults] = useState<GeocodeResult[]>([]);
@@ -433,7 +435,6 @@ export default function GameMap() {
           {/* Landmarks */}
           {adventureLandmarks.map((lm) => {
             if (!lm.location) return null;
-            const visited = visitedLandmarks.has(lm.id);
             const proximityRadius = 50; // meters
 
             return (
@@ -476,7 +477,7 @@ export default function GameMap() {
           activeOpacity={0.8}
         >
           <Text style={styles.landmarkPanelTitle}>
-            Landmarks ({adventureLandmarks.length}) | Tokens ({adventureTokens.length})
+            Landmarks
           </Text>
           <Text style={styles.landmarkPanelToggle}>
             {landmarksExpanded ? "▾" : "▴"}
@@ -488,7 +489,6 @@ export default function GameMap() {
             {/* Landmarks Section */}
             {adventureLandmarks.length > 0 && (
               <>
-                <Text style={styles.sectionHeader}>Landmarks</Text>
                 <FlatList
                   data={adventureLandmarks}
                   keyExtractor={(item) => `landmark_${item.id}`}
@@ -509,42 +509,6 @@ export default function GameMap() {
                         >
                           {item.name}
                         </Text>
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-              </>
-            )}
-            
-            {/* Tokens Section */}
-            {adventureTokens.length > 0 && (
-              <>
-                <Text style={styles.sectionHeader}>Tokens</Text>
-                <FlatList
-                  data={adventureTokens}
-                  keyExtractor={(item) => `token_${item.id}`}
-                  renderItem={({ item }) => {
-                    const visited = visitedLandmarks.has(`token_${item.id}` as any);
-                    return (
-                      <TouchableOpacity
-                        style={styles.landmarkItem}
-                        onPress={() => focusOnToken(item)}
-                        activeOpacity={0.8}
-                      >
-                        <Text
-                          style={[
-                            styles.landmarkName,
-                            visited && styles.landmarkVisited,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          Token {item.tokenorder || item.id}
-                        </Text>
-                        {item.hint && (
-                          <Text style={styles.landmarkDesc} numberOfLines={1}>
-                            Hint: {item.hint}
-                          </Text>
-                        )}
                       </TouchableOpacity>
                     );
                   }}
