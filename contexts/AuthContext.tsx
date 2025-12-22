@@ -1,17 +1,17 @@
 "use client";
+import { Adventurer, CreateAdventurer, UpdateAdventurer } from "@/types/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import {
   createContext,
+  ReactNode,
   useContext,
   useReducer,
   useState,
-  ReactNode,
 } from "react";
 import { Alert } from "react-native";
 import { useDatabase } from "./DatabaseContext";
-import { Adventurer, CreateAdventurer } from "@/types/database";
 
 // State interface
 interface AuthState {
@@ -209,7 +209,13 @@ function AuthProvider({ children }: AuthProviderProps) {
     }
 
     try {
-      await updateAdventurer(user.id, { username: newUsername });
+      const updatedAdventurer: UpdateAdventurer = {
+        id: user.id,
+        username: user.username,
+        password: user.password,
+        profilepicture: user.profilepicture
+      }
+      await updateAdventurer(user.id, updatedAdventurer);
       dispatch({ type: "edit/username", payload: newUsername });
     } catch (error) {
       console.error("Failed to update username:", error);
@@ -276,4 +282,5 @@ function useAuth(): AuthContextValue {
 }
 
 export { AuthProvider, useAuth };
-export type { AuthContextValue, AuthState, AuthAction };
+export type { AuthAction, AuthContextValue, AuthState };
+

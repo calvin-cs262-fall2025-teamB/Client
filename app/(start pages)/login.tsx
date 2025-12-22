@@ -112,9 +112,9 @@ export default function Login() {
               <TouchableOpacity onPress={() => router.push("/signin")}>
                 <Text style={styles.authenticationHelpText}>Sign Up</Text>
               </TouchableOpacity>
-              <Text style={styles.authenticationHelpText}>
+              {/* <Text style={styles.authenticationHelpText}>
                 Forgot password?
-              </Text>
+              </Text> */}
             </View>
           </View>
         </View>
