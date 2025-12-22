@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import MapView, { Circle, Marker, Region } from "react-native-maps";
+import MapView, { Marker, Region } from "react-native-maps";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { useDatabase } from "../../contexts/DatabaseContext";
@@ -461,12 +461,35 @@ export default function GameMap() {
             );
           })}
           
-          {/* Current Token */}
+          {/* Tokens - Show collected tokens or current token if in proximity */}
           {adventureTokens
-            .filter(token => token.tokenorder === tokenNum)
+            .filter(token => {
+              if (!token.location || !location) return false;
+              
+              const tokenOrder = token.tokenorder || 1;
+              
+              // Show if token has been collected (tokenNum > tokenorder)
+              if (tokenNum > tokenOrder) return true;
+              
+              // Show current token if user is within proximity
+              if (tokenOrder === tokenNum) {
+                const proximityRadius = 10; // meters
+                const distance = getDistanceMeters(
+                  location.coords.latitude,
+                  location.coords.longitude,
+                  token.location.x,
+                  token.location.y
+                );
+                return distance <= proximityRadius;
+              }
+              
+              return false;
+            })
             .map((token) => {
               if (!token.location) return null;
               const visited = visitedLandmarks.has(`token_${token.id}` as any);
+              const tokenOrder = token.tokenorder || 1;
+              const isCollected = tokenNum > tokenOrder;
               const proximityRadius = 10; // meters
 
               return (
@@ -476,13 +499,13 @@ export default function GameMap() {
                       latitude: token.location.x,
                       longitude: token.location.y,
                     }}
-                    title={`Token ${token.tokenorder || token.id}`}
+                    title={`Token ${tokenOrder}`}
                     description={
-                      visited 
+                      isCollected
                         ? "(Collected) Token found!" 
                         : token.hint || "Collect this token!"
                     }
-                    pinColor={visited ? "green" : "blue"}
+                    pinColor={isCollected ? "green" : "blue"}
                   />
                   {/* <Circle
                     center={{
