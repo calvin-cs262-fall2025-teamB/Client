@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Vibration
 } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
 
@@ -73,6 +74,7 @@ export default function GameMap() {
   );
 
   const [tokenNum, setTokenNum] = useState<number>(1);
+  const [hasVibratedForCurrentToken, setHasVibratedForCurrentToken] = useState<boolean>(false);
 
   // Search any location state
   // const [searchQuery, setSearchQuery] = useState("");
@@ -142,50 +144,63 @@ export default function GameMap() {
     setAdventureTokens([]);
   }, [adventureId]);
 
+  // Reset vibration state when tokenNum changes
+  useEffect(() => {
+    setHasVibratedForCurrentToken(false);
+  }, [tokenNum]);
+
   // Define proximity check function for both landmarks and tokens
   const checkProximity = useCallback((loc: Location.LocationObject) => {
     const { latitude, longitude } = loc.coords;
     const proximityRadius = 50; // meters
 
     // Check landmarks
-    adventureLandmarks.forEach((landmark) => {
-      if (!landmark.location) return;
-      if (visitedLandmarks.has(landmark.id)) return;
+    // adventureLandmarks.forEach((landmark) => {
+    //   if (!landmark.location) return;
+    //   if (visitedLandmarks.has(landmark.id)) return;
 
-      const distance = getDistanceMeters(
-        latitude,
-        longitude,
-        landmark.location.x,
-        landmark.location.y
-      );
+    //   const distance = getDistanceMeters(
+    //     latitude,
+    //     longitude,
+    //     landmark.location.x,
+    //     landmark.location.y
+    //   );
 
-      if (distance <= proximityRadius) {
-        setVisitedLandmarks((prev) => {
-          const updated = new Set(prev);
-          updated.add(landmark.id);
-          return updated;
-        });
+    //   if (distance <= proximityRadius) {
+    //     setVisitedLandmarks((prev) => {
+    //       const updated = new Set(prev);
+    //       updated.add(landmark.id);
+    //       return updated;
+    //     });
 
-        setScore((prev) => prev + 10); // Default 10 points for landmarks
+    //     setScore((prev) => prev + 10); // Default 10 points for landmarks
 
-        Alert.alert(
-          "Landmark discovered!",
-          `You found ${landmark.name} and earned 10 points!`
-        );
-      }
-    });
+    //     Alert.alert(
+    //       "Landmark discovered!",
+    //       `You found ${landmark.name} and earned 10 points!`
+    //     );
+    //   }
+    // });
 
     // Check tokens
     adventureTokens.forEach((token) => {
       if (!token.location) return;
       if (visitedLandmarks.has(`token_${token.id}` as any)) return;
 
+      const tokenOrder = token.tokenorder || 1;
       const distance = getDistanceMeters(
         latitude,
         longitude,
         token.location.x,
         token.location.y
       );
+
+      // Check if this is the current token and user is in proximity
+      if (tokenOrder === tokenNum && distance <= 10 && !hasVibratedForCurrentToken) {
+        // Vibrate for current token when in close proximity
+        Vibration.vibrate([0, 500, 200, 500]); // Pattern: wait, vibrate, pause, vibrate
+        setHasVibratedForCurrentToken(true);
+      }
 
       if (distance <= proximityRadius) {
         setVisitedLandmarks((prev) => {
@@ -200,9 +215,14 @@ export default function GameMap() {
           "Token collected!",
           `You collected a token and earned 25 points!${token.hint ? ` Hint: ${token.hint}` : ''}`
         );
+        
+        // Move to next token
+        if (tokenOrder === tokenNum) {
+          setTokenNum(prev => prev + 1);
+        }
       }
     });
-  }, [adventureLandmarks, adventureTokens, visitedLandmarks]);
+  }, [adventureLandmarks, adventureTokens, visitedLandmarks, tokenNum, hasVibratedForCurrentToken]);
 
   // Request user location & start watching
   useEffect(() => {
