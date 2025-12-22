@@ -1,71 +1,27 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import {
-  StyleSheet,
-  View,
-  Text,
-  Alert,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
-} from "react-native";
-import MapView, { Marker, Circle, Region } from "react-native-maps";
 import * as Location from "expo-location";
+import { useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View
+} from "react-native";
+import MapView, { Marker, Region } from "react-native-maps";
 
 import { useAuth } from "../../contexts/AuthContext";
+import { useDatabase } from "../../contexts/DatabaseContext";
+import { Adventure, Landmark, Token } from "../../types/database";
 
-type Point = {
-  latitude: number;
-  longitude: number;
-};
-
-type Landmark = {
-  id: number;
-  regionID: number;
-  name: string;
-  description?: string | null;
-  location?: Point | null;
-  radius: number; // meters
-  points: number;
-};
-
-type GeocodeResult = {
-  id: string;
-  name: string;
-  lat: number;
-  lon: number;
-};
-
-// Calvin landmarks (example)
-const LANDMARKS: Landmark[] = [
-  {
-    id: 1,
-    regionID: 5,
-    name: "Commons Lawn",
-    description: "The heart of campus life at Calvin.",
-    location: { latitude: 42.93237, longitude: -85.58149 },
-    radius: 60,
-    points: 10,
-  },
-  {
-    id: 2,
-    regionID: 5,
-    name: "Hekman Library",
-    description: "Study spot and home to the Meeter Center.",
-    location: { latitude: 42.92985, longitude: -85.58743 },
-    radius: 50,
-    points: 15,
-  },
-  {
-    id: 3,
-    regionID: 5,
-    name: "Spoelhof Fieldhouse Complex",
-    description: "Home of the Knights and the fieldhouse facilities.",
-    location: { latitude: 42.93334, longitude: -85.58952 },
-    radius: 70,
-    points: 20,
-  },
-];
+// type GeocodeResult = {
+//   id: string;
+//   name: string;
+//   lat: number;
+//   lon: number;
+// };
 
 // Haversine distance (in meters) between two lat/lng coordinates
 function getDistanceMeters(
@@ -89,25 +45,47 @@ function getDistanceMeters(
 }
 
 export default function GameMap() {
-  const { user } = useAuth(); // not used yet, but available
+  const { user } = useAuth();
+  const { adventureId } = useLocalSearchParams<{ adventureId: string }>();
+  const {
+    fetchAdventures,
+    fetchTokens,
+    fetchLandmarks,
+    getTokensByAdventure,
+    getLandmarksByRegion,
+    adventures,
+    tokens,
+    landmarks,
+    loading
+  } = useDatabase();
 
   const [location, setLocation] = useState<Location.LocationObject | null>(
     null
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [currentAdventure, setCurrentAdventure] = useState<Adventure | null>(null);
+  const [adventureLandmarks, setAdventureLandmarks] = useState<Landmark[]>([]);
+  const [adventureTokens, setAdventureTokens] = useState<Token[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  const [score, setScore] = useState<number>(0);
+  const [collectedTokens, setCollectedTokens] = useState<number>(0);
   const [visitedLandmarks, setVisitedLandmarks] = useState<Set<number>>(
     () => new Set()
   );
 
+  const [tokenNum, setTokenNum] = useState<number>(1);
+  const [hasVibratedForCurrentToken, setHasVibratedForCurrentToken] = useState<boolean>(false);
+
   // Search any location state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [geoResults, setGeoResults] = useState<GeocodeResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  // const [searchQuery, setSearchQuery] = useState("");
+  // const [geoResults, setGeoResults] = useState<GeocodeResult[]>([]);
+  // const [isSearching, setIsSearching] = useState(false);
 
   // Floating landmark panel
   const [landmarksExpanded, setLandmarksExpanded] = useState(false);
+  
+  // Floating hint panel
+  const [hintExpanded, setHintExpanded] = useState(false);
 
   // ✅ map center/region (this is what updates when you move the map)
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
@@ -117,37 +95,137 @@ export default function GameMap() {
   );
   const mapRef = useRef<MapView | null>(null);
 
-  // Define proximity check function before useEffect
-  const checkLandmarkProximity = useCallback((loc: Location.LocationObject) => {
+  // Load adventure data when component mounts or adventureId changes
+  useEffect(() => {
+    if (!adventureId || dataLoaded) return;
+
+    const loadAdventureData = async () => {
+      try {
+        setDataLoaded(true);
+        
+        // Fetch all required data
+        const [adventuresData, allTokensData, allLandmarksData] = await Promise.all([
+          fetchAdventures(),
+          fetchTokens(), // Fetch all tokens first
+          fetchLandmarks() // Fetch all landmarks first
+        ]);
+        
+        // Find the current adventure from the fetched data or existing state
+        const adventure = adventures.find(a => a.id === parseInt(adventureId)) || 
+                         adventuresData?.find(a => a.id === parseInt(adventureId));
+        
+        if (adventure) {
+          setCurrentAdventure(adventure);
+          
+          // Filter tokens for this specific adventure from the returned data
+          const adventureTokensList = allTokensData ? 
+            allTokensData.filter(token => token.adventureid === adventure.id) :
+            getTokensByAdventure(adventure.id);
+          setAdventureTokens(adventureTokensList);
+          
+          // Filter landmarks for the adventure's region from the returned data
+          const regionLandmarks = allLandmarksData ?
+            allLandmarksData.filter(landmark => landmark.regionid === adventure.regionid) :
+            getLandmarksByRegion(adventure.regionid);
+          setAdventureLandmarks(regionLandmarks);
+        }
+      } catch (error) {
+        console.error('Error loading adventure data:', error);
+        Alert.alert('Error', 'Failed to load adventure data');
+        setDataLoaded(false); // Allow retry if there was an error
+      }
+    };
+
+    loadAdventureData();
+  }, [adventureId]); // Only depend on adventureId
+
+  // Reset data loaded flag when adventure ID changes
+  useEffect(() => {
+    setDataLoaded(false);
+    setCurrentAdventure(null);
+    setAdventureLandmarks([]);
+    setAdventureTokens([]);
+  }, [adventureId]);
+
+  // Reset vibration state when tokenNum changes
+  useEffect(() => {
+    setHasVibratedForCurrentToken(false);
+  }, [tokenNum]);
+
+  // Define proximity check function for both landmarks and tokens
+  const checkProximity = useCallback((loc: Location.LocationObject) => {
     const { latitude, longitude } = loc.coords;
+    const proximityRadius = 50; // meters
 
-    LANDMARKS.forEach((landmark) => {
-      if (!landmark.location) return;
-      if (visitedLandmarks.has(landmark.id)) return;
+    // Check landmarks
+    // adventureLandmarks.forEach((landmark) => {
+    //   if (!landmark.location) return;
+    //   if (visitedLandmarks.has(landmark.id)) return;
 
+    //   const distance = getDistanceMeters(
+    //     latitude,
+    //     longitude,
+    //     landmark.location.x,
+    //     landmark.location.y
+    //   );
+
+    //   if (distance <= proximityRadius) {
+    //     setVisitedLandmarks((prev) => {
+    //       const updated = new Set(prev);
+    //       updated.add(landmark.id);
+    //       return updated;
+    //     });
+
+    //     setScore((prev) => prev + 10); // Default 10 points for landmarks
+
+    //     Alert.alert(
+    //       "Landmark discovered!",
+    //       `You found ${landmark.name} and earned 10 points!`
+    //     );
+    //   }
+    // });
+
+    // Check tokens
+    adventureTokens.forEach((token) => {
+      if (!token.location) return;
+      if (visitedLandmarks.has(`token_${token.id}` as any)) return;
+
+      const tokenOrder = token.tokenorder || 1;
       const distance = getDistanceMeters(
         latitude,
         longitude,
-        landmark.location.latitude,
-        landmark.location.longitude
+        token.location.x,
+        token.location.y
       );
 
-      if (distance <= landmark.radius) {
+      // Check if this is the current token and user is in proximity
+      if (tokenOrder === tokenNum && distance <= 10 && !hasVibratedForCurrentToken) {
+        // Vibrate for current token when in close proximity
+        Vibration.vibrate([0, 500, 200, 500]); // Pattern: wait, vibrate, pause, vibrate
+        setHasVibratedForCurrentToken(true);
+      }
+
+      if (distance <= proximityRadius) {
         setVisitedLandmarks((prev) => {
           const updated = new Set(prev);
-          updated.add(landmark.id);
+          updated.add(`token_${token.id}` as any);
           return updated;
         });
 
-        setScore((prev) => prev + landmark.points);
+        setCollectedTokens((prev) => prev + 1); // Increment collected tokens count
 
         Alert.alert(
-          "Landmark found!",
-          `You discovered ${landmark.name} and earned ${landmark.points} points!`
+          "Token collected!",
+          `You collected token ${tokenOrder}!${token.hint ? ` Hint: ${token.hint}` : ''}`
         );
+        
+        // Move to next token
+        if (tokenOrder === tokenNum) {
+          setTokenNum(prev => prev + 1);
+        }
       }
     });
-  }, [visitedLandmarks]);
+  }, [adventureLandmarks, adventureTokens, visitedLandmarks, tokenNum, hasVibratedForCurrentToken]);
 
   // Request user location & start watching
   useEffect(() => {
@@ -189,7 +267,7 @@ export default function GameMap() {
             longitudeDelta: prev?.longitudeDelta ?? 0.01,
           }));
 
-          checkLandmarkProximity(loc);
+          checkProximity(loc);
         }
       );
 
@@ -201,77 +279,77 @@ export default function GameMap() {
         locationSubscription.current.remove();
       }
     };
-  }, [checkLandmarkProximity]);
+  }, [checkProximity]);
 
   // 🔎 Search any location using OpenStreetMap Nominatim
-  const searchAnyLocation = async () => {
-    const q = searchQuery.trim();
-    if (!q) {
-      setGeoResults([]);
-      return;
-    }
+  // const searchAnyLocation = async () => {
+  //   const q = searchQuery.trim();
+  //   if (!q) {
+  //     setGeoResults([]);
+  //     return;
+  //   }
 
-    setIsSearching(true);
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        q
-      )}&format=json&limit=5`;
+  //   setIsSearching(true);
+  //   try {
+  //     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+  //       q
+  //     )}&format=json&limit=5`;
 
-      const response = await fetch(url, {
-        headers: {
-          // Nominatim asks for an identifying header; replace with your app/email in real use
-          "User-Agent": "CalvinLandmarkApp/1.0 (your-email@calvin.edu)",
-        },
-      });
+  //     const response = await fetch(url, {
+  //       headers: {
+  //         // Nominatim asks for an identifying header; replace with your app/email in real use
+  //         "User-Agent": "CalvinLandmarkApp/1.0 (your-email@calvin.edu)",
+  //       },
+  //     });
 
-      const data = await response.json();
-      const mapped: GeocodeResult[] = data.map((item: any) => ({
-        id: item.place_id.toString(),
-        name: item.display_name,
-        lat: parseFloat(item.lat),
-        lon: parseFloat(item.lon),
-      }));
+  //     const data = await response.json();
+  //     const mapped: GeocodeResult[] = data.map((item: any) => ({
+  //       id: item.place_id.toString(),
+  //       name: item.display_name,
+  //       lat: parseFloat(item.lat),
+  //       lon: parseFloat(item.lon),
+  //     }));
 
-      setGeoResults(mapped);
+  //     setGeoResults(mapped);
 
-      if (mapped.length === 0) {
-        Alert.alert(
-          "No results",
-          "Could not find any locations for that search."
-        );
-      }
-    } catch (err) {
-      console.error(err);
-      Alert.alert(
-        "Search error",
-        "Something went wrong while searching for that location."
-      );
-    } finally {
-      setIsSearching(false);
-    }
-  };
+  //     if (mapped.length === 0) {
+  //       Alert.alert(
+  //         "No results",
+  //         "Could not find any locations for that search."
+  //       );
+  //     }
+  //   } catch (err) {
+  //     console.error(err);
+  //     Alert.alert(
+  //       "Search error",
+  //       "Something went wrong while searching for that location."
+  //     );
+  //   } finally {
+  //     setIsSearching(false);
+  //   }
+  // };
 
-  const focusOnGeocodeResult = (place: GeocodeResult) => {
-    const region: Region = {
-      latitude: place.lat,
-      longitude: place.lon,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    };
+  // const focusOnGeocodeResult = (place: GeocodeResult) => {
+  //   const region: Region = {
+  //     latitude: place.lat,
+  //     longitude: place.lon,
+  //     latitudeDelta: 0.01,
+  //     longitudeDelta: 0.01,
+  //   };
 
-    setMapRegion(region); // 👈 update map center
-    mapRef.current?.animateToRegion(region, 800);
+  //   setMapRegion(region); // 👈 update map center
+  //   mapRef.current?.animateToRegion(region, 800);
 
-    setGeoResults([]);
-    setSearchQuery(place.name);
-  };
+  //   setGeoResults([]);
+  //   setSearchQuery(place.name);
+  // };
 
   const focusOnLandmark = (lm: Landmark) => {
     if (!lm.location) return;
 
     const region: Region = {
-      latitude: lm.location.latitude,
-      longitude: lm.location.longitude,
+      latitude: lm.location.x,
+      longitude: lm.location.y,
       latitudeDelta: 0.004,
       longitudeDelta: 0.004,
     };
@@ -280,21 +358,41 @@ export default function GameMap() {
     mapRef.current?.animateToRegion(region, 800);
   };
 
-  const handleSearchClear = () => {
-    setSearchQuery("");
-    setGeoResults([]);
+  const focusOnToken = (token: Token) => {
+    if (!token.location) return;
+
+    const region: Region = {
+      latitude: token.location.x,
+      longitude: token.location.y,
+      latitudeDelta: 0.004,
+      longitudeDelta: 0.004,
+    };
+
+    setMapRegion(region);
+    mapRef.current?.animateToRegion(region, 800);
   };
+
+  // const handleSearchClear = () => {
+  //   setSearchQuery("");
+  //   setGeoResults([]);
+  // };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Landmark Hunt</Text>
-        <Text style={styles.score}>Score: {score}</Text>
+        {/* <Text style={styles.title}>
+          {loading.adventures || loading.landmarks || loading.tokens
+            ? "Loading..."
+            : currentAdventure
+            ? currentAdventure.name
+            : "Adventure"}
+        </Text> */}
+        <Text style={styles.score}>Tokens Collected: {collectedTokens} / {adventureTokens.length}</Text>
       </View>
 
       {/* Search bar for ANY location */}
-      <View style={styles.searchContainer}>
+      {/* <View style={styles.searchContainer}>
         <View style={styles.searchRow}>
           <TextInput
             value={searchQuery}
@@ -315,10 +413,10 @@ export default function GameMap() {
               <Text style={styles.searchButtonText}>Search</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Geocoding search results */}
-        {geoResults.length > 0 && (
+        {/* {geoResults.length > 0 && (
           <View style={styles.searchResults}>
             <FlatList
               keyboardShouldPersistTaps="handled"
@@ -340,7 +438,7 @@ export default function GameMap() {
             />
           </View>
         )}
-      </View>
+      </View> */}
 
       {errorMsg && (
         <View style={styles.message}>
@@ -357,36 +455,94 @@ export default function GameMap() {
           onRegionChangeComplete={setMapRegion} // 👈 updates when you move the map
           showsUserLocation
         >
-          {LANDMARKS.map((lm) => {
+          {/* Landmarks */}
+          {adventureLandmarks.map((lm) => {
             if (!lm.location) return null;
-            const visited = visitedLandmarks.has(lm.id);
+            const proximityRadius = 50; // meters
 
             return (
-              <View key={lm.id}>
+              <View key={`landmark_${lm.id}`}>
                 <Marker
                   coordinate={{
-                    latitude: lm.location.latitude,
-                    longitude: lm.location.longitude,
+                    latitude: lm.location.x,
+                    longitude: lm.location.y,
                   }}
                   title={lm.name}
-                  description={
-                    (visited ? "(Visited) " : "") + (lm.description ?? "")
-                  }
-                  pinColor={visited ? "green" : "red"}
+                  pinColor="Red"
                 />
-                <Circle
+                {/* <Circle
                   center={{
-                    latitude: lm.location.latitude,
-                    longitude: lm.location.longitude,
+                    latitude: lm.location.x,
+                    longitude: lm.location.y,
                   }}
-                  radius={lm.radius}
+                  radius={proximityRadius}
                   strokeWidth={1}
                   strokeColor="rgba(0, 150, 255, 0.8)"
                   fillColor="rgba(0, 150, 255, 0.15)"
-                />
+                /> */}
               </View>
             );
           })}
+          
+          {/* Tokens - Show collected tokens or current token if in proximity */}
+          {adventureTokens
+            .filter(token => {
+              if (!token.location || !location) return false;
+              
+              const tokenOrder = token.tokenorder || 1;
+              
+              // Show if token has been collected (tokenNum > tokenorder)
+              if (tokenNum > tokenOrder) return true;
+              
+              // Show current token if user is within proximity
+              if (tokenOrder === tokenNum) {
+                const proximityRadius = 10; // meters
+                const distance = getDistanceMeters(
+                  location.coords.latitude,
+                  location.coords.longitude,
+                  token.location.x,
+                  token.location.y
+                );
+                return distance <= proximityRadius;
+              }
+              
+              return false;
+            })
+            .map((token) => {
+              if (!token.location) return null;
+              const visited = visitedLandmarks.has(`token_${token.id}` as any);
+              const tokenOrder = token.tokenorder || 1;
+              const isCollected = tokenNum > tokenOrder;
+              const proximityRadius = 10; // meters
+
+              return (
+                <View key={`token_${token.id}`}>
+                  <Marker
+                    coordinate={{
+                      latitude: token.location.x,
+                      longitude: token.location.y,
+                    }}
+                    title={`Token ${tokenOrder}`}
+                    description={
+                      isCollected
+                        ? "(Collected) Token found!" 
+                        : token.hint || "Collect this token!"
+                    }
+                    pinColor={isCollected ? "green" : "blue"}
+                  />
+                  {/* <Circle
+                    center={{
+                      latitude: token.location.x,
+                      longitude: token.location.y,
+                    }}
+                    radius={proximityRadius}
+                    strokeWidth={1}
+                    strokeColor="rgba(0, 0, 255, 0.8)"
+                    fillColor="rgba(0, 0, 255, 0.15)"
+                  /> */}
+                </View>
+              );
+            })}
         </MapView>
       ) : (
         <View style={styles.message}>
@@ -396,6 +552,45 @@ export default function GameMap() {
         </View>
       )}
 
+      {/* 🧷 Floating compressible hint tab */}
+      <View style={styles.hintPanel}>
+        <TouchableOpacity
+          style={styles.landmarkPanelHeader}
+          onPress={() => setHintExpanded((prev) => !prev)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.landmarkPanelTitle}>
+            Current Token Hint
+          </Text>
+          <Text style={styles.landmarkPanelToggle}>
+            {hintExpanded ? "▾" : "▴"}
+          </Text>
+        </TouchableOpacity>
+
+        {hintExpanded && (
+          <View style={styles.landmarkListWrapper}>
+            <View style={styles.hintContent}>
+              {(() => {
+                const currentToken = adventureTokens.find(token => (token.tokenorder || 1) === tokenNum);
+                if (currentToken && currentToken.hint) {
+                  return (
+                    <Text style={styles.hintText}>
+                      {currentToken.hint}
+                    </Text>
+                  );
+                } else {
+                  return (
+                    <Text style={styles.noHintText}>
+                      No hint available for current token.
+                    </Text>
+                  );
+                }
+              })()} 
+            </View>
+          </View>
+        )}
+      </View>
+
       {/* 🧷 Floating compressible landmark tab */}
       <View style={styles.landmarkPanel}>
         <TouchableOpacity
@@ -404,7 +599,7 @@ export default function GameMap() {
           activeOpacity={0.8}
         >
           <Text style={styles.landmarkPanelTitle}>
-            Landmarks ({LANDMARKS.length})
+            Landmarks
           </Text>
           <Text style={styles.landmarkPanelToggle}>
             {landmarksExpanded ? "▾" : "▴"}
@@ -413,35 +608,35 @@ export default function GameMap() {
 
         {landmarksExpanded && (
           <View style={styles.landmarkListWrapper}>
-            <FlatList
-              data={LANDMARKS}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => {
-                const visited = visitedLandmarks.has(item.id);
-                return (
-                  <TouchableOpacity
-                    style={styles.landmarkItem}
-                    onPress={() => focusOnLandmark(item)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.landmarkName,
-                        visited && styles.landmarkVisited,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.name}
-                    </Text>
-                    {item.description ? (
-                      <Text style={styles.landmarkDesc} numberOfLines={1}>
-                        {item.description}
-                      </Text>
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              }}
-            />
+            {/* Landmarks Section */}
+            {adventureLandmarks.length > 0 && (
+              <>
+                <FlatList
+                  data={adventureLandmarks}
+                  keyExtractor={(item) => `landmark_${item.id}`}
+                  renderItem={({ item }) => {
+                    const visited = visitedLandmarks.has(item.id);
+                    return (
+                      <TouchableOpacity
+                        style={styles.landmarkItem}
+                        onPress={() => focusOnLandmark(item)}
+                        activeOpacity={0.8}
+                      >
+                        <Text
+                          style={[
+                            styles.landmarkName,
+                            visited && styles.landmarkVisited,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              </>
+            )}
           </View>
         )}
       </View>
@@ -455,7 +650,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#111827",
   },
   header: {
-    paddingTop: 50,
+    paddingTop: 10,
     paddingBottom: 10,
     paddingHorizontal: 16,
     backgroundColor: "#1f2937",
@@ -550,7 +745,20 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 20,
+    top: 60, // Position below header
+    marginHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(17,24,39,0.95)",
+    overflow: "hidden",
+    zIndex: 30,
+  },
+  
+  // Floating hint panel  
+  hintPanel: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 20, // Position at bottom of screen
     marginHorizontal: 16,
     borderRadius: 12,
     backgroundColor: "rgba(17,24,39,0.95)",
@@ -597,5 +805,28 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
     fontSize: 11,
     marginTop: 2,
+  },
+  sectionHeader: {
+    color: "#facc15",
+    fontSize: 12,
+    fontWeight: "700",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#1f2937",
+  },
+  hintContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  hintText: {
+    color: "white",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  noHintText: {
+    color: "#9ca3af",
+    fontSize: 14,
+    fontStyle: "italic",
+    lineHeight: 20,
   },
 });
