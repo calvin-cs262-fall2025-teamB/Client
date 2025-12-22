@@ -83,6 +83,9 @@ export default function GameMap() {
 
   // Floating landmark panel
   const [landmarksExpanded, setLandmarksExpanded] = useState(false);
+  
+  // Floating hint panel
+  const [hintExpanded, setHintExpanded] = useState(false);
 
   // ✅ map center/region (this is what updates when you move the map)
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
@@ -549,6 +552,45 @@ export default function GameMap() {
         </View>
       )}
 
+      {/* 🧷 Floating compressible hint tab */}
+      <View style={styles.hintPanel}>
+        <TouchableOpacity
+          style={styles.landmarkPanelHeader}
+          onPress={() => setHintExpanded((prev) => !prev)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.landmarkPanelTitle}>
+            Current Token Hint
+          </Text>
+          <Text style={styles.landmarkPanelToggle}>
+            {hintExpanded ? "▾" : "▴"}
+          </Text>
+        </TouchableOpacity>
+
+        {hintExpanded && (
+          <View style={styles.landmarkListWrapper}>
+            <View style={styles.hintContent}>
+              {(() => {
+                const currentToken = adventureTokens.find(token => (token.tokenorder || 1) === tokenNum);
+                if (currentToken && currentToken.hint) {
+                  return (
+                    <Text style={styles.hintText}>
+                      {currentToken.hint}
+                    </Text>
+                  );
+                } else {
+                  return (
+                    <Text style={styles.noHintText}>
+                      No hint available for current token.
+                    </Text>
+                  );
+                }
+              })()} 
+            </View>
+          </View>
+        )}
+      </View>
+
       {/* 🧷 Floating compressible landmark tab */}
       <View style={styles.landmarkPanel}>
         <TouchableOpacity
@@ -703,7 +745,20 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 20,
+    top: 60, // Position below header
+    marginHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(17,24,39,0.95)",
+    overflow: "hidden",
+    zIndex: 30,
+  },
+  
+  // Floating hint panel  
+  hintPanel: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 20, // Position at bottom of screen
     marginHorizontal: 16,
     borderRadius: 12,
     backgroundColor: "rgba(17,24,39,0.95)",
@@ -758,5 +813,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: "#1f2937",
+  },
+  hintContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  hintText: {
+    color: "white",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  noHintText: {
+    color: "#9ca3af",
+    fontSize: 14,
+    fontStyle: "italic",
+    lineHeight: 20,
   },
 });
