@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import MapView, { Marker, Region } from "react-native-maps";
+import MapView, { Circle, Marker, Region } from "react-native-maps";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { useDatabase } from "../../contexts/DatabaseContext";
@@ -460,6 +460,43 @@ export default function GameMap() {
               </View>
             );
           })}
+          
+          {/* Current Token */}
+          {adventureTokens
+            .filter(token => token.tokenorder === tokenNum)
+            .map((token) => {
+              if (!token.location) return null;
+              const visited = visitedLandmarks.has(`token_${token.id}` as any);
+              const proximityRadius = 10; // meters
+
+              return (
+                <View key={`token_${token.id}`}>
+                  <Marker
+                    coordinate={{
+                      latitude: token.location.x,
+                      longitude: token.location.y,
+                    }}
+                    title={`Token ${token.tokenorder || token.id}`}
+                    description={
+                      visited 
+                        ? "(Collected) Token found!" 
+                        : token.hint || "Collect this token!"
+                    }
+                    pinColor={visited ? "green" : "blue"}
+                  />
+                  {/* <Circle
+                    center={{
+                      latitude: token.location.x,
+                      longitude: token.location.y,
+                    }}
+                    radius={proximityRadius}
+                    strokeWidth={1}
+                    strokeColor="rgba(0, 0, 255, 0.8)"
+                    fillColor="rgba(0, 0, 255, 0.15)"
+                  /> */}
+                </View>
+              );
+            })}
         </MapView>
       ) : (
         <View style={styles.message}>
