@@ -1,6 +1,14 @@
 import {
-  getAdventuresByCreator,
-  mockData,
+  readAdventurers,
+  readAdventures,
+  readAdventuresByAdventurer,
+  readAdventuresByRegion,
+  readCompletedAdventuresByAdventurer,
+  readLandmarks,
+  readLandmarksInRegion,
+  readRegions,
+  readTokens,
+  readTokensInAdventure
 } from "@/data/mockData";
 import {
   Adventure,
@@ -117,6 +125,7 @@ interface DatabaseContextValue extends DatabaseState {
     regionid?: number | null,
     adventurerid?: number | null
   ) => Promise<Adventure[] | undefined>;
+  fetchTokens: (adventureid?: number | null) => Promise<Token[] | undefined>;
   fetchCompletedAdventures: (adventurerid: number) => Promise<CompletedAdventure[] | undefined>;
 
   // Create/Update functions
@@ -478,12 +487,14 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
       }
 
       // Fallback to mock data if fetch fails
-      dispatch({ type: "SET_ADVENTURERS", data: mockData.adventurers });
+      const fallbackData = readAdventurers();
+      dispatch({ type: "SET_ADVENTURERS", data: fallbackData });
       // Clear any existing errors since fallback was successful
       dispatch({
         type: "CLEAR_ERROR",
         entity: "adventurers",
       });
+      return fallbackData;
     }
   }, [apiCall, API_BASE_URL]);
 
@@ -502,13 +513,14 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         console.log("Backend unavailable - using mock regions data");
       }
       // Fallback to mock data if fetch fails
-      dispatch({ type: "SET_REGIONS", data: mockData.regions });
+      const fallbackData = readRegions();
+      dispatch({ type: "SET_REGIONS", data: fallbackData });
       // Clear any existing errors since fallback was successful
       dispatch({
         type: "CLEAR_ERROR",
         entity: "regions",
       });
-      return mockData.regions;
+      return fallbackData;
     }
   }, [apiCall]);
 
@@ -532,8 +544,8 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         }
         // Fallback to mock data if fetch fails
         const fallbackData = regionid
-          ? getLandmarksByRegion(regionid)
-          : mockData.landmarks;
+          ? readLandmarksInRegion(regionid)
+          : readLandmarks();
         dispatch({ type: "SET_LANDMARKS", data: fallbackData });
         // Clear any existing errors since fallback was successful
         dispatch({
@@ -572,11 +584,13 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
           console.log("Backend unavailable - using mock adventures data");
         }
         // Fallback to mock data if fetch fails
-        let fallbackData = mockData.adventures;
+        let fallbackData: Adventure[];
         if (regionid) {
-          fallbackData = getAdventuresByRegion(regionid);
+          fallbackData = readAdventuresByRegion(regionid);
         } else if (adventurerid) {
-          fallbackData = getAdventuresByCreator(adventurerid);
+          fallbackData = readAdventuresByAdventurer(adventurerid);
+        } else {
+          fallbackData = readAdventures();
         }
         dispatch({ type: "SET_ADVENTURES", data: fallbackData });
         // Clear any existing errors since fallback was successful
@@ -639,9 +653,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
           console.log("Backend unavailable - using mock completed adventures data");
         }
         // Fallback to mock data if fetch fails
-        const fallbackData = adventurerid
-          ? getCompletedAdventuresByUser(adventurerid)
-          : mockData.completedAdventures;
+        const fallbackData = readCompletedAdventuresByAdventurer(adventurerid);
         dispatch({
           type: "SET_COMPLETED_ADVENTURES",
           data: fallbackData,
@@ -650,6 +662,40 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         dispatch({
           type: "CLEAR_ERROR",
           entity: "completedAdventures",
+        });
+        return fallbackData;
+      }
+    },
+    [apiCall]
+  );
+
+  const fetchTokens = useCallback(
+    async (adventureid: number | null = null): Promise<Token[] | undefined> => {
+      dispatch({
+        type: "SET_LOADING",
+        entity: "tokens",
+        isLoading: true,
+      });
+      try {
+        const endpoint = adventureid
+          ? `/tokens?adventureid=${adventureid}`
+          : "/tokens";
+        const data = await apiCall<Token[]>(endpoint);
+        dispatch({ type: "SET_TOKENS", data });
+        return data;
+      } catch (error) {
+        if (__DEV__) {
+          console.log("Backend unavailable - using mock tokens data");
+        }
+        // Fallback to mock data if fetch fails
+        const fallbackData = adventureid
+          ? readTokensInAdventure(adventureid)
+          : readTokens();
+        dispatch({ type: "SET_TOKENS", data: fallbackData });
+        // Clear any existing errors since fallback was successful
+        dispatch({
+          type: "CLEAR_ERROR",
+          entity: "tokens",
         });
         return fallbackData;
       }
@@ -989,6 +1035,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
     fetchRegions,
     fetchLandmarks,
     fetchAdventures,
+    fetchTokens,
     fetchCompletedAdventures,
 
     // Create/Update functions

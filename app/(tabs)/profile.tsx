@@ -75,6 +75,10 @@ export default function Profile() {
     if (completedAdventures && adventures && user?.id) {
       const userCompletedAdventures: CompletedAdventure[] = completedAdventures;
 
+      if(__DEV__) {
+        console.log(userCompletedAdventures);
+      }
+
       // Calculate total tokens from completed adventures
       const totalTokens = userCompletedAdventures.reduce(
         (sum: number, completed: CompletedAdventure) => {

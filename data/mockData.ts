@@ -1108,6 +1108,161 @@ export function getCompleteAdventure(adventureId: number) {
 }
 
 // ============================================================================
+// Mock REST API Functions (matching dataService.ts GET endpoints)
+// ============================================================================
+
+// ADVENTURER FUNCTIONS
+/**
+ * Mock readAdventurers - Returns all adventurers ordered by ID
+ */
+export function readAdventurers(): Adventurer[] {
+  return mockAdventurers.slice().sort((a, b) => a.id - b.id);
+}
+
+/**
+ * Mock readAdventurer - Returns specific adventurer by ID
+ */
+export function readAdventurer(id: number): Adventurer | null {
+  return mockAdventurers.find((adventurer) => adventurer.id === id) || null;
+}
+
+// REGION FUNCTIONS
+/**
+ * Mock readRegions - Returns all regions ordered by ID
+ */
+export function readRegions(): Region[] {
+  return mockRegions.slice().sort((a, b) => a.id - b.id);
+}
+
+/**
+ * Mock readRegion - Returns specific region by ID
+ */
+export function readRegion(id: number): Region | null {
+  return mockRegions.find((region) => region.id === id) || null;
+}
+
+// LANDMARK FUNCTIONS
+/**
+ * Mock readLandmarks - Returns all landmarks ordered by ID
+ */
+export function readLandmarks(): Landmark[] {
+  return mockLandmarks.slice().sort((a, b) => a.id - b.id);
+}
+
+/**
+ * Mock readLandmark - Returns specific landmark by ID
+ */
+export function readLandmark(id: number): Landmark | null {
+  return mockLandmarks.find((landmark) => landmark.id === id) || null;
+}
+
+/**
+ * Mock readLandmarksInRegion - Returns landmarks in specific region ordered by ID
+ */
+export function readLandmarksInRegion(regionId: number): Landmark[] {
+  return mockLandmarks
+    .filter((landmark) => landmark.regionid === regionId)
+    .sort((a, b) => a.id - b.id);
+}
+
+// ADVENTURE FUNCTIONS
+/**
+ * Mock readAdventures - Returns all adventures ordered by ID
+ */
+export function readAdventures(): Adventure[] {
+  return mockAdventures.slice().sort((a, b) => a.id - b.id);
+}
+
+/**
+ * Mock readAdventure - Returns specific adventure by ID
+ */
+export function readAdventure(id: number): Adventure | null {
+  return mockAdventures.find((adventure) => adventure.id === id) || null;
+}
+
+/**
+ * Mock readAdventuresByRegion - Returns adventures in specific region ordered by ID
+ */
+export function readAdventuresByRegion(regionId: number): Adventure[] {
+  return mockAdventures
+    .filter((adventure) => adventure.regionid === regionId)
+    .sort((a, b) => a.id - b.id);
+}
+
+/**
+ * Mock readAdventuresByAdventurer - Returns adventures by specific adventurer ordered by ID
+ */
+export function readAdventuresByAdventurer(adventurerId: number): Adventure[] {
+  return mockAdventures
+    .filter((adventure) => adventure.adventurerid === adventurerId)
+    .sort((a, b) => a.id - b.id);
+}
+
+// TOKEN FUNCTIONS
+/**
+ * Mock readTokens - Returns all tokens ordered by ID
+ */
+export function readTokens(): Token[] {
+  return mockTokens.slice().sort((a, b) => a.id - b.id);
+}
+
+/**
+ * Mock readToken - Returns specific token by ID
+ */
+export function readToken(id: number): Token | null {
+  return mockTokens.find((token) => token.id === id) || null;
+}
+
+/**
+ * Mock readTokensInAdventure - Returns tokens in specific adventure ordered by token order, then ID
+ */
+export function readTokensInAdventure(adventureId: number): Token[] {
+  return mockTokens
+    .filter((token) => token.adventureid === adventureId)
+    .sort((a, b) => {
+      // Sort by tokenorder first, then by id if tokenorder is same or null
+      const orderA = a.tokenorder ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.tokenorder ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      return a.id - b.id;
+    });
+}
+
+// COMPLETED ADVENTURE FUNCTIONS
+/**
+ * Mock readCompletedAdventures - Returns all completed adventures ordered by completion date (newest first)
+ */
+export function readCompletedAdventures(): CompletedAdventure[] {
+  return mockCompletedAdventures.slice().sort((a, b) => {
+    const dateA = new Date(a.completiondate || 0);
+    const dateB = new Date(b.completiondate || 0);
+    return dateB.getTime() - dateA.getTime(); // Newest first
+  });
+}
+
+/**
+ * Mock readCompletedAdventure - Returns specific completed adventure by ID
+ */
+export function readCompletedAdventure(id: number): CompletedAdventure | null {
+  return mockCompletedAdventures.find((completed) => completed.id === id) || null;
+}
+
+/**
+ * Mock readCompletedAdventuresByAdventurer - Returns completed adventures by specific adventurer ordered by completion date (newest first)
+ */
+export function readCompletedAdventuresByAdventurer(adventurerId: number): CompletedAdventure[] {
+  return mockCompletedAdventures
+    .filter((completed) => completed.adventurerid === adventurerId)
+    .sort((a, b) => {
+      const dateA = new Date(a.completiondate || 0);
+      const dateB = new Date(b.completiondate || 0);
+      return dateB.getTime() - dateA.getTime(); // Newest first
+    });
+}
+
+// ============================================================================
 // Export all mock data
 // ============================================================================
 
