@@ -7,8 +7,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  Vibration
+  Vibration,
+  View
 } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
 
@@ -68,7 +68,7 @@ export default function GameMap() {
   const [adventureTokens, setAdventureTokens] = useState<Token[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  const [score, setScore] = useState<number>(0);
+  const [collectedTokens, setCollectedTokens] = useState<number>(0);
   const [visitedLandmarks, setVisitedLandmarks] = useState<Set<number>>(
     () => new Set()
   );
@@ -209,11 +209,11 @@ export default function GameMap() {
           return updated;
         });
 
-        setScore((prev) => prev + 25); // 25 points for tokens
+        setCollectedTokens((prev) => prev + 1); // Increment collected tokens count
 
         Alert.alert(
           "Token collected!",
-          `You collected a token and earned 25 points!${token.hint ? ` Hint: ${token.hint}` : ''}`
+          `You collected token ${tokenOrder}!${token.hint ? ` Hint: ${token.hint}` : ''}`
         );
         
         // Move to next token
@@ -378,14 +378,14 @@ export default function GameMap() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>
+        {/* <Text style={styles.title}>
           {loading.adventures || loading.landmarks || loading.tokens
             ? "Loading..."
             : currentAdventure
             ? currentAdventure.name
             : "Adventure"}
-        </Text>
-        <Text style={styles.score}>Score: {score}</Text>
+        </Text> */}
+        <Text style={styles.score}>Tokens Collected: {collectedTokens} / {adventureTokens.length}</Text>
       </View>
 
       {/* Search bar for ANY location */}
