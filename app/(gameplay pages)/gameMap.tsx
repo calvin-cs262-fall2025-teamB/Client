@@ -9,18 +9,18 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import MapView, { Circle, Marker, Region } from "react-native-maps";
+import MapView, { Marker, Region } from "react-native-maps";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { useDatabase } from "../../contexts/DatabaseContext";
 import { Adventure, Landmark, Token } from "../../types/database";
 
-type GeocodeResult = {
-  id: string;
-  name: string;
-  lat: number;
-  lon: number;
-};
+// type GeocodeResult = {
+//   id: string;
+//   name: string;
+//   lat: number;
+//   lon: number;
+// };
 
 // Haversine distance (in meters) between two lat/lng coordinates
 function getDistanceMeters(
@@ -73,9 +73,9 @@ export default function GameMap() {
   );
 
   // Search any location state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [geoResults, setGeoResults] = useState<GeocodeResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  // const [searchQuery, setSearchQuery] = useState("");
+  // const [geoResults, setGeoResults] = useState<GeocodeResult[]>([]);
+  // const [isSearching, setIsSearching] = useState(false);
 
   // Floating landmark panel
   const [landmarksExpanded, setLandmarksExpanded] = useState(false);
@@ -444,10 +444,9 @@ export default function GameMap() {
                     longitude: lm.location.y,
                   }}
                   title={lm.name}
-                  description={visited ? "(Visited) Landmark discovered!" : "Landmark"}
-                  pinColor={visited ? "green" : "blue"}
+                  pinColor="Red"
                 />
-                <Circle
+                {/* <Circle
                   center={{
                     latitude: lm.location.x,
                     longitude: lm.location.y,
@@ -456,42 +455,7 @@ export default function GameMap() {
                   strokeWidth={1}
                   strokeColor="rgba(0, 150, 255, 0.8)"
                   fillColor="rgba(0, 150, 255, 0.15)"
-                />
-              </View>
-            );
-          })}
-          
-          {/* Tokens */}
-          {adventureTokens.map((token) => {
-            if (!token.location) return null;
-            const visited = visitedLandmarks.has(`token_${token.id}` as any);
-            const proximityRadius = 50; // meters
-
-            return (
-              <View key={`token_${token.id}`}>
-                <Marker
-                  coordinate={{
-                    latitude: token.location.x,
-                    longitude: token.location.y,
-                  }}
-                  title={`Token ${token.tokenorder || token.id}`}
-                  description={
-                    visited 
-                      ? "(Collected) Token found!" 
-                      : token.hint || "Collect this token!"
-                  }
-                  pinColor={visited ? "green" : "red"}
-                />
-                <Circle
-                  center={{
-                    latitude: token.location.x,
-                    longitude: token.location.y,
-                  }}
-                  radius={proximityRadius}
-                  strokeWidth={1}
-                  strokeColor="rgba(255, 0, 0, 0.8)"
-                  fillColor="rgba(255, 0, 0, 0.15)"
-                />
+                /> */}
               </View>
             );
           })}
