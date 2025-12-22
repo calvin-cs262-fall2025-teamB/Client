@@ -2,14 +2,12 @@ import * as Location from "expo-location";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import MapView, { Circle, Marker, Region } from "react-native-maps";
 
@@ -23,8 +21,6 @@ type GeocodeResult = {
   lat: number;
   lon: number;
 };
-
-// Database-driven landmarks and tokens
 
 // Haversine distance (in meters) between two lat/lng coordinates
 function getDistanceMeters(
@@ -69,6 +65,7 @@ export default function GameMap() {
   const [currentAdventure, setCurrentAdventure] = useState<Adventure | null>(null);
   const [adventureLandmarks, setAdventureLandmarks] = useState<Landmark[]>([]);
   const [adventureTokens, setAdventureTokens] = useState<Token[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   const [score, setScore] = useState<number>(0);
   const [visitedLandmarks, setVisitedLandmarks] = useState<Set<number>>(
@@ -93,36 +90,55 @@ export default function GameMap() {
 
   // Load adventure data when component mounts or adventureId changes
   useEffect(() => {
-    if (!adventureId) return;
+    if (!adventureId || dataLoaded) return;
 
     const loadAdventureData = async () => {
       try {
-        // Fetch adventure details
-        await fetchAdventures();
+        setDataLoaded(true);
         
-        // Find the current adventure
-        const adventure = adventures.find(a => a.id === parseInt(adventureId));
+        // Fetch all required data
+        const [adventuresData, allTokensData, allLandmarksData] = await Promise.all([
+          fetchAdventures(),
+          fetchTokens(), // Fetch all tokens first
+          fetchLandmarks() // Fetch all landmarks first
+        ]);
+        
+        // Find the current adventure from the fetched data or existing state
+        const adventure = adventures.find(a => a.id === parseInt(adventureId)) || 
+                         adventuresData?.find(a => a.id === parseInt(adventureId));
+        
         if (adventure) {
           setCurrentAdventure(adventure);
           
-          // Fetch tokens for this adventure
-          await fetchTokens(adventure.id);
-          const adventureTokensList = getTokensByAdventure(adventure.id);
+          // Filter tokens for this specific adventure from the returned data
+          const adventureTokensList = allTokensData ? 
+            allTokensData.filter(token => token.adventureid === adventure.id) :
+            getTokensByAdventure(adventure.id);
           setAdventureTokens(adventureTokensList);
           
-          // Fetch landmarks for the adventure's region
-          await fetchLandmarks(adventure.regionid);
-          const regionLandmarks = getLandmarksByRegion(adventure.regionid);
+          // Filter landmarks for the adventure's region from the returned data
+          const regionLandmarks = allLandmarksData ?
+            allLandmarksData.filter(landmark => landmark.regionid === adventure.regionid) :
+            getLandmarksByRegion(adventure.regionid);
           setAdventureLandmarks(regionLandmarks);
         }
       } catch (error) {
         console.error('Error loading adventure data:', error);
         Alert.alert('Error', 'Failed to load adventure data');
+        setDataLoaded(false); // Allow retry if there was an error
       }
     };
 
     loadAdventureData();
-  }, [adventureId, adventures, fetchAdventures, fetchTokens, fetchLandmarks, getTokensByAdventure, getLandmarksByRegion]);
+  }, [adventureId]); // Only depend on adventureId
+
+  // Reset data loaded flag when adventure ID changes
+  useEffect(() => {
+    setDataLoaded(false);
+    setCurrentAdventure(null);
+    setAdventureLandmarks([]);
+    setAdventureTokens([]);
+  }, [adventureId]);
 
   // Define proximity check function for both landmarks and tokens
   const checkProximity = useCallback((loc: Location.LocationObject) => {
@@ -241,67 +257,67 @@ export default function GameMap() {
   }, [checkProximity]);
 
   // 🔎 Search any location using OpenStreetMap Nominatim
-  const searchAnyLocation = async () => {
-    const q = searchQuery.trim();
-    if (!q) {
-      setGeoResults([]);
-      return;
-    }
+  // const searchAnyLocation = async () => {
+  //   const q = searchQuery.trim();
+  //   if (!q) {
+  //     setGeoResults([]);
+  //     return;
+  //   }
 
-    setIsSearching(true);
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        q
-      )}&format=json&limit=5`;
+  //   setIsSearching(true);
+  //   try {
+  //     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+  //       q
+  //     )}&format=json&limit=5`;
 
-      const response = await fetch(url, {
-        headers: {
-          // Nominatim asks for an identifying header; replace with your app/email in real use
-          "User-Agent": "CalvinLandmarkApp/1.0 (your-email@calvin.edu)",
-        },
-      });
+  //     const response = await fetch(url, {
+  //       headers: {
+  //         // Nominatim asks for an identifying header; replace with your app/email in real use
+  //         "User-Agent": "CalvinLandmarkApp/1.0 (your-email@calvin.edu)",
+  //       },
+  //     });
 
-      const data = await response.json();
-      const mapped: GeocodeResult[] = data.map((item: any) => ({
-        id: item.place_id.toString(),
-        name: item.display_name,
-        lat: parseFloat(item.lat),
-        lon: parseFloat(item.lon),
-      }));
+  //     const data = await response.json();
+  //     const mapped: GeocodeResult[] = data.map((item: any) => ({
+  //       id: item.place_id.toString(),
+  //       name: item.display_name,
+  //       lat: parseFloat(item.lat),
+  //       lon: parseFloat(item.lon),
+  //     }));
 
-      setGeoResults(mapped);
+  //     setGeoResults(mapped);
 
-      if (mapped.length === 0) {
-        Alert.alert(
-          "No results",
-          "Could not find any locations for that search."
-        );
-      }
-    } catch (err) {
-      console.error(err);
-      Alert.alert(
-        "Search error",
-        "Something went wrong while searching for that location."
-      );
-    } finally {
-      setIsSearching(false);
-    }
-  };
+  //     if (mapped.length === 0) {
+  //       Alert.alert(
+  //         "No results",
+  //         "Could not find any locations for that search."
+  //       );
+  //     }
+  //   } catch (err) {
+  //     console.error(err);
+  //     Alert.alert(
+  //       "Search error",
+  //       "Something went wrong while searching for that location."
+  //     );
+  //   } finally {
+  //     setIsSearching(false);
+  //   }
+  // };
 
-  const focusOnGeocodeResult = (place: GeocodeResult) => {
-    const region: Region = {
-      latitude: place.lat,
-      longitude: place.lon,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    };
+  // const focusOnGeocodeResult = (place: GeocodeResult) => {
+  //   const region: Region = {
+  //     latitude: place.lat,
+  //     longitude: place.lon,
+  //     latitudeDelta: 0.01,
+  //     longitudeDelta: 0.01,
+  //   };
 
-    setMapRegion(region); // 👈 update map center
-    mapRef.current?.animateToRegion(region, 800);
+  //   setMapRegion(region); // 👈 update map center
+  //   mapRef.current?.animateToRegion(region, 800);
 
-    setGeoResults([]);
-    setSearchQuery(place.name);
-  };
+  //   setGeoResults([]);
+  //   setSearchQuery(place.name);
+  // };
 
   const focusOnLandmark = (lm: Landmark) => {
     if (!lm.location) return;
@@ -331,10 +347,10 @@ export default function GameMap() {
     mapRef.current?.animateToRegion(region, 800);
   };
 
-  const handleSearchClear = () => {
-    setSearchQuery("");
-    setGeoResults([]);
-  };
+  // const handleSearchClear = () => {
+  //   setSearchQuery("");
+  //   setGeoResults([]);
+  // };
 
   return (
     <View style={styles.container}>
@@ -351,7 +367,7 @@ export default function GameMap() {
       </View>
 
       {/* Search bar for ANY location */}
-      <View style={styles.searchContainer}>
+      {/* <View style={styles.searchContainer}>
         <View style={styles.searchRow}>
           <TextInput
             value={searchQuery}
@@ -372,10 +388,10 @@ export default function GameMap() {
               <Text style={styles.searchButtonText}>Search</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Geocoding search results */}
-        {geoResults.length > 0 && (
+        {/* {geoResults.length > 0 && (
           <View style={styles.searchResults}>
             <FlatList
               keyboardShouldPersistTaps="handled"
@@ -397,7 +413,7 @@ export default function GameMap() {
             />
           </View>
         )}
-      </View>
+      </View> */}
 
       {errorMsg && (
         <View style={styles.message}>
@@ -584,7 +600,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#111827",
   },
   header: {
-    paddingTop: 50,
+    paddingTop: 10,
     paddingBottom: 10,
     paddingHorizontal: 16,
     backgroundColor: "#1f2937",
