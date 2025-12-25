@@ -117,6 +117,16 @@ export default function Login() {
               </Text> */}
             </View>
           </View>
+          
+          {/* Debug Section */}
+          <View style={styles.debugSection}>
+            <TouchableOpacity
+              style={styles.debugButton}
+              onPress={() => router.push("/debug")}
+            >
+              <Text style={styles.debugButtonText}>Debug Console</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </>

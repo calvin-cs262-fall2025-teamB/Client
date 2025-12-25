@@ -1,4 +1,14 @@
 import themes from '@/assets/utils/themes';
+import { DatabaseSync } from '@/components/reusable/DatabaseSync';
+import { localDb } from '@/data/localDatabaseService';
+import {
+  mockAdventurers,
+  mockAdventures,
+  mockCompletedAdventures,
+  mockLandmarks,
+  mockRegions,
+  mockTokens
+} from '@/data/mockData';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -202,6 +212,44 @@ export default function DebugPage() {
     }
   };
 
+  const remakeLocalDatabase = async () => {
+    try {
+      addTestResult('Remake Local Database', true, null, 'Starting database recreation...');
+      
+      // Initialize local database if needed
+      await localDb.initialize();
+      
+      // Sync mock data to local database
+      await localDb.syncDataFromRemote({
+        adventurers: mockAdventurers,
+        regions: mockRegions,
+        landmarks: mockLandmarks,
+        adventures: mockAdventures,
+        tokens: mockTokens,
+        completedAdventures: mockCompletedAdventures
+      });
+      
+      addTestResult('Remake Local Database', true, {
+        adventurers: mockAdventurers.length,
+        regions: mockRegions.length,
+        landmarks: mockLandmarks.length,
+        adventures: mockAdventures.length,
+        tokens: mockTokens.length,
+        completedAdventures: mockCompletedAdventures.length
+      }, 'Local database recreated with mock data successfully');
+      
+      // Refresh data in the context
+      await Promise.all([
+        fetchRegions(),
+        fetchAdventures(),
+        fetchCompletedAdventures(user?.id || 1)
+      ]);
+      
+    } catch (error) {
+      addTestResult('Remake Local Database', false, null, error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
+
   const runAllTests = async () => {
     setIsRunningTests(true);
     clearResults();
@@ -246,6 +294,8 @@ export default function DebugPage() {
         </Text>
       </View>
 
+      {/* Database Sync Status */}
+      <DatabaseSync />
       {/* Database Status */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Database Status</Text>
@@ -354,6 +404,13 @@ export default function DebugPage() {
 
         <TouchableOpacity style={styles.clearButton} onPress={clearResults}>
           <Text style={styles.clearButtonText}>Clear Results</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>Database Management</Text>
+        <Text style={styles.warningText}>⚠️ This will replace all local SQLite data with mock data</Text>
+        
+        <TouchableOpacity style={[styles.testButton, styles.databaseButton]} onPress={remakeLocalDatabase}>
+          <Text style={styles.testButtonText}>🔄 Remake Local Database with Mock Data</Text>
         </TouchableOpacity>
       </View>
 
@@ -487,6 +544,9 @@ const styles = StyleSheet.create({
   },
   createButton: {
     backgroundColor: '#f39c12',
+  },
+  databaseButton: {
+    backgroundColor: '#9b59b6',
   },
   testButtonText: {
     color: 'white',
