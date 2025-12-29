@@ -605,14 +605,14 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         
         if (__DEV__) {
           console.log("Completed adventures response:", result.data);
-          console.log(
-            "Completed adventures type:",
-            typeof result.data,
-            Array.isArray(result.data)
-          );
+          // console.log(
+          //   "Completed adventures type:",
+          //   typeof result.data,
+          //   Array.isArray(result.data)
+          // );
           if (result.data && result.data.length > 0) {
-            console.log("Sample completed adventure:", result.data[0]);
-            console.log("Available fields:", Object.keys(result.data[0]));
+            // console.log("Sample completed adventure:", result.data[0]);
+            // console.log("Available fields:", Object.keys(result.data[0]));
           } else {
             console.log(
               "No completed adventures found for user:",

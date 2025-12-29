@@ -380,9 +380,6 @@ export default function DebugPage() {
 
         <Text style={styles.sectionTitle}>Create Tests (Use Carefully)</Text>
         <Text style={styles.warningText}>These tests will create real data in the database</Text>
-        <Text style={styles.infoText}>
-          📍 Location format: {`{x: 42.9634, y: -85.6681}`} → {`"(42.9634,-85.6681)"`}
-        </Text>
         
         <View style={styles.buttonRow}>
           <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateRegion}>

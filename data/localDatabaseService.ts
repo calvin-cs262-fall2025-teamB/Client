@@ -28,14 +28,30 @@ const DB_NAME = 'wayfind.db';
 
 class LocalDatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
+  private initPromise: Promise<void> | null = null;
+
+  private async ensureInitialized(): Promise<void> {
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    
+    if (!this.db) {
+      this.initPromise = this.initialize();
+      return this.initPromise;
+    }
+  }
 
   async initialize(): Promise<void> {
     try {
+      console.log('Initializing SQLite database...');
       this.db = await SQLite.openDatabaseAsync(DB_NAME);
+      console.log('Database opened, creating tables...');
       await this.createTables();
       console.log('Local database initialized successfully');
     } catch (error) {
       console.error('Failed to initialize local database:', error);
+      this.db = null;
+      this.initPromise = null;
       throw error;
     }
   }
@@ -43,83 +59,93 @@ class LocalDatabaseService {
   private async createTables(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const createTableQueries = [
-      // Drop tables in reverse order to handle foreign key constraints
-      `DROP TABLE IF EXISTS CompletedAdventure;`,
-      `DROP TABLE IF EXISTS Token;`,
-      `DROP TABLE IF EXISTS Adventure;`,
-      `DROP TABLE IF EXISTS Landmark;`,
-      `DROP TABLE IF EXISTS Region;`,
-      `DROP TABLE IF EXISTS Adventurer;`,
+    try {
+      // Enable foreign keys
+      await this.db.execAsync('PRAGMA foreign_keys = ON;');
 
-      // Create Adventurer table
-      `CREATE TABLE IF NOT EXISTS Adventurer (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL,
-        password TEXT NOT NULL,
-        profilePicture TEXT
-      );`,
+      const createTableQueries = [
+        // Drop tables in reverse order to handle foreign key constraints
+        `DROP TABLE IF EXISTS CompletedAdventure;`,
+        `DROP TABLE IF EXISTS Token;`,
+        `DROP TABLE IF EXISTS Adventure;`,
+        `DROP TABLE IF EXISTS Landmark;`,
+        `DROP TABLE IF EXISTS Region;`,
+        `DROP TABLE IF EXISTS Adventurer;`,
 
-      // Create Region table
-      `CREATE TABLE IF NOT EXISTS Region (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        adventurerID INTEGER,
-        name TEXT NOT NULL,
-        description TEXT,
-        locationX REAL NOT NULL,
-        locationY REAL NOT NULL,
-        radius INTEGER NOT NULL,
-        FOREIGN KEY (adventurerID) REFERENCES Adventurer(id)
-      );`,
+        // Create Adventurer table
+        `CREATE TABLE IF NOT EXISTS Adventurer (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL,
+          password TEXT NOT NULL,
+          profilePicture TEXT
+        );`,
 
-      // Create Landmark table
-      `CREATE TABLE IF NOT EXISTS Landmark (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        regionID INTEGER,
-        name TEXT NOT NULL,
-        locationX REAL,
-        locationY REAL,
-        FOREIGN KEY (regionID) REFERENCES Region(id)
-      );`,
+        // Create Region table
+        `CREATE TABLE IF NOT EXISTS Region (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          adventurerID INTEGER,
+          name TEXT NOT NULL,
+          description TEXT,
+          locationX REAL NOT NULL,
+          locationY REAL NOT NULL,
+          radius INTEGER NOT NULL,
+          FOREIGN KEY (adventurerID) REFERENCES Adventurer(id)
+        );`,
 
-      // Create Adventure table
-      `CREATE TABLE IF NOT EXISTS Adventure (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        adventurerid INTEGER,
-        regionid INTEGER,
-        name TEXT NOT NULL,
-        numTokens INTEGER,
-        locationX REAL,
-        locationY REAL,
-        FOREIGN KEY (adventurerid) REFERENCES Adventurer(id),
-        FOREIGN KEY (regionid) REFERENCES Region(id)
-      );`,
+        // Create Landmark table
+        `CREATE TABLE IF NOT EXISTS Landmark (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          regionID INTEGER,
+          name TEXT NOT NULL,
+          locationX REAL,
+          locationY REAL,
+          FOREIGN KEY (regionID) REFERENCES Region(id)
+        );`,
 
-      // Create Token table
-      `CREATE TABLE IF NOT EXISTS Token (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        adventureid INTEGER,
-        locationX REAL,
-        locationY REAL,
-        hint TEXT,
-        tokenOrder INTEGER,
-        FOREIGN KEY (adventureid) REFERENCES Adventure(id)
-      );`,
+        // Create Adventure table
+        `CREATE TABLE IF NOT EXISTS Adventure (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          adventurerid INTEGER,
+          regionid INTEGER,
+          name TEXT NOT NULL,
+          numTokens INTEGER,
+          locationX REAL,
+          locationY REAL,
+          FOREIGN KEY (adventurerid) REFERENCES Adventurer(id),
+          FOREIGN KEY (regionid) REFERENCES Region(id)
+        );`,
 
-      // Create CompletedAdventure table
-      `CREATE TABLE IF NOT EXISTS CompletedAdventure (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        adventurerid INTEGER,
-        adventureid INTEGER,
-        completionDate TEXT,
-        completionTime TEXT,
-        FOREIGN KEY (adventurerid) REFERENCES Adventurer(id),
-        FOREIGN KEY (adventureid) REFERENCES Adventure(id)
-      );`
-    ];
+        // Create Token table
+        `CREATE TABLE IF NOT EXISTS Token (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          adventureid INTEGER,
+          locationX REAL,
+          locationY REAL,
+          hint TEXT,
+          tokenOrder INTEGER,
+          FOREIGN KEY (adventureid) REFERENCES Adventure(id)
+        );`,
 
-    for (const query of createTableQueries) {
-      await this.db.execAsync(query);
+        // Create CompletedAdventure table
+        `CREATE TABLE IF NOT EXISTS CompletedAdventure (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          adventurerid INTEGER,
+          adventureid INTEGER,
+          completionDate TEXT,
+          completionTime TEXT,
+          FOREIGN KEY (adventurerid) REFERENCES Adventurer(id),
+          FOREIGN KEY (adventureid) REFERENCES Adventure(id)
+        );`
+      ];
+
+      for (const query of createTableQueries) {
+        await this.db.execAsync(query);
+      }
+      
+      console.log('All tables created successfully');
+    } catch (error) {
+      console.error('Error creating tables:', error);
+      throw error;
     }
   }
 
@@ -139,75 +165,93 @@ class LocalDatabaseService {
   // ============================================================================
 
   async getAdventurers(): Promise<Adventurer[]> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    const result = await this.db.getAllAsync(`
-      SELECT * FROM Adventurer ORDER BY id
-    `);
-    
-    return result.map((row: any) => ({
-      id: row.id,
-      username: row.username,
-      password: row.password,
-      profilepicture: row.profilePicture
-    }));
+    try {
+      const result = await this.db.getAllAsync(`
+        SELECT * FROM Adventurer ORDER BY id
+      `);
+      
+      return result.map((row: any) => ({
+        id: row.id,
+        username: row.username,
+        password: row.password,
+        profilepicture: row.profilePicture
+      }));
+    } catch (error) {
+      console.error('Error getting adventurers:', error);
+      throw error;
+    }
   }
 
   async createAdventurer(data: CreateAdventurer): Promise<Adventurer> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    const result = await this.db.runAsync(
-      `INSERT INTO Adventurer (username, password, profilePicture) VALUES (?, ?, ?)`,
-      [data.username, data.password, data.profilepicture || null]
-    );
-    
-    const newAdventurer: Adventurer = {
-      id: result.lastInsertRowId,
-      username: data.username,
-      password: data.password,
-      profilepicture: data.profilepicture
-    };
-    
-    return newAdventurer;
+    try {
+      const result = await this.db.runAsync(
+        `INSERT INTO Adventurer (username, password, profilePicture) VALUES (?, ?, ?)`,
+        [data.username, data.password, data.profilepicture || null]
+      );
+      
+      const newAdventurer: Adventurer = {
+        id: result.lastInsertRowId,
+        username: data.username,
+        password: data.password,
+        profilepicture: data.profilepicture
+      };
+      
+      return newAdventurer;
+    } catch (error) {
+      console.error('Error creating adventurer:', error);
+      throw error;
+    }
   }
 
   async updateAdventurer(id: number, data: Omit<UpdateAdventurer, 'id'>): Promise<Adventurer> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    const setParts = [];
-    const values = [];
-    
-    if (data.username !== undefined) {
-      setParts.push('username = ?');
-      values.push(data.username);
+    try {
+      const setParts = [];
+      const values = [];
+      
+      if (data.username !== undefined) {
+        setParts.push('username = ?');
+        values.push(data.username);
+      }
+      if (data.password !== undefined) {
+        setParts.push('password = ?');
+        values.push(data.password);
+      }
+      if (data.profilepicture !== undefined) {
+        setParts.push('profilePicture = ?');
+        values.push(data.profilepicture);
+      }
+      
+      values.push(id);
+      
+      await this.db.runAsync(
+        `UPDATE Adventurer SET ${setParts.join(', ')} WHERE id = ?`,
+        values
+      );
+      
+      const result = await this.db.getFirstAsync(
+        `SELECT * FROM Adventurer WHERE id = ?`,
+        [id]
+      ) as any;
+      
+      return {
+        id: result.id,
+        username: result.username,
+        password: result.password,
+        profilepicture: result.profilePicture
+      };
+    } catch (error) {
+      console.error('Error updating adventurer:', error);
+      throw error;
     }
-    if (data.password !== undefined) {
-      setParts.push('password = ?');
-      values.push(data.password);
-    }
-    if (data.profilepicture !== undefined) {
-      setParts.push('profilePicture = ?');
-      values.push(data.profilepicture);
-    }
-    
-    values.push(id);
-    
-    await this.db.runAsync(
-      `UPDATE Adventurer SET ${setParts.join(', ')} WHERE id = ?`,
-      values
-    );
-    
-    const result = await this.db.getFirstAsync(
-      `SELECT * FROM Adventurer WHERE id = ?`,
-      [id]
-    ) as any;
-    
-    return {
-      id: result.id,
-      username: result.username,
-      password: result.password,
-      profilepicture: result.profilePicture
-    };
   }
 
   // ============================================================================
@@ -215,43 +259,55 @@ class LocalDatabaseService {
   // ============================================================================
 
   async getRegions(): Promise<Region[]> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    const result = await this.db.getAllAsync(`
-      SELECT * FROM Region ORDER BY id
-    `);
-    
-    return result.map((row: any) => ({
-      id: row.id,
-      adventurerid: row.adventurerID,
-      name: row.name,
-      description: row.description,
-      location: this.xyToPoint(row.locationX, row.locationY)!,
-      radius: row.radius
-    }));
+    try {
+      const result = await this.db.getAllAsync(`
+        SELECT * FROM Region ORDER BY id
+      `);
+      
+      return result.map((row: any) => ({
+        id: row.id,
+        adventurerid: row.adventurerID,
+        name: row.name,
+        description: row.description,
+        location: this.xyToPoint(row.locationX, row.locationY)!,
+        radius: row.radius
+      }));
+    } catch (error) {
+      console.error('Error getting regions:', error);
+      throw error;
+    }
   }
 
   async createRegion(data: CreateRegion): Promise<Region> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    const { x, y } = this.pointToXY(data.location);
-    
-    const result = await this.db.runAsync(
-      `INSERT INTO Region (adventurerID, name, description, locationX, locationY, radius) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [data.adventurerid, data.name, data.description || null, x, y, data.radius]
-    );
-    
-    const newRegion: Region = {
-      id: result.lastInsertRowId,
-      adventurerid: data.adventurerid,
-      name: data.name,
-      description: data.description,
-      location: data.location,
-      radius: data.radius
-    };
-    
-    return newRegion;
+    try {
+      const { x, y } = this.pointToXY(data.location);
+      
+      const result = await this.db.runAsync(
+        `INSERT INTO Region (adventurerID, name, description, locationX, locationY, radius) 
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [data.adventurerid, data.name, data.description || null, x, y, data.radius]
+      );
+      
+      const newRegion: Region = {
+        id: result.lastInsertRowId,
+        adventurerid: data.adventurerid,
+        name: data.name,
+        description: data.description,
+        location: data.location,
+        radius: data.radius
+      };
+      
+      return newRegion;
+    } catch (error) {
+      console.error('Error creating region:', error);
+      throw error;
+    }
   }
 
   // ============================================================================
@@ -259,46 +315,58 @@ class LocalDatabaseService {
   // ============================================================================
 
   async getLandmarks(regionId?: number): Promise<Landmark[]> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    let query = `SELECT * FROM Landmark`;
-    let params: any[] = [];
-    
-    if (regionId) {
-      query += ` WHERE regionID = ?`;
-      params.push(regionId);
+    try {
+      let query = `SELECT * FROM Landmark`;
+      let params: any[] = [];
+      
+      if (regionId) {
+        query += ` WHERE regionID = ?`;
+        params.push(regionId);
+      }
+      
+      query += ` ORDER BY id`;
+      
+      const result = await this.db.getAllAsync(query, params);
+      
+      return result.map((row: any) => ({
+        id: row.id,
+        regionid: row.regionID,
+        name: row.name,
+        location: this.xyToPoint(row.locationX, row.locationY)
+      }));
+    } catch (error) {
+      console.error('Error getting landmarks:', error);
+      throw error;
     }
-    
-    query += ` ORDER BY id`;
-    
-    const result = await this.db.getAllAsync(query, params);
-    
-    return result.map((row: any) => ({
-      id: row.id,
-      regionid: row.regionID,
-      name: row.name,
-      location: this.xyToPoint(row.locationX, row.locationY)
-    }));
   }
 
   async createLandmark(data: CreateLandmark): Promise<Landmark> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    const location = data.location ? this.pointToXY(data.location) : null;
-    
-    const result = await this.db.runAsync(
-      `INSERT INTO Landmark (regionID, name, locationX, locationY) VALUES (?, ?, ?, ?)`,
-      [data.regionid, data.name, location?.x || null, location?.y || null]
-    );
-    
-    const newLandmark: Landmark = {
-      id: result.lastInsertRowId,
-      regionid: data.regionid,
-      name: data.name,
-      location: data.location
-    };
-    
-    return newLandmark;
+    try {
+      const location = data.location ? this.pointToXY(data.location) : null;
+      
+      const result = await this.db.runAsync(
+        `INSERT INTO Landmark (regionID, name, locationX, locationY) VALUES (?, ?, ?, ?)`,
+        [data.regionid, data.name, location?.x || null, location?.y || null]
+      );
+      
+      const newLandmark: Landmark = {
+        id: result.lastInsertRowId,
+        regionid: data.regionid,
+        name: data.name,
+        location: data.location
+      };
+      
+      return newLandmark;
+    } catch (error) {
+      console.error('Error creating landmark:', error);
+      throw error;
+    }
   }
 
   // ============================================================================
@@ -306,68 +374,80 @@ class LocalDatabaseService {
   // ============================================================================
 
   async getAdventures(regionId?: number, adventurerId?: number): Promise<Adventure[]> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    let query = `SELECT * FROM Adventure`;
-    let params: any[] = [];
-    let conditions: string[] = [];
-    
-    if (regionId) {
-      conditions.push('regionid = ?');
-      params.push(regionId);
+    try {
+      let query = `SELECT * FROM Adventure`;
+      let params: any[] = [];
+      let conditions: string[] = [];
+      
+      if (regionId) {
+        conditions.push('regionid = ?');
+        params.push(regionId);
+      }
+      
+      if (adventurerId) {
+        conditions.push('adventurerid = ?');
+        params.push(adventurerId);
+      }
+      
+      if (conditions.length > 0) {
+        query += ` WHERE ${conditions.join(' AND ')}`;
+      }
+      
+      query += ` ORDER BY id`;
+      
+      const result = await this.db.getAllAsync(query, params);
+      
+      return result.map((row: any) => ({
+        id: row.id,
+        adventurerid: row.adventurerid,
+        regionid: row.regionid,
+        name: row.name,
+        numtokens: row.numTokens,
+        location: this.xyToPoint(row.locationX, row.locationY)
+      }));
+    } catch (error) {
+      console.error('Error getting adventures:', error);
+      throw error;
     }
-    
-    if (adventurerId) {
-      conditions.push('adventurerid = ?');
-      params.push(adventurerId);
-    }
-    
-    if (conditions.length > 0) {
-      query += ` WHERE ${conditions.join(' AND ')}`;
-    }
-    
-    query += ` ORDER BY id`;
-    
-    const result = await this.db.getAllAsync(query, params);
-    
-    return result.map((row: any) => ({
-      id: row.id,
-      adventurerid: row.adventurerid,
-      regionid: row.regionid,
-      name: row.name,
-      numtokens: row.numTokens,
-      location: this.xyToPoint(row.locationX, row.locationY)
-    }));
   }
 
   async createAdventure(data: CreateAdventure): Promise<Adventure> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    const location = data.location ? this.pointToXY(data.location) : null;
-    
-    const result = await this.db.runAsync(
-      `INSERT INTO Adventure (adventurerid, regionid, name, numTokens, locationX, locationY) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        data.adventurerid,
-        data.regionid,
-        data.name,
-        data.numtokens || null,
-        location?.x || null,
-        location?.y || null
-      ]
-    );
-    
-    const newAdventure: Adventure = {
-      id: result.lastInsertRowId,
-      adventurerid: data.adventurerid,
-      regionid: data.regionid,
-      name: data.name,
-      numtokens: data.numtokens,
-      location: data.location
-    };
-    
-    return newAdventure;
+    try {
+      const location = data.location ? this.pointToXY(data.location) : null;
+      
+      const result = await this.db.runAsync(
+        `INSERT INTO Adventure (adventurerid, regionid, name, numTokens, locationX, locationY) 
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          data.adventurerid,
+          data.regionid,
+          data.name,
+          data.numtokens || null,
+          location?.x || null,
+          location?.y || null
+        ]
+      );
+      
+      const newAdventure: Adventure = {
+        id: result.lastInsertRowId,
+        adventurerid: data.adventurerid,
+        regionid: data.regionid,
+        name: data.name,
+        numtokens: data.numtokens,
+        location: data.location
+      };
+      
+      return newAdventure;
+    } catch (error) {
+      console.error('Error creating adventure:', error);
+      throw error;
+    }
   }
 
   // ============================================================================
@@ -375,55 +455,67 @@ class LocalDatabaseService {
   // ============================================================================
 
   async getTokens(adventureId?: number): Promise<Token[]> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    let query = `SELECT * FROM Token`;
-    let params: any[] = [];
-    
-    if (adventureId) {
-      query += ` WHERE adventureid = ?`;
-      params.push(adventureId);
+    try {
+      let query = `SELECT * FROM Token`;
+      let params: any[] = [];
+      
+      if (adventureId) {
+        query += ` WHERE adventureid = ?`;
+        params.push(adventureId);
+      }
+      
+      query += ` ORDER BY tokenOrder, id`;
+      
+      const result = await this.db.getAllAsync(query, params);
+      
+      return result.map((row: any) => ({
+        id: row.id,
+        adventureid: row.adventureid,
+        location: this.xyToPoint(row.locationX, row.locationY),
+        hint: row.hint,
+        tokenorder: row.tokenOrder
+      }));
+    } catch (error) {
+      console.error('Error getting tokens:', error);
+      throw error;
     }
-    
-    query += ` ORDER BY tokenOrder, id`;
-    
-    const result = await this.db.getAllAsync(query, params);
-    
-    return result.map((row: any) => ({
-      id: row.id,
-      adventureid: row.adventureid,
-      location: this.xyToPoint(row.locationX, row.locationY),
-      hint: row.hint,
-      tokenorder: row.tokenOrder
-    }));
   }
 
   async createToken(data: CreateToken): Promise<Token> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
-    const location = data.location ? this.pointToXY(data.location) : null;
-    
-    const result = await this.db.runAsync(
-      `INSERT INTO Token (adventureid, locationX, locationY, hint, tokenOrder) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [
-        data.adventureid,
-        location?.x || null,
-        location?.y || null,
-        data.hint || null,
-        data.tokenorder || null
-      ]
-    );
-    
-    const newToken: Token = {
-      id: result.lastInsertRowId,
-      adventureid: data.adventureid,
-      location: data.location,
-      hint: data.hint,
-      tokenorder: data.tokenorder
-    };
-    
-    return newToken;
+    try {
+      const location = data.location ? this.pointToXY(data.location) : null;
+      
+      const result = await this.db.runAsync(
+        `INSERT INTO Token (adventureid, locationX, locationY, hint, tokenOrder) 
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          data.adventureid,
+          location?.x || null,
+          location?.y || null,
+          data.hint || null,
+          data.tokenorder || null
+        ]
+      );
+      
+      const newToken: Token = {
+        id: result.lastInsertRowId,
+        adventureid: data.adventureid,
+        location: data.location,
+        hint: data.hint,
+        tokenorder: data.tokenorder
+      };
+      
+      return newToken;
+    } catch (error) {
+      console.error('Error creating token:', error);
+      throw error;
+    }
   }
 
   // ============================================================================
@@ -431,6 +523,7 @@ class LocalDatabaseService {
   // ============================================================================
 
   async getCompletedAdventures(adventurerId: number): Promise<CompletedAdventure[]> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
     const result = await this.db.getAllAsync(
@@ -448,6 +541,7 @@ class LocalDatabaseService {
   }
 
   async createCompletedAdventure(data: CreateCompletedAdventure): Promise<CompletedAdventure> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
     const result = await this.db.runAsync(
@@ -477,6 +571,7 @@ class LocalDatabaseService {
   // ============================================================================
 
   async clearAllData(): Promise<void> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
     
     const tables = ['CompletedAdventure', 'Token', 'Adventure', 'Landmark', 'Region', 'Adventurer'];
@@ -494,6 +589,7 @@ class LocalDatabaseService {
     tokens?: Token[];
     completedAdventures?: CompletedAdventure[];
   }): Promise<void> {
+    await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
@@ -567,10 +663,16 @@ class LocalDatabaseService {
   }
 
   async isDataAvailable(): Promise<boolean> {
-    if (!this.db) return false;
+    try {
+      await this.ensureInitialized();
+      if (!this.db) return false;
     
-    const result = await this.db.getFirstAsync(`SELECT COUNT(*) as count FROM Adventurer`) as any;
-    return result.count > 0;
+      const result = await this.db.getFirstAsync(`SELECT COUNT(*) as count FROM Adventurer`) as any;
+      return result.count > 0;
+    } catch (error) {
+      console.error('Error checking data availability:', error);
+      return false;
+    }
   }
 }
 
