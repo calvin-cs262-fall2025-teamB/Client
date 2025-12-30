@@ -60,8 +60,8 @@ class LocalDatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      // Enable foreign keys
-      await this.db.execAsync('PRAGMA foreign_keys = ON;');
+      // Temporarily disable foreign keys during setup
+      await this.db.execAsync('PRAGMA foreign_keys = OFF;');
 
       const createTableQueries = [
         // Drop tables in reverse order to handle foreign key constraints
@@ -77,29 +77,29 @@ class LocalDatabaseService {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           username TEXT NOT NULL,
           password TEXT NOT NULL,
-          profilePicture TEXT
+          profilepicture TEXT
         );`,
 
         // Create Region table
         `CREATE TABLE IF NOT EXISTS Region (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          adventurerID INTEGER,
+          adventurerid INTEGER,
           name TEXT NOT NULL,
           description TEXT,
           locationX REAL NOT NULL,
           locationY REAL NOT NULL,
           radius INTEGER NOT NULL,
-          FOREIGN KEY (adventurerID) REFERENCES Adventurer(id)
+          FOREIGN KEY (adventurerid) REFERENCES Adventurer(id)
         );`,
 
         // Create Landmark table
         `CREATE TABLE IF NOT EXISTS Landmark (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          regionID INTEGER,
+          regionid INTEGER,
           name TEXT NOT NULL,
           locationX REAL,
           locationY REAL,
-          FOREIGN KEY (regionID) REFERENCES Region(id)
+          FOREIGN KEY (regionid) REFERENCES Region(id)
         );`,
 
         // Create Adventure table
@@ -108,7 +108,7 @@ class LocalDatabaseService {
           adventurerid INTEGER,
           regionid INTEGER,
           name TEXT NOT NULL,
-          numTokens INTEGER,
+          numtokens INTEGER,
           locationX REAL,
           locationY REAL,
           FOREIGN KEY (adventurerid) REFERENCES Adventurer(id),
@@ -122,7 +122,7 @@ class LocalDatabaseService {
           locationX REAL,
           locationY REAL,
           hint TEXT,
-          tokenOrder INTEGER,
+          tokenorder INTEGER,
           FOREIGN KEY (adventureid) REFERENCES Adventure(id)
         );`,
 
@@ -131,8 +131,8 @@ class LocalDatabaseService {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           adventurerid INTEGER,
           adventureid INTEGER,
-          completionDate TEXT,
-          completionTime TEXT,
+          completiondate TEXT,
+          completiontime TEXT,
           FOREIGN KEY (adventurerid) REFERENCES Adventurer(id),
           FOREIGN KEY (adventureid) REFERENCES Adventure(id)
         );`
@@ -177,7 +177,7 @@ class LocalDatabaseService {
         id: row.id,
         username: row.username,
         password: row.password,
-        profilepicture: row.profilePicture
+        profilepicture: row.profilepicture
       }));
     } catch (error) {
       console.error('Error getting adventurers:', error);
@@ -191,7 +191,7 @@ class LocalDatabaseService {
     
     try {
       const result = await this.db.runAsync(
-        `INSERT INTO Adventurer (username, password, profilePicture) VALUES (?, ?, ?)`,
+        `INSERT INTO Adventurer (username, password, profilepicture) VALUES (?, ?, ?)`,
         [data.username, data.password, data.profilepicture || null]
       );
       
@@ -226,7 +226,7 @@ class LocalDatabaseService {
         values.push(data.password);
       }
       if (data.profilepicture !== undefined) {
-        setParts.push('profilePicture = ?');
+        setParts.push('profilepicture = ?');
         values.push(data.profilepicture);
       }
       
@@ -246,7 +246,7 @@ class LocalDatabaseService {
         id: result.id,
         username: result.username,
         password: result.password,
-        profilepicture: result.profilePicture
+        profilepicture: result.profilepicture
       };
     } catch (error) {
       console.error('Error updating adventurer:', error);
@@ -269,7 +269,7 @@ class LocalDatabaseService {
       
       return result.map((row: any) => ({
         id: row.id,
-        adventurerid: row.adventurerID,
+        adventurerid: row.adventurerid,
         name: row.name,
         description: row.description,
         location: this.xyToPoint(row.locationX, row.locationY)!,
@@ -289,7 +289,7 @@ class LocalDatabaseService {
       const { x, y } = this.pointToXY(data.location);
       
       const result = await this.db.runAsync(
-        `INSERT INTO Region (adventurerID, name, description, locationX, locationY, radius) 
+        `INSERT INTO Region (adventurerid, name, description, locationX, locationY, radius) 
          VALUES (?, ?, ?, ?, ?, ?)`,
         [data.adventurerid, data.name, data.description || null, x, y, data.radius]
       );
@@ -323,7 +323,7 @@ class LocalDatabaseService {
       let params: any[] = [];
       
       if (regionId) {
-        query += ` WHERE regionID = ?`;
+        query += ` WHERE regionid = ?`;
         params.push(regionId);
       }
       
@@ -333,7 +333,7 @@ class LocalDatabaseService {
       
       return result.map((row: any) => ({
         id: row.id,
-        regionid: row.regionID,
+        regionid: row.regionid,
         name: row.name,
         location: this.xyToPoint(row.locationX, row.locationY)
       }));
@@ -351,7 +351,7 @@ class LocalDatabaseService {
       const location = data.location ? this.pointToXY(data.location) : null;
       
       const result = await this.db.runAsync(
-        `INSERT INTO Landmark (regionID, name, locationX, locationY) VALUES (?, ?, ?, ?)`,
+        `INSERT INTO Landmark (regionid, name, locationX, locationY) VALUES (?, ?, ?, ?)`,
         [data.regionid, data.name, location?.x || null, location?.y || null]
       );
       
@@ -405,7 +405,7 @@ class LocalDatabaseService {
         adventurerid: row.adventurerid,
         regionid: row.regionid,
         name: row.name,
-        numtokens: row.numTokens,
+        numtokens: row.numtokens,
         location: this.xyToPoint(row.locationX, row.locationY)
       }));
     } catch (error) {
@@ -422,7 +422,7 @@ class LocalDatabaseService {
       const location = data.location ? this.pointToXY(data.location) : null;
       
       const result = await this.db.runAsync(
-        `INSERT INTO Adventure (adventurerid, regionid, name, numTokens, locationX, locationY) 
+        `INSERT INTO Adventure (adventurerid, regionid, name, numtokens, locationX, locationY) 
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
           data.adventurerid,
@@ -467,7 +467,7 @@ class LocalDatabaseService {
         params.push(adventureId);
       }
       
-      query += ` ORDER BY tokenOrder, id`;
+      query += ` ORDER BY tokenorder, id`;
       
       const result = await this.db.getAllAsync(query, params);
       
@@ -476,7 +476,7 @@ class LocalDatabaseService {
         adventureid: row.adventureid,
         location: this.xyToPoint(row.locationX, row.locationY),
         hint: row.hint,
-        tokenorder: row.tokenOrder
+        tokenorder: row.tokenorder
       }));
     } catch (error) {
       console.error('Error getting tokens:', error);
@@ -492,7 +492,7 @@ class LocalDatabaseService {
       const location = data.location ? this.pointToXY(data.location) : null;
       
       const result = await this.db.runAsync(
-        `INSERT INTO Token (adventureid, locationX, locationY, hint, tokenOrder) 
+        `INSERT INTO Token (adventureid, locationX, locationY, hint, tokenorder) 
          VALUES (?, ?, ?, ?, ?)`,
         [
           data.adventureid,
@@ -535,8 +535,8 @@ class LocalDatabaseService {
       id: row.id,
       adventurerid: row.adventurerid,
       adventureid: row.adventureid,
-      completiondate: row.completionDate,
-      completiontime: row.completionTime
+      completiondate: row.completiondate,
+      completiontime: row.completiontime
     }));
   }
 
@@ -545,7 +545,7 @@ class LocalDatabaseService {
     if (!this.db) throw new Error('Database not initialized');
     
     const result = await this.db.runAsync(
-      `INSERT INTO CompletedAdventure (adventurerid, adventureid, completionDate, completionTime) 
+      `INSERT INTO CompletedAdventure (adventurerid, adventureid, completiondate, completiontime) 
        VALUES (?, ?, ?, ?)`,
       [
         data.adventurerid,
@@ -600,7 +600,7 @@ class LocalDatabaseService {
       if (data.adventurers) {
         for (const adventurer of data.adventurers) {
           await this.db.runAsync(
-            `INSERT INTO Adventurer (id, username, password, profilePicture) VALUES (?, ?, ?, ?)`,
+            `INSERT INTO Adventurer (id, username, password, profilepicture) VALUES (?, ?, ?, ?)`,
             [adventurer.id, adventurer.username, adventurer.password, adventurer.profilepicture || null]
           );
         }
@@ -610,7 +610,7 @@ class LocalDatabaseService {
         for (const region of data.regions) {
           const { x, y } = this.pointToXY(region.location);
           await this.db.runAsync(
-            `INSERT INTO Region (id, adventurerID, name, description, locationX, locationY, radius) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO Region (id, adventurerid, name, description, locationX, locationY, radius) VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [region.id, region.adventurerid, region.name, region.description || null, x, y, region.radius]
           );
         }
@@ -620,7 +620,7 @@ class LocalDatabaseService {
         for (const landmark of data.landmarks) {
           const location = landmark.location ? this.pointToXY(landmark.location) : null;
           await this.db.runAsync(
-            `INSERT INTO Landmark (id, regionID, name, locationX, locationY) VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO Landmark (id, regionid, name, locationX, locationY) VALUES (?, ?, ?, ?, ?)`,
             [landmark.id, landmark.regionid, landmark.name, location?.x || null, location?.y || null]
           );
         }
@@ -630,7 +630,7 @@ class LocalDatabaseService {
         for (const adventure of data.adventures) {
           const location = adventure.location ? this.pointToXY(adventure.location) : null;
           await this.db.runAsync(
-            `INSERT INTO Adventure (id, adventurerid, regionid, name, numTokens, locationX, locationY) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO Adventure (id, adventurerid, regionid, name, numtokens, locationX, locationY) VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [adventure.id, adventure.adventurerid, adventure.regionid, adventure.name, adventure.numtokens || null, location?.x || null, location?.y || null]
           );
         }
@@ -640,7 +640,7 @@ class LocalDatabaseService {
         for (const token of data.tokens) {
           const location = token.location ? this.pointToXY(token.location) : null;
           await this.db.runAsync(
-            `INSERT INTO Token (id, adventureid, locationX, locationY, hint, tokenOrder) VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO Token (id, adventureid, locationX, locationY, hint, tokenorder) VALUES (?, ?, ?, ?, ?, ?)`,
             [token.id, token.adventureid, location?.x || null, location?.y || null, token.hint || null, token.tokenorder || null]
           );
         }
@@ -649,7 +649,7 @@ class LocalDatabaseService {
       if (data.completedAdventures) {
         for (const completed of data.completedAdventures) {
           await this.db.runAsync(
-            `INSERT INTO CompletedAdventure (id, adventurerid, adventureid, completionDate, completionTime) VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO CompletedAdventure (id, adventurerid, adventureid, completiondate, completiontime) VALUES (?, ?, ?, ?, ?)`,
             [completed.id, completed.adventurerid, completed.adventureid, completed.completiondate || null, completed.completiontime || null]
           );
         }
