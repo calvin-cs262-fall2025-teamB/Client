@@ -81,6 +81,14 @@ interface DatabaseState {
 
   // Cache timestamps for data freshness
   lastUpdated: LastUpdatedStates;
+
+  // Azure connectivity state
+  azureConnectivity: {
+    isAvailable: boolean;
+    lastChecked: string | null;
+    isChecking: boolean;
+    initialCheckComplete: boolean;
+  };
 }
 
 // Action types
@@ -102,7 +110,10 @@ type DatabaseAction =
   | { type: "ADD_TOKEN"; data: Token }
   | { type: "ADD_COMPLETED_ADVENTURE"; data: CompletedAdventure }
   | { type: "SET_ERROR"; entity: EntityType; error: string }
-  | { type: "CLEAR_ERROR"; entity: EntityType };
+  | { type: "CLEAR_ERROR"; entity: EntityType }
+  | { type: "SET_AZURE_CONNECTIVITY_CHECKING"; isChecking: boolean }
+  | { type: "SET_AZURE_CONNECTIVITY"; isAvailable: boolean }
+  | { type: "SET_INITIAL_AZURE_CHECK_COMPLETE" };
 
 // Context value interface
 interface DatabaseContextValue extends DatabaseState {
@@ -150,6 +161,10 @@ interface DatabaseContextValue extends DatabaseState {
     mock: boolean;
   }>;
   getLastSyncTime: () => Date | null;
+  
+  // Azure connectivity functions
+  checkAzureConnectivity: () => Promise<boolean>;
+  isAzureAvailable: () => boolean;
 }
 
 const DatabaseContext = createContext<DatabaseContextValue | undefined>(
@@ -194,6 +209,14 @@ const initialState: DatabaseState = {
     adventures: null,
     tokens: null,
     completedAdventures: null,
+  },
+
+  // Azure connectivity state
+  azureConnectivity: {
+    isAvailable: false,
+    lastChecked: null,
+    isChecking: false,
+    initialCheckComplete: false,
   },
 };
 
@@ -346,6 +369,35 @@ function databaseReducer(
         errors: {
           ...state.errors,
           [action.entity]: null,
+        },
+      };
+
+    case "SET_AZURE_CONNECTIVITY_CHECKING":
+      return {
+        ...state,
+        azureConnectivity: {
+          ...state.azureConnectivity,
+          isChecking: action.isChecking,
+        },
+      };
+
+    case "SET_AZURE_CONNECTIVITY":
+      return {
+        ...state,
+        azureConnectivity: {
+          ...state.azureConnectivity,
+          isAvailable: action.isAvailable,
+          lastChecked: new Date().toISOString(),
+          isChecking: false,
+        },
+      };
+
+    case "SET_INITIAL_AZURE_CHECK_COMPLETE":
+      return {
+        ...state,
+        azureConnectivity: {
+          ...state.azureConnectivity,
+          initialCheckComplete: true,
         },
       };
 
@@ -900,6 +952,68 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
     return hybridDataService.getLastSyncTime();
   }, []);
 
+  // Azure connectivity checking
+  const checkAzureConnectivity = useCallback(async (): Promise<boolean> => {
+    dispatch({ type: "SET_AZURE_CONNECTIVITY_CHECKING", isChecking: true });
+    
+    try {
+      if (__DEV__) {
+        console.log("🔍 Checking Azure connectivity...");
+      }
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await fetch(`${API_BASE_URL}/adventurers`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const isAvailable = response.ok;
+      dispatch({ type: "SET_AZURE_CONNECTIVITY", isAvailable });
+      
+      // Mark initial check as complete if this is the first check
+      if (!state.azureConnectivity.initialCheckComplete) {
+        dispatch({ type: "SET_INITIAL_AZURE_CHECK_COMPLETE" });
+      }
+      
+      // Configure hybridDataService based on connectivity
+      hybridDataService.setAzureAvailable(isAvailable);
+      
+      if (__DEV__) {
+        console.log(isAvailable ? "✅ Azure connectivity confirmed" : "❌ Azure connectivity failed - app will use local data only");
+      }
+      
+      return isAvailable;
+    } catch (error) {
+      dispatch({ type: "SET_AZURE_CONNECTIVITY", isAvailable: false });
+      
+      // Mark initial check as complete if this is the first check
+      if (!state.azureConnectivity.initialCheckComplete) {
+        dispatch({ type: "SET_INITIAL_AZURE_CHECK_COMPLETE" });
+      }
+      
+      // Configure hybridDataService to skip Azure
+      hybridDataService.setAzureAvailable(false);
+      
+      if (__DEV__) {
+        console.log("❌ Azure connectivity check failed - app will use local data only:", error);
+      }
+      
+      return false;
+    }
+  }, [API_BASE_URL]);
+
+  const isAzureAvailable = useCallback((): boolean => {
+    return state.azureConnectivity.isAvailable;
+  }, [state.azureConnectivity.isAvailable]);
+
   // Test connectivity function
   const testConnectivity = useCallback(async (): Promise<void> => {
     if (__DEV__) {
@@ -933,34 +1047,60 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
       console.log("API Base URL:", API_BASE_URL);
     }
 
-    // Initialize data with error handling to prevent server crashes
+    // Initialize data with Azure connectivity check
     const initializeData = async (): Promise<void> => {
-      // Test connectivity first
-      if (__DEV__) {
-        await testConnectivity();
-      }
-
       try {
-        await fetchAdventurers();
-      } catch (error) {
-        console.error("Failed to initialize adventurers:", error);
-      }
+        // Check Azure connectivity first
+        const azureAvailable = await checkAzureConnectivity();
+        
+        if (__DEV__) {
+          console.log(`🌐 Azure connectivity: ${azureAvailable ? 'Available' : 'Unavailable'}`);
+        }
 
-      try {
-        await fetchRegions();
-      } catch (error) {
-        console.error("Failed to initialize regions:", error);
-      }
+        // Initialize essential data regardless of Azure status
+        // The hybridDataService will handle fallbacks appropriately
+        try {
+          await fetchAdventurers();
+        } catch (error) {
+          console.error("Failed to initialize adventurers:", error);
+        }
 
-      try {
-        await fetchAdventures();
+        try {
+          await fetchRegions();
+        } catch (error) {
+          console.error("Failed to initialize regions:", error);
+        }
+
+        try {
+          await fetchAdventures();
+        } catch (error) {
+          console.error("Failed to initialize adventures:", error);
+        }
+        
+        if (__DEV__) {
+          console.log("✅ Database initialization complete");
+        }
       } catch (error) {
-        console.error("Failed to initialize adventures:", error);
+        console.error("Database initialization failed:", error);
       }
     };
 
     initializeData();
-  }, [fetchAdventurers, fetchRegions, fetchAdventures, testConnectivity]);
+    
+    // Set up periodic Azure connectivity checks (every 10 minutes)
+    // Only check if Azure was initially down and we want to detect recovery
+    const connectivityInterval = setInterval(async () => {
+      if (!state.azureConnectivity.isAvailable && state.azureConnectivity.initialCheckComplete) {
+        if (__DEV__) {
+          console.log("🔄 Checking if Azure service has recovered...");
+        }
+        await checkAzureConnectivity();
+      }
+    }, 10 * 60 * 1000); // 10 minutes - less aggressive
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(connectivityInterval);
+  }, [fetchAdventurers, fetchRegions, fetchAdventures, checkAzureConnectivity]);
 
   // Context value
   const contextValue: DatabaseContextValue = {
@@ -997,6 +1137,10 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
     syncWithRemote,
     getDataSourceStatus,
     getLastSyncTime,
+    
+    // Azure connectivity functions
+    checkAzureConnectivity,
+    isAzureAvailable,
   };
 
   return (
