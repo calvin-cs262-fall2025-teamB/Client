@@ -1,15 +1,4 @@
-import {
-  readAdventurers,
-  readAdventures,
-  readAdventuresByAdventurer,
-  readAdventuresByRegion,
-  readCompletedAdventuresByAdventurer,
-  readLandmarks,
-  readLandmarksInRegion,
-  readRegions,
-  readTokens,
-  readTokensInAdventure
-} from "@/data/mockData";
+import { hybridDataService } from "@/data/hybridDataService";
 import {
   Adventure,
   Adventurer,
@@ -152,6 +141,15 @@ interface DatabaseContextValue extends DatabaseState {
 
   // Utility functions
   clearError: (entity: EntityType) => void;
+  
+  // Sync and status functions
+  syncWithRemote: () => Promise<{ success: boolean; error?: string }>;
+  getDataSourceStatus: () => Promise<{
+    azure: boolean;
+    sqlite: boolean;
+    mock: boolean;
+  }>;
+  getLastSyncTime: () => Date | null;
 }
 
 const DatabaseContext = createContext<DatabaseContextValue | undefined>(
@@ -473,30 +471,27 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
       isLoading: true,
     });
     try {
-      const fullUrl = `${API_BASE_URL}/adventurers`;
-
-      const data = await apiCall<Adventurer[]>("/adventurers");
-
-      // Ensure data is an array
-      const adventurersArray = Array.isArray(data) ? data : [];
+      const result = await hybridDataService.fetchAdventurers();
+      const adventurersArray = Array.isArray(result.data) ? result.data : [];
       dispatch({ type: "SET_ADVENTURERS", data: adventurersArray });
-      return data;
+      
+      if (__DEV__) {
+        console.log(`✅ Adventurers loaded from: ${result.source}`);
+      }
+      
+      return result.data;
     } catch (error) {
       if (__DEV__) {
-        console.log("Backend unavailable - using mock adventurers data");
+        console.error("All data sources failed for adventurers:", error);
       }
-
-      // Fallback to mock data if fetch fails
-      const fallbackData = readAdventurers();
-      dispatch({ type: "SET_ADVENTURERS", data: fallbackData });
-      // Clear any existing errors since fallback was successful
       dispatch({
-        type: "CLEAR_ERROR",
+        type: "SET_ERROR",
         entity: "adventurers",
+        error: error instanceof Error ? error.message : "Failed to load adventurers"
       });
-      return fallbackData;
+      return undefined;
     }
-  }, [apiCall, API_BASE_URL]);
+  }, []);
 
   const fetchRegions = useCallback(async (): Promise<Region[] | undefined> => {
     dispatch({
@@ -505,24 +500,26 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
       isLoading: true,
     });
     try {
-      const data = await apiCall<Region[]>("/regions");
-      dispatch({ type: "SET_REGIONS", data });
-      return data;
+      const result = await hybridDataService.fetchRegions();
+      dispatch({ type: "SET_REGIONS", data: result.data });
+      
+      if (__DEV__) {
+        console.log(`✅ Regions loaded from: ${result.source}`);
+      }
+      
+      return result.data;
     } catch (error) {
       if (__DEV__) {
-        console.log("Backend unavailable - using mock regions data");
+        console.error("All data sources failed for regions:", error);
       }
-      // Fallback to mock data if fetch fails
-      const fallbackData = readRegions();
-      dispatch({ type: "SET_REGIONS", data: fallbackData });
-      // Clear any existing errors since fallback was successful
       dispatch({
-        type: "CLEAR_ERROR",
+        type: "SET_ERROR",
         entity: "regions",
+        error: error instanceof Error ? error.message : "Failed to load regions"
       });
-      return fallbackData;
+      return undefined;
     }
-  }, [apiCall]);
+  }, []);
 
   const fetchLandmarks = useCallback(
     async (regionid: number | null = null): Promise<Landmark[] | undefined> => {
@@ -532,30 +529,27 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         isLoading: true,
       });
       try {
-        const endpoint = regionid
-          ? `/landmarks?regionid=${regionid}`
-          : "/landmarks";
-        const data = await apiCall<Landmark[]>(endpoint);
-        dispatch({ type: "SET_LANDMARKS", data });
-        return data;
+        const result = await hybridDataService.fetchLandmarks(regionid);
+        dispatch({ type: "SET_LANDMARKS", data: result.data });
+        
+        if (__DEV__) {
+          console.log(`✅ Landmarks loaded from: ${result.source}`);
+        }
+        
+        return result.data;
       } catch (error) {
         if (__DEV__) {
-          console.log("Backend unavailable - using mock landmarks data");
+          console.error("All data sources failed for landmarks:", error);
         }
-        // Fallback to mock data if fetch fails
-        const fallbackData = regionid
-          ? readLandmarksInRegion(regionid)
-          : readLandmarks();
-        dispatch({ type: "SET_LANDMARKS", data: fallbackData });
-        // Clear any existing errors since fallback was successful
         dispatch({
-          type: "CLEAR_ERROR",
+          type: "SET_ERROR",
           entity: "landmarks",
+          error: error instanceof Error ? error.message : "Failed to load landmarks"
         });
-        return fallbackData;
+        return undefined;
       }
     },
-    [apiCall]
+    []
   );
 
   const fetchAdventures = useCallback(
@@ -569,39 +563,27 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         isLoading: true,
       });
       try {
-        let endpoint = "/adventures";
-        const params = new URLSearchParams();
-        // Use lowercase for query parameters (matches PostgreSQL conventions)
-        if (regionid) params.append("regionid", regionid.toString());
-        if (adventurerid) params.append("adventurerid", adventurerid.toString());
-        if (params.toString()) endpoint += `?${params.toString()}`;
-
-        const data = await apiCall<Adventure[]>(endpoint);
-        dispatch({ type: "SET_ADVENTURES", data });
-        return data;
+        const result = await hybridDataService.fetchAdventures(regionid, adventurerid);
+        dispatch({ type: "SET_ADVENTURES", data: result.data });
+        
+        if (__DEV__) {
+          console.log(`✅ Adventures loaded from: ${result.source}`);
+        }
+        
+        return result.data;
       } catch (error) {
         if (__DEV__) {
-          console.log("Backend unavailable - using mock adventures data");
+          console.error("All data sources failed for adventures:", error);
         }
-        // Fallback to mock data if fetch fails
-        let fallbackData: Adventure[];
-        if (regionid) {
-          fallbackData = readAdventuresByRegion(regionid);
-        } else if (adventurerid) {
-          fallbackData = readAdventuresByAdventurer(adventurerid);
-        } else {
-          fallbackData = readAdventures();
-        }
-        dispatch({ type: "SET_ADVENTURES", data: fallbackData });
-        // Clear any existing errors since fallback was successful
         dispatch({
-          type: "CLEAR_ERROR",
+          type: "SET_ERROR",
           entity: "adventures",
+          error: error instanceof Error ? error.message : "Failed to load adventures"
         });
-        return fallbackData;
+        return undefined;
       }
     },
-    [apiCall]
+    []
   );
 
   const fetchCompletedAdventures = useCallback(
@@ -619,30 +601,29 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
           );
         }
 
-        const data = await apiCall<CompletedAdventure[]>(
-          `/completedAdventures/adventurer/${adventurerid}`
-        );
-
+        const result = await hybridDataService.fetchCompletedAdventures(adventurerid);
+        
         if (__DEV__) {
-          console.log("Completed adventures response:", data);
-          console.log(
-            "Completed adventures type:",
-            typeof data,
-            Array.isArray(data)
-          );
-          if (data && data.length > 0) {
-            console.log("Sample completed adventure:", data[0]);
-            console.log("Available fields:", Object.keys(data[0]));
+          console.log("Completed adventures response:", result.data);
+          // console.log(
+          //   "Completed adventures type:",
+          //   typeof result.data,
+          //   Array.isArray(result.data)
+          // );
+          if (result.data && result.data.length > 0) {
+            // console.log("Sample completed adventure:", result.data[0]);
+            // console.log("Available fields:", Object.keys(result.data[0]));
           } else {
             console.log(
               "No completed adventures found for user:",
               adventurerid
             );
           }
+          console.log(`✅ Completed adventures loaded from: ${result.source}`);
         }
 
         // Ensure data is an array
-        const completedArray = Array.isArray(data) ? data : [];
+        const completedArray = Array.isArray(result.data) ? result.data : [];
         dispatch({
           type: "SET_COMPLETED_ADVENTURES",
           data: completedArray,
@@ -650,24 +631,19 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         return completedArray;
       } catch (error) {
         if (__DEV__) {
-          console.log("Backend unavailable - using mock completed adventures data");
+          console.error("All data sources failed for completed adventures:", error);
         }
-        // Fallback to mock data if fetch fails
-        const fallbackData = readCompletedAdventuresByAdventurer(adventurerid);
         dispatch({
-          type: "SET_COMPLETED_ADVENTURES",
-          data: fallbackData,
-        });
-        // Clear any existing errors since fallback was successful
-        dispatch({
-          type: "CLEAR_ERROR",
+          type: "SET_ERROR",
           entity: "completedAdventures",
+          error: error instanceof Error ? error.message : "Failed to load completed adventures"
         });
-        return fallbackData;
+        return undefined;
       }
     },
-    [apiCall]
+    []
   );
+  
 
   const fetchTokens = useCallback(
     async (adventureid: number | null = null): Promise<Token[] | undefined> => {
@@ -677,58 +653,50 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         isLoading: true,
       });
       try {
-        const endpoint = adventureid
-          ? `/tokens?adventureid=${adventureid}`
-          : "/tokens";
-        const data = await apiCall<Token[]>(endpoint);
-        dispatch({ type: "SET_TOKENS", data });
-        return data;
+        const result = await hybridDataService.fetchTokens(adventureid);
+        dispatch({ type: "SET_TOKENS", data: result.data });
+        
+        if (__DEV__) {
+          console.log(`✅ Tokens loaded from: ${result.source}`);
+        }
+        
+        return result.data;
       } catch (error) {
         if (__DEV__) {
-          console.log("Backend unavailable - using mock tokens data");
+          console.error("All data sources failed for tokens:", error);
         }
-        // Fallback to mock data if fetch fails
-        const fallbackData = adventureid
-          ? readTokensInAdventure(adventureid)
-          : readTokens();
-        dispatch({ type: "SET_TOKENS", data: fallbackData });
-        // Clear any existing errors since fallback was successful
         dispatch({
-          type: "CLEAR_ERROR",
+          type: "SET_ERROR",
           entity: "tokens",
+          error: error instanceof Error ? error.message : "Failed to load tokens"
         });
-        return fallbackData;
+        return undefined;
       }
     },
-    [apiCall]
+    []
   );
+  
 
   // Create/Update functions
   const createAdventurer = useCallback(
     async (adventurerData: CreateAdventurer): Promise<Adventurer> => {
       try {
-        const data = await apiCall<Adventurer>("/adventurers", {
-          method: "POST",
-          body: JSON.stringify(adventurerData),
-        });
-        dispatch({ type: "ADD_ADVENTURER", data });
-        return data;
-      } catch (error) {
-        // Fallback: Create mock user for offline/development use
+        const result = await hybridDataService.createAdventurer(adventurerData);
+        dispatch({ type: "ADD_ADVENTURER", data: result.data });
+        
         if (__DEV__) {
-          console.log("Backend unavailable - creating mock user for development");
+          console.log(`✅ Adventurer created using: ${result.source}`);
         }
-        const mockUser: Adventurer = {
-          id: Math.floor(Math.random() * 10000) + 1000, // Random ID
-          username: adventurerData.username,
-          password: adventurerData.password,
-          profilepicture: adventurerData.profilepicture || null,
-        };
-        dispatch({ type: "ADD_ADVENTURER", data: mockUser });
-        return mockUser;
+        
+        return result.data;
+      } catch (error) {
+        if (__DEV__) {
+          console.error("Failed to create adventurer:", error);
+        }
+        throw error;
       }
     },
-    [apiCall]
+    []
   );
 
   const updateAdventurer = useCallback(
@@ -737,159 +705,104 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
       adventurerData: Omit<UpdateAdventurer, 'id'>
     ): Promise<Adventurer> => {
       try {
-        const data = await apiCall<Adventurer>(`/adventurers/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(adventurerData),
-        });
-        dispatch({ type: "UPDATE_ADVENTURER", data });
-        return data;
+        const result = await hybridDataService.updateAdventurer(id, adventurerData);
+        dispatch({ type: "UPDATE_ADVENTURER", data: result.data });
+        
+        if (__DEV__) {
+          console.log(`✅ Adventurer updated using: ${result.source}`);
+        }
+        
+        return result.data;
       } catch (error) {
         console.error("Error updating adventurer:", error);
         throw error;
       }
     },
-    [apiCall]
+    []
   );
 
   const createRegion = useCallback(
     async (regionData: CreateRegion): Promise<Region> => {
       try {
-        // Format location for PostgreSQL point type
-        const formattedData = {
-          ...regionData,
-          location: formatLocationForPostgreSQL(regionData.location),
-        };
-
-        const data = await apiCall<Region>("/regions", {
-          method: "POST",
-          body: JSON.stringify(formattedData),
-        });
-        dispatch({ type: "ADD_REGION", data });
-        return data;
+        const result = await hybridDataService.createRegion(regionData);
+        dispatch({ type: "ADD_REGION", data: result.data });
+        
+        if (__DEV__) {
+          console.log(`✅ Region created using: ${result.source}`);
+        }
+        
+        return result.data;
       } catch (error) {
         if (__DEV__) {
-          console.log("Backend unavailable - creating mock region for development");
+          console.error("Failed to create region:", error);
         }
-
-        // Fallback: Create mock region for offline/development use
-        const mockRegion: Region = {
-          id: Math.floor(Math.random() * 10000) + 1000,
-          adventurerid: regionData.adventurerid,
-          name: regionData.name,
-          description: regionData.description || null,
-          location: regionData.location,
-          radius: regionData.radius,
-        };
-        dispatch({ type: "ADD_REGION", data: mockRegion });
-        return mockRegion;
+        throw error;
       }
     },
-    [apiCall]
+    []
   );
 
   const createLandmark = useCallback(
     async (landmarkData: CreateLandmark): Promise<Landmark> => {
       try {
-        // Format location for PostgreSQL point type
-        const formattedData = {
-          ...landmarkData,
-          location: formatLocationForPostgreSQL(landmarkData.location),
-        };
-
-        const data = await apiCall<Landmark>("/landmarks", {
-          method: "POST",
-          body: JSON.stringify(formattedData),
-        });
-        dispatch({ type: "ADD_LANDMARK", data });
-        return data;
+        const result = await hybridDataService.createLandmark(landmarkData);
+        dispatch({ type: "ADD_LANDMARK", data: result.data });
+        
+        if (__DEV__) {
+          console.log(`✅ Landmark created using: ${result.source}`);
+        }
+        
+        return result.data;
       } catch (error) {
         if (__DEV__) {
-          console.log("Backend unavailable - creating mock landmark for development");
+          console.error("Failed to create landmark:", error);
         }
-
-        // Fallback: Create mock landmark for offline/development use
-        const mockLandmark: Landmark = {
-          id: Math.floor(Math.random() * 10000) + 1000,
-          regionid: landmarkData.regionid,
-          name: landmarkData.name,
-          location: landmarkData.location,
-        };
-        dispatch({ type: "ADD_LANDMARK", data: mockLandmark });
-        return mockLandmark;
+        throw error;
       }
     },
-    [apiCall]
+    []
   );
 
   const createAdventure = useCallback(
     async (adventureData: CreateAdventure): Promise<Adventure> => {
       try {
-        // Format location for PostgreSQL point type
-        const formattedData = {
-          ...adventureData,
-          location: formatLocationForPostgreSQL(adventureData.location),
-        };
-
-        const data = await apiCall<Adventure>("/adventures", {
-          method: "POST",
-          body: JSON.stringify(formattedData),
-        });
-        dispatch({ type: "ADD_ADVENTURE", data });
-        return data;
+        const result = await hybridDataService.createAdventure(adventureData);
+        dispatch({ type: "ADD_ADVENTURE", data: result.data });
+        
+        if (__DEV__) {
+          console.log(`✅ Adventure created using: ${result.source}`);
+        }
+        
+        return result.data;
       } catch (error) {
         if (__DEV__) {
-          console.log("Backend unavailable - creating mock adventure for development");
+          console.error("Failed to create adventure:", error);
         }
-
-        // Fallback: Create mock adventure for offline/development use
-        const mockAdventure: Adventure = {
-          id: Math.floor(Math.random() * 10000) + 1000,
-          adventurerid: adventureData.adventurerid,
-          regionid: adventureData.regionid,
-          name: adventureData.name,
-          numtokens: adventureData.numtokens,
-          location: adventureData.location,
-        };
-        dispatch({ type: "ADD_ADVENTURE", data: mockAdventure });
-        return mockAdventure;
+        throw error;
       }
     },
-    [apiCall]
+    []
   );
 
   const createToken = useCallback(
     async (tokenData: CreateToken): Promise<Token> => {
       try {
-        // Format location for PostgreSQL point type
-        const formattedData = {
-          ...tokenData,
-          location: formatLocationForPostgreSQL(tokenData.location),
-        };
-
-        const data = await apiCall<Token>("/tokens", {
-          method: "POST",
-          body: JSON.stringify(formattedData),
-        });
-        dispatch({ type: "ADD_TOKEN", data });
-        return data;
+        const result = await hybridDataService.createToken(tokenData);
+        dispatch({ type: "ADD_TOKEN", data: result.data });
+        
+        if (__DEV__) {
+          console.log(`✅ Token created using: ${result.source}`);
+        }
+        
+        return result.data;
       } catch (error) {
         if (__DEV__) {
-          console.log("Backend unavailable - creating mock token for development");
+          console.error("Failed to create token:", error);
         }
-
-        // Fallback: Create mock token for offline/development use
-        const mockToken: Token = {
-          id: Math.floor(Math.random() * 10000) + 1000,
-          adventureid: tokenData.adventureid,
-          location: tokenData.location,
-          hint: tokenData.hint || null,
-          tokenorder: tokenData.tokenorder || null,
-        };
-        dispatch({ type: "ADD_TOKEN", data: mockToken });
-        return mockToken;
+        throw error;
       }
     },
-    [apiCall]
+    []
   );
 
   const completeAdventure = useCallback(
@@ -897,31 +810,24 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
       completionData: CreateCompletedAdventure
     ): Promise<CompletedAdventure> => {
       try {
-        const data = await apiCall<CompletedAdventure>("/completed-adventures", {
-          method: "POST",
-          body: JSON.stringify(completionData),
-        });
-        dispatch({ type: "ADD_COMPLETED_ADVENTURE", data });
-        return data;
+        const result = await hybridDataService.createCompletedAdventure(completionData);
+        dispatch({ type: "ADD_COMPLETED_ADVENTURE", data: result.data });
+        
+        if (__DEV__) {
+          console.log(`✅ Adventure completion recorded using: ${result.source}`);
+        }
+        
+        return result.data;
       } catch (error) {
         if (__DEV__) {
-          console.log("Backend unavailable - marking adventure as completed locally");
+          console.error("Failed to complete adventure:", error);
         }
-
-        // Fallback: Create mock completion for offline/development use
-        const mockCompletion: CompletedAdventure = {
-          id: Math.floor(Math.random() * 10000) + 1000,
-          adventurerid: completionData.adventurerid,
-          adventureid: completionData.adventureid,
-          completiondate: completionData.completiondate || new Date().toISOString(),
-          completiontime: completionData.completiontime || "00:00:00",
-        };
-        dispatch({ type: "ADD_COMPLETED_ADVENTURE", data: mockCompletion });
-        return mockCompletion;
+        throw error;
       }
     },
-    [apiCall]
+    []
   );
+  
 
   // Helper functions for common queries
   const getAdventuresByRegion = useCallback(
@@ -961,6 +867,37 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
   // Clear errors
   const clearError = useCallback((entity: EntityType): void => {
     dispatch({ type: "CLEAR_ERROR", entity });
+  }, []);
+
+  // Sync and status functions
+  const syncWithRemote = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = await hybridDataService.fullSync();
+      if (result.success) {
+        // Refresh all data after successful sync
+        await Promise.all([
+          fetchAdventurers(),
+          fetchRegions(),
+          fetchLandmarks(),
+          fetchAdventures(),
+          fetchTokens()
+        ]);
+      }
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Sync failed'
+      };
+    }
+  }, [fetchAdventurers, fetchRegions, fetchLandmarks, fetchAdventures, fetchTokens]);
+
+  const getDataSourceStatus = useCallback(async () => {
+    return await hybridDataService.getDataSourceStatus();
+  }, []);
+
+  const getLastSyncTime = useCallback(() => {
+    return hybridDataService.getLastSyncTime();
   }, []);
 
   // Test connectivity function
@@ -1055,6 +992,11 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
 
     // Utility functions
     clearError,
+    
+    // Sync and status functions
+    syncWithRemote,
+    getDataSourceStatus,
+    getLastSyncTime,
   };
 
   return (
