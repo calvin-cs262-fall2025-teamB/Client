@@ -656,7 +656,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         const result = await hybridDataService.fetchCompletedAdventures(adventurerid);
         
         if (__DEV__) {
-          console.log("Completed adventures response:", result.data);
+          // console.log("Completed adventures response:", result.data);
           // console.log(
           //   "Completed adventures type:",
           //   typeof result.data,
