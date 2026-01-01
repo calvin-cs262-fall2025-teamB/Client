@@ -47,6 +47,17 @@ type DataSource = 'azure' | 'sqlite' | 'mock';
 class HybridDataService {
   private initialized = false;
   private lastSyncTime: Date | null = null;
+  private azureAvailable = true; // Default to trying Azure
+
+  setAzureAvailable(available: boolean): void {
+    this.azureAvailable = available;
+    if (__DEV__) {
+      console.log(`🔧 Azure availability set to: ${available ? 'ENABLED' : 'DISABLED'}`);
+      if (!available) {
+        console.log('📱 App will use local SQLite database and mock data only');
+      }
+    }
+  }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -104,14 +115,21 @@ class HybridDataService {
   ): Promise<{ data: T; source: DataSource }> {
     await this.initialize();
 
-    // Try Azure API first
-    try {
-      const data = await apiCall();
-      // Background sync to local database
-      this.backgroundSync(entityName, data);
-      return { data, source: 'azure' };
-    } catch (apiError) {
-      console.log(`Azure API failed for ${entityName}, trying local database`);
+    // Skip Azure API if we know it's unavailable
+    if (this.azureAvailable) {
+      // Try Azure API first
+      try {
+        const data = await apiCall();
+        // Background sync to local database
+        this.backgroundSync(entityName, data);
+        return { data, source: 'azure' };
+      } catch (apiError) {
+        console.log(`Azure API failed for ${entityName}, trying local database`);
+        // Note: Don't automatically mark Azure as unavailable here
+        // Let the DatabaseContext handle connectivity state
+      }
+    } else {
+      console.log(`⚡ Azure disabled, using local data for ${entityName}`);
     }
 
     // Try SQLite database
@@ -166,31 +184,36 @@ class HybridDataService {
   async createAdventurer(adventurerData: CreateAdventurer): Promise<{ data: Adventurer; source: DataSource }> {
     await this.initialize();
 
-    // Try Azure API first
+    // Check if Azure is available before trying
+    if (this.azureAvailable) {
+      // Try Azure API first
+      try {
+        const result = await this.makeApiCall<Adventurer>('/adventurers', {
+          method: 'POST',
+          body: JSON.stringify(adventurerData),
+        });
+        
+        // Also create in local database for offline access
+        try {
+          await localDb.createAdventurer(adventurerData);
+        } catch (localError) {
+          console.log('Failed to sync new adventurer to local database:', localError);
+        }
+        
+        return result;
+      } catch (apiError) {
+        console.log('Azure API failed for createAdventurer, trying local database');
+      }
+    } else {
+      console.log('⚡ Azure disabled, creating adventurer in local database only');
+    }
+
+    // Try local database
     try {
-      const result = await this.makeApiCall<Adventurer>('/adventurers', {
-        method: 'POST',
-        body: JSON.stringify(adventurerData),
-      });
-      
-      // Also create in local database for offline access
-      try {
-        await localDb.createAdventurer(adventurerData);
-      } catch (localError) {
-        console.log('Failed to sync new adventurer to local database:', localError);
-      }
-      
-      return result;
-    } catch (apiError) {
-      console.log('Azure API failed for createAdventurer, trying local database');
-      
-      // Try local database
-      try {
-        const data = await localDb.createAdventurer(adventurerData);
-        return { data, source: 'sqlite' };
-      } catch (localError) {
-        throw new Error('Both Azure API and local database failed for creating adventurer');
-      }
+      const data = await localDb.createAdventurer(adventurerData);
+      return { data, source: 'sqlite' };
+    } catch (localError) {
+      throw new Error('Local database failed for creating adventurer');
     }
   }
 

@@ -16,6 +16,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -39,13 +40,16 @@ export default function DebugPage() {
     errors,
     
     // Fetch functions
+    fetchAdventurers,
     fetchRegions,
     fetchLandmarks,
     fetchAdventures,
+    fetchTokens,
     fetchCompletedAdventures,
 
     // Create/Update functions
     createRegion,
+    createLandmark,
     createAdventure,
     createToken,
     completeAdventure,
@@ -86,6 +90,22 @@ export default function DebugPage() {
     profilepicture: null,
   });
 
+  const [testLandmark, setTestLandmark] = useState({
+    name: 'Debug Test Landmark',
+    regionid: 1,
+    location: { x: 42.9634, y: -85.6681 },
+  });
+
+  const [testCompletedAdventure, setTestCompletedAdventure] = useState({
+    adventureid: 1,
+    completiondate: new Date().toISOString().split('T')[0],
+    completiontime: '00:30:00',
+  });
+
+  // Input states for parameterized tests
+  const [regionIdInput, setRegionIdInput] = useState<string>('1');
+  const [adventureIdInput, setAdventureIdInput] = useState<string>('1');
+
   const addTestResult = (test: string, success: boolean, data: any = null, error: string | null = null) => {
     const result = {
       id: Date.now() + Math.random(), // Make ID unique to prevent duplicate keys
@@ -103,6 +123,15 @@ export default function DebugPage() {
   };
 
   // Individual test functions
+  const testFetchAdventurers = async () => {
+    try {
+      await fetchAdventurers();
+      addTestResult('Fetch Adventurers', true, adventurers);
+    } catch (error) {
+      addTestResult('Fetch Adventurers', false, null, error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
+
   const testFetchRegions = async () => {
     try {
       await fetchRegions();
@@ -121,29 +150,25 @@ export default function DebugPage() {
     }
   };
 
-  // Note: fetchTokens is not implemented in DatabaseContext yet
-  // const testFetchTokens = async () => {
-  //   try {
-  //     await fetchTokens();
-  //     addTestResult('Fetch All Tokens', true, tokens);
-  //   } catch (error) {
-  //     addTestResult('Fetch All Tokens', false, null, error instanceof Error ? error.message : 'Unknown error');
-  //   }
-  // };
+  const testFetchLandmarks = async () => {
+    try {
+      const regionId = regionIdInput ? parseInt(regionIdInput) : null;
+      await fetchLandmarks(regionId);
+      addTestResult(`Fetch Landmarks${regionId ? ` for Region ${regionId}` : ''}`, true, landmarks);
+    } catch (error) {
+      addTestResult('Fetch Landmarks', false, null, error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
 
-  // const testFetchTokensForAdventure = async () => {
-  //   if (adventures && adventures.length > 0) {
-  //     try {
-  //       const adventureId = adventures[0].id;
-  //       await fetchTokens(adventureId);
-  //       addTestResult(`Fetch Tokens for Adventure ${adventureId}`, true, tokens);
-  //     } catch (error) {
-  //       addTestResult('Fetch Tokens for Adventure', false, null, error instanceof Error ? error.message : 'Unknown error');
-  //     }
-  //   } else {
-  //     addTestResult('Fetch Tokens for Adventure', false, null, 'No adventures available');
-  //   }
-  // };
+  const testFetchTokens = async () => {
+    try {
+      const adventureId = adventureIdInput ? parseInt(adventureIdInput) : null;
+      await fetchTokens(adventureId);
+      addTestResult(`Fetch Tokens${adventureId ? ` for Adventure ${adventureId}` : ''}`, true, tokens);
+    } catch (error) {
+      addTestResult('Fetch Tokens', false, null, error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
 
   const testFetchCompletedAdventures = async () => {
     if (user?.id) {
@@ -167,6 +192,18 @@ export default function DebugPage() {
       addTestResult('Create Region', true, result);
     } catch (error) {
       addTestResult('Create Region', false, null, error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
+
+  const testCreateLandmark = async () => {
+    try {
+      const result = await createLandmark({
+        ...testLandmark,
+        regionid: regions && regions.length > 0 ? regions[0].id : 1,
+      });
+      addTestResult('Create Landmark', true, result);
+    } catch (error) {
+      addTestResult('Create Landmark', false, null, error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
@@ -209,6 +246,57 @@ export default function DebugPage() {
       addTestResult('Create Adventurer', true, result);
     } catch (error) {
       addTestResult('Create Adventurer', false, null, error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
+
+  const testCreateCompletedAdventure = async () => {
+    if (adventures && adventures.length > 0) {
+      try {
+        const result = await completeAdventure({
+          ...testCompletedAdventure,
+          adventurerid: user?.id || 1,
+          adventureid: adventures[0].id,
+        });
+        addTestResult('Create Completed Adventure', true, result);
+      } catch (error) {
+        addTestResult('Create Completed Adventure', false, null, error instanceof Error ? error.message : 'Unknown error');
+      }
+    } else {
+      addTestResult('Create Completed Adventure', false, null, 'No adventures available');
+    }
+  };
+
+  const debugSQLiteDatabase = async () => {
+    try {
+      console.log('🔍 Starting SQLite database debugging...');
+      
+      // Check if data is available
+      const hasData = await localDb.isDataAvailable();
+      addTestResult('SQLite Has Data Check', hasData, { hasData });
+      
+      // Try to get adventurers directly
+      const adventurers = await localDb.getAdventurers();
+      addTestResult('SQLite Direct Adventurer Query', true, { 
+        count: adventurers.length, 
+        sample: adventurers[0] || null 
+      });
+      
+      // Get all table counts
+      const regions = await localDb.getRegions();
+      const landmarks = await localDb.getLandmarks();
+      const adventures = await localDb.getAdventures();
+      const tokens = await localDb.getTokens();
+      
+      addTestResult('SQLite All Table Counts', true, {
+        adventurers: adventurers.length,
+        regions: regions.length,
+        landmarks: landmarks.length,
+        adventures: adventures.length,
+        tokens: tokens.length
+      });
+      
+    } catch (error) {
+      addTestResult('SQLite Database Debug', false, null, error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
@@ -255,10 +343,11 @@ export default function DebugPage() {
     clearResults();
     
     const tests = [
+      testFetchAdventurers,
       testFetchRegions,
+      testFetchLandmarks,
       testFetchAdventures,
-      // testFetchTokens, // Not implemented yet
-      // testFetchTokensForAdventure, // Not implemented yet
+      testFetchTokens,
       testFetchCompletedAdventures,
       // Note: Skipping create tests in "run all" to avoid creating duplicate data
     ];
@@ -299,8 +388,10 @@ export default function DebugPage() {
       {/* Database Status */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Database Status</Text>
-        <Text style={styles.infoText}>Adventures: {adventures?.length || 0}</Text>
+        <Text style={styles.infoText}>Adventurers: {adventurers?.length || 0}</Text>
         <Text style={styles.infoText}>Regions: {regions?.length || 0}</Text>
+        <Text style={styles.infoText}>Landmarks: {landmarks?.length || 0}</Text>
+        <Text style={styles.infoText}>Adventures: {adventures?.length || 0}</Text>
         <Text style={styles.infoText}>Tokens: {tokens?.length || 0}</Text>
         <Text style={styles.infoText}>Completed Adventures: {completedAdventures?.length || 0}</Text>
         
@@ -318,23 +409,62 @@ export default function DebugPage() {
       {/* Loading States */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Loading States</Text>
-        <Text style={styles.infoText}>Adventures: {loading.adventures ? 'Loading...' : 'Ready'}</Text>
+        <Text style={styles.infoText}>Adventurers: {loading.adventurers ? 'Loading...' : 'Ready'}</Text>
         <Text style={styles.infoText}>Regions: {loading.regions ? 'Loading...' : 'Ready'}</Text>
+        <Text style={styles.infoText}>Landmarks: {loading.landmarks ? 'Loading...' : 'Ready'}</Text>
+        <Text style={styles.infoText}>Adventures: {loading.adventures ? 'Loading...' : 'Ready'}</Text>
         <Text style={styles.infoText}>Tokens: {loading.tokens ? 'Loading...' : 'Ready'}</Text>
+        <Text style={styles.infoText}>Completed Adventures: {loading.completedAdventures ? 'Loading...' : 'Ready'}</Text>
       </View>
 
       {/* Error States */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Error States</Text>
-        <Text style={[styles.infoText, errors.adventures && styles.errorText]}>
-          Adventures: {errors.adventures || 'No errors'}
+        <Text style={[styles.infoText, errors.adventurers && styles.errorText]}>
+          Adventurers: {errors.adventurers || 'No errors'}
         </Text>
         <Text style={[styles.infoText, errors.regions && styles.errorText]}>
           Regions: {errors.regions || 'No errors'}
         </Text>
+        <Text style={[styles.infoText, errors.landmarks && styles.errorText]}>
+          Landmarks: {errors.landmarks || 'No errors'}
+        </Text>
+        <Text style={[styles.infoText, errors.adventures && styles.errorText]}>
+          Adventures: {errors.adventures || 'No errors'}
+        </Text>
         <Text style={[styles.infoText, errors.tokens && styles.errorText]}>
           Tokens: {errors.tokens || 'No errors'}
         </Text>
+        <Text style={[styles.infoText, errors.completedAdventures && styles.errorText]}>
+          Completed Adventures: {errors.completedAdventures || 'No errors'}
+        </Text>
+      </View>
+
+      {/* Test Inputs */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Test Parameters</Text>
+        
+        <View style={styles.inputRow}>
+          <Text style={styles.inputLabel}>Region ID (for landmarks):</Text>
+          <TextInput
+            style={styles.numberInput}
+            value={regionIdInput}
+            onChangeText={setRegionIdInput}
+            placeholder="Enter region ID"
+            keyboardType="numeric"
+          />
+        </View>
+        
+        <View style={styles.inputRow}>
+          <Text style={styles.inputLabel}>Adventure ID (for tokens):</Text>
+          <TextInput
+            style={styles.numberInput}
+            value={adventureIdInput}
+            onChangeText={setAdventureIdInput}
+            placeholder="Enter adventure ID"
+            keyboardType="numeric"
+          />
+        </View>
       </View>
 
       {/* Test Controls */}
@@ -353,51 +483,67 @@ export default function DebugPage() {
         </TouchableOpacity>
 
         <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.testButton} onPress={testFetchAdventurers}>
+            <Text style={styles.testButtonText}>Read Adventurers</Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity style={styles.testButton} onPress={testFetchRegions}>
-            <Text style={styles.testButtonText}>Fetch Regions</Text>
+            <Text style={styles.testButtonText}>Read Regions</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.testButton} onPress={testFetchLandmarks}>
+            <Text style={styles.testButtonText}>Read Landmarks</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.testButton} onPress={testFetchAdventures}>
-            <Text style={styles.testButtonText}>Fetch Adventures</Text>
+            <Text style={styles.testButtonText}>Read Adventures</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Token fetching not implemented yet
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.testButton} onPress={testFetchTokens}>
-            <Text style={styles.testButtonText}>Fetch All Tokens</Text>
+            <Text style={styles.testButtonText}>Read Tokens</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.testButton} onPress={testFetchTokensForAdventure}>
-            <Text style={styles.testButtonText}>Fetch Adventure Tokens</Text>
+          <TouchableOpacity style={styles.testButton} onPress={testFetchCompletedAdventures}>
+            <Text style={styles.testButtonText}>Read Completed Adventures</Text>
           </TouchableOpacity>
         </View>
-        */}
-
-        <TouchableOpacity style={styles.testButton} onPress={testFetchCompletedAdventures}>
-          <Text style={styles.testButtonText}>Fetch Completed Adventures</Text>
-        </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Create Tests (Use Carefully)</Text>
         <Text style={styles.warningText}>These tests will create real data in the database</Text>
         
         <View style={styles.buttonRow}>
           <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateRegion}>
-            <Text style={styles.testButtonText}>Create Test Region</Text>
+            <Text style={styles.testButtonText}>Create Region</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateAdventure}>
-            <Text style={styles.testButtonText}>Create Test Adventure</Text>
+          <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateLandmark}>
+            <Text style={styles.testButtonText}>Create Landmark</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateToken}>
-          <Text style={styles.testButtonText}>Create Test Token</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateAdventure}>
+            <Text style={styles.testButtonText}>Create Adventure</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateToken}>
+            <Text style={styles.testButtonText}>Create Token</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateAdventurer}>
-          <Text style={styles.testButtonText}>Create Test Adventurer</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateAdventurer}>
+            <Text style={styles.testButtonText}>Create Adventurer</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={[styles.testButton, styles.createButton]} onPress={testCreateCompletedAdventure}>
+            <Text style={styles.testButtonText}>Create Completed Adventure</Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity style={styles.clearButton} onPress={clearResults}>
           <Text style={styles.clearButtonText}>Clear Results</Text>
@@ -408,6 +554,10 @@ export default function DebugPage() {
         
         <TouchableOpacity style={[styles.testButton, styles.databaseButton]} onPress={remakeLocalDatabase}>
           <Text style={styles.testButtonText}>🔄 Remake Local Database with Mock Data</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.testButton, styles.debugButton]} onPress={debugSQLiteDatabase}>
+          <Text style={styles.testButtonText}>🔍 Debug SQLite Database</Text>
         </TouchableOpacity>
       </View>
 
@@ -545,6 +695,9 @@ const styles = StyleSheet.create({
   databaseButton: {
     backgroundColor: '#9b59b6',
   },
+  debugButton: {
+    backgroundColor: '#34495e',
+  },
   testButtonText: {
     color: 'white',
     fontWeight: '600',
@@ -644,5 +797,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#666',
     fontFamily: 'monospace',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  numberInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    padding: 8,
+    width: 80,
+    textAlign: 'center',
+    backgroundColor: '#fff',
   },
 });

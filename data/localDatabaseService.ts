@@ -43,13 +43,21 @@ class LocalDatabaseService {
 
   async initialize(): Promise<void> {
     try {
-      console.log('Initializing SQLite database...');
+      console.log('🚀 Initializing SQLite database...');
       this.db = await SQLite.openDatabaseAsync(DB_NAME);
-      console.log('Database opened, creating tables...');
+      console.log(`📁 Database opened: ${DB_NAME}`);
+      
+      console.log('📋 Creating/verifying database tables...');
       await this.createTables();
-      console.log('Local database initialized successfully');
+      
+      // Check if database has any data
+      const adventurerCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Adventurer') as { count: number } | null;
+      const regionCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Region') as { count: number } | null;
+      
+      console.log(`📊 Initial database status: ${adventurerCount?.count || 0} adventurers, ${regionCount?.count || 0} regions`);
+      console.log('✅ Local database initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize local database:', error);
+      console.error('❌ Failed to initialize local database:', error);
       this.db = null;
       this.initPromise = null;
       throw error;
@@ -60,19 +68,11 @@ class LocalDatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      // Temporarily disable foreign keys during setup
-      await this.db.execAsync('PRAGMA foreign_keys = OFF;');
+      // Enable foreign key constraints
+      await this.db.execAsync('PRAGMA foreign_keys = ON;');
 
       const createTableQueries = [
-        // Drop tables in reverse order to handle foreign key constraints
-        `DROP TABLE IF EXISTS CompletedAdventure;`,
-        `DROP TABLE IF EXISTS Token;`,
-        `DROP TABLE IF EXISTS Adventure;`,
-        `DROP TABLE IF EXISTS Landmark;`,
-        `DROP TABLE IF EXISTS Region;`,
-        `DROP TABLE IF EXISTS Adventurer;`,
-
-        // Create Adventurer table
+        // Create Adventurer table (only if it doesn't exist)
         `CREATE TABLE IF NOT EXISTS Adventurer (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           username TEXT NOT NULL,
@@ -149,6 +149,42 @@ class LocalDatabaseService {
     }
   }
 
+  // Method to completely clear and recreate the database (for remake functionality)
+  async clearAndRecreateDatabase(): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      console.log('🗑️ Clearing and recreating database...');
+      
+      // Temporarily disable foreign keys during cleanup
+      await this.db.execAsync('PRAGMA foreign_keys = OFF;');
+
+      // Drop tables in reverse order to handle foreign key constraints
+      const dropQueries = [
+        `DROP TABLE IF EXISTS CompletedAdventure;`,
+        `DROP TABLE IF EXISTS Token;`,
+        `DROP TABLE IF EXISTS Adventure;`,
+        `DROP TABLE IF EXISTS Landmark;`,
+        `DROP TABLE IF EXISTS Region;`,
+        `DROP TABLE IF EXISTS Adventurer;`,
+      ];
+
+      for (const query of dropQueries) {
+        await this.db.execAsync(query);
+      }
+
+      console.log('🔄 Tables dropped, recreating...');
+      
+      // Recreate tables  
+      await this.createTables();
+      
+      console.log('✅ Database cleared and recreated successfully');
+    } catch (error) {
+      console.error('❌ Error clearing and recreating database:', error);
+      throw error;
+    }
+  }
+
   // Helper function to convert Point to separate X,Y coordinates
   private pointToXY(point: Point): { x: number; y: number } {
     return { x: point.x, y: point.y };
@@ -169,9 +205,17 @@ class LocalDatabaseService {
     if (!this.db) throw new Error('Database not initialized');
     
     try {
+      console.log('🔍 Fetching adventurers from SQLite...');
+      
       const result = await this.db.getAllAsync(`
         SELECT * FROM Adventurer ORDER BY id
       `);
+      
+      console.log(`📊 Found ${result.length} adventurers in SQLite database`);
+      
+      if (result.length > 0) {
+        console.log('👥 Sample adventurer data:', result[0]);
+      }
       
       return result.map((row: any) => ({
         id: row.id,
@@ -666,9 +710,28 @@ class LocalDatabaseService {
     try {
       await this.ensureInitialized();
       if (!this.db) return false;
+      
+      console.log('🔍 Checking if data is available in SQLite...');
     
-      const result = await this.db.getFirstAsync(`SELECT COUNT(*) as count FROM Adventurer`) as any;
-      return result.count > 0;
+      const adventurerCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Adventurer') as { count: number } | null;
+      const regionCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Region') as { count: number } | null;
+      const landmarkCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Landmark') as { count: number } | null;
+      const adventureCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Adventure') as { count: number } | null;
+      
+      console.log(`📊 SQLite data counts:`, {
+        adventurers: adventurerCount?.count || 0,
+        regions: regionCount?.count || 0,
+        landmarks: landmarkCount?.count || 0,
+        adventures: adventureCount?.count || 0
+      });
+      
+      const hasData = (adventurerCount?.count || 0) > 0 || 
+                     (regionCount?.count || 0) > 0 || 
+                     (landmarkCount?.count || 0) > 0 || 
+                     (adventureCount?.count || 0) > 0;
+      
+      console.log(`🎯 Data available in SQLite: ${hasData ? 'YES' : 'NO'}`);
+      return hasData;
     } catch (error) {
       console.error('Error checking data availability:', error);
       return false;
