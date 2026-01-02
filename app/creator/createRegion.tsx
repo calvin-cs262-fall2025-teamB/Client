@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  PanResponder,
   StyleSheet,
   Text,
   TextInput,
@@ -106,7 +105,7 @@ export default function CreateRegionScreen() {
   const [regionRadius, setRegionRadius] = useState<number>(200); // Default 200m
   const [regionName, setRegionName] = useState<string>("");
   const [creationStep, setCreationStep] = useState<
-    "idle" | "placing" | "adjusting"
+    "idle" | "placing" | "confirmCenter" | "adjustingRadius" | "confirmRadius"
   >("idle");
 
   // Prompt modal state
@@ -130,117 +129,45 @@ export default function CreateRegionScreen() {
   };
 
   const mapRef = useRef<MapView>(null);
-  const [isPinching, setIsPinching] = useState(false);
-  const initialPinchDistance = useRef<number>(0);
-  const initialRadius = useRef<number>(200);
-  const lastUpdateTime = useRef<number>(0);
-  const THROTTLE_MS = 16; // ~60fps - update at most every 16ms
+  const [isDraggingEdge, setIsDraggingEdge] = useState(false);
+  const [edgeMarkerCoord, setEdgeMarkerCoord] = useState<LatLng | null>(null);
 
-  // Calculate distance between two touch points
-  const getTouchDistance = (touches: any[]) => {
-    if (touches.length < 2) return 0;
+  // Calculate distance between two geographic points in meters
+  const calculateDistance = useCallback((point1: LatLng, point2: LatLng): number => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (point2.latitude - point1.latitude) * (Math.PI / 180);
+    const dLng = (point2.longitude - point1.longitude) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(point1.latitude * (Math.PI / 180)) *
+        Math.cos(point2.latitude * (Math.PI / 180)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }, []);
 
-    const touch1 = touches[0];
-    const touch2 = touches[1];
+  // Calculate edge marker position based on center and radius
+  const calculateEdgePosition = useCallback((center: LatLng, radius: number): LatLng => {
+    const radiusInDegrees = radius / 111320; // Convert meters to degrees
+    return {
+      latitude: center.latitude + radiusInDegrees,
+      longitude: center.longitude,
+    };
+  }, []);
 
-    // Use pageX/pageY if available (iOS), fall back to locationX/Y (Android)
-    const x1 = touch1.pageX ?? touch1.locationX ?? 0;
-    const y1 = touch1.pageY ?? touch1.locationY ?? 0;
-    const x2 = touch2.pageX ?? touch2.locationX ?? 0;
-    const y2 = touch2.pageY ?? touch2.locationY ?? 0;
-
-    const dx = x1 - x2;
-    const dy = y1 - y2;
-
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  // Adaptive pixel-to-meter conversion for better control
-  const pixelsToMeters = useCallback(
-    (pixels: number, latitude: number, currentRadius: number) => {
-      // Base sensitivity - adjust this to change overall responsiveness
-      let sensitivity = 2.5;
-
-      // Adaptive sensitivity based on current radius
-      if (currentRadius < 200) {
-        sensitivity = 1.5; // Fine control for small circles
-      } else if (currentRadius > 1000) {
-        sensitivity = 4.0; // Faster changes for large circles
-      }
-
-      return pixels * sensitivity;
-    },
-    []
-  );
-
-  // Pinch gesture with haptics and throttling
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: (evt) => {
-      const touchCount = evt.nativeEvent.touches.length;
-      return creationStep === "adjusting" && touchCount === 2;
-    },
-    onMoveShouldSetPanResponder: (evt) => {
-      const touchCount = evt.nativeEvent.touches.length;
-      return creationStep === "adjusting" && touchCount === 2;
-    },
-
-    onPanResponderGrant: (evt) => {
-      const touches = evt.nativeEvent.touches;
-      if (touches.length === 2) {
-        const distance = getTouchDistance(touches);
-
-        if (distance > 0) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          setIsPinching(true);
-          initialPinchDistance.current = distance;
-          initialRadius.current = regionRadius;
-          lastUpdateTime.current = Date.now();
-        } else {
-          console.warn("⚠️ Touch distance is 0 - touch coordinates may be unavailable");
-        }
-      }
-    },
-
-    onPanResponderMove: (evt) => {
-      const touches = evt.nativeEvent.touches;
-
-      if (touches.length === 2 && regionCenter && isPinching) {
-        // Throttle updates to ~60fps for smoother performance
-        const now = Date.now();
-        if (now - lastUpdateTime.current < THROTTLE_MS) {
-          return; // Skip this update
-        }
-        lastUpdateTime.current = now;
-
-        const currentDistance = getTouchDistance(touches);
-
-        if (currentDistance === 0 || initialPinchDistance.current === 0) {
-          console.warn("⚠️ Invalid touch distance detected");
-          return;
-        }
-
-        const distanceChange = currentDistance - initialPinchDistance.current;
-        const metersChange = pixelsToMeters(
-          distanceChange,
-          regionCenter.latitude,
-          regionRadius
-        );
-
-        const newRadius = initialRadius.current + metersChange;
-        const clampedRadius = Math.max(
-          50,
-          Math.min(5000, Math.round(newRadius))
-        );
-
-        setRegionRadius(clampedRadius);
-      }
-    },
-
-    onPanResponderRelease: () => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setIsPinching(false);
-    },
-  });
+  // Handle edge marker drag to resize circle
+  const handleEdgeMarkerDrag = useCallback((newCoord: LatLng) => {
+    if (!regionCenter) return;
+    
+    const distance = calculateDistance(regionCenter, newCoord);
+    const clampedRadius = Math.max(50, Math.min(5000, Math.round(distance)));
+    
+    setRegionRadius(clampedRadius);
+    setEdgeMarkerCoord(calculateEdgePosition(regionCenter, clampedRadius));
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [regionCenter, calculateDistance, calculateEdgePosition]);
 
   // Location tracking
   useEffect(() => {
@@ -269,22 +196,43 @@ export default function CreateRegionScreen() {
     })();
   }, []);
 
+  // Update edge marker position when center or radius changes
+  useEffect(() => {
+    if (regionCenter && creationStep !== "idle") {
+      setEdgeMarkerCoord(calculateEdgePosition(regionCenter, regionRadius));
+    }
+  }, [regionCenter, regionRadius, creationStep, calculateEdgePosition]);
+
   // Handle map press
   const handleMapPress = (event: MapPressEvent) => {
-    if (isPinching) {
+    if (isDraggingEdge) {
       return;
     }
 
     const coord = event.nativeEvent.coordinate;
 
-    if (creationStep === "placing" || creationStep === "adjusting") {
+    // Only allow center placement/movement in placing state
+    if (creationStep === "placing") {
       setRegionCenter(coord);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-      if (creationStep === "placing") {
-        setCreationStep("adjusting");
-      }
+      setCreationStep("confirmCenter");
     }
+  };
+
+  // Handle center confirmation
+  const confirmCenter = () => {
+    if (!regionCenter) {
+      Alert.alert("No Location", "Please tap the map to place your region center.");
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setCreationStep("adjustingRadius");
+  };
+
+  // Handle radius confirmation
+  const confirmRadius = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setCreationStep("confirmRadius");
   };
 
   // Finalize region creation
@@ -436,8 +384,8 @@ export default function CreateRegionScreen() {
         ref={mapRef}
         style={styles.map}
         showsUserLocation={true}
-        scrollEnabled={creationStep === "idle"}
-        zoomEnabled={creationStep === "idle"}
+        scrollEnabled={creationStep === "idle" || creationStep === "placing"}
+        zoomEnabled={true}
         rotateEnabled={creationStep === "idle"}
         pitchEnabled={creationStep === "idle"}
         onPress={handleMapPress}
@@ -454,7 +402,7 @@ export default function CreateRegionScreen() {
         />
 
         {/* Live circle preview during creation */}
-        {regionCenter && creationStep !== "idle" && (
+        {regionCenter && (creationStep === "confirmCenter" || creationStep === "adjustingRadius" || creationStep === "confirmRadius") && (
           <>
             {/* Circle region preview */}
             <Circle
@@ -470,46 +418,37 @@ export default function CreateRegionScreen() {
                 <View style={styles.centerDot} />
               </View>
             </Marker>
+            {/* Edge marker for resizing - only in adjustingRadius state */}
+            {edgeMarkerCoord && creationStep === "adjustingRadius" && (
+              <Marker
+                key={`edge-${regionRadius}`}
+                coordinate={edgeMarkerCoord}
+                draggable={true}
+                tracksViewChanges={false}
+                onDragStart={() => {
+                  setIsDraggingEdge(true);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                onDrag={(e) => {
+                  handleEdgeMarkerDrag(e.nativeEvent.coordinate);
+                }}
+                onDragEnd={() => {
+                  setIsDraggingEdge(false);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }}
+                anchor={{ x: 0.5, y: 0.5 }}
+              >
+                <View style={styles.edgeMarker}>
+                  <View style={styles.edgeDot} />
+                  <Text style={styles.edgeLabel}>Drag</Text>
+                </View>
+              </Marker>
+            )}
           </>
         )}
       </MapView>
 
-      {/* Touch overlay for gestures */}
-      {creationStep === "adjusting" && (
-        <View
-          style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
-          {...panResponder.panHandlers}
-          onTouchEnd={async (evt) => {
-            if (
-              evt.nativeEvent.touches.length === 0 &&
-              !isPinching &&
-              regionCenter &&
-              mapRef.current
-            ) {
-              try {
-                const { locationX, locationY } = evt.nativeEvent;
 
-                if (locationX === undefined || locationY === undefined) {
-                  console.log("📍 Touch coordinates unavailable, MapView.onPress will handle");
-                  return;
-                }
-
-                const coord = await mapRef.current.coordinateForPoint({
-                  x: locationX,
-                  y: locationY,
-                });
-
-                if (coord && coord.latitude && coord.longitude) {
-                  setRegionCenter(coord);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-              } catch (error) {
-                console.log("Touch overlay coordinate conversion failed:", error);
-              }
-            }
-          }}
-        />
-      )}
 
       {/* Clean instruction overlay */}
       {creationStep !== "idle" && (
@@ -522,7 +461,7 @@ export default function CreateRegionScreen() {
           <View
             style={[
               styles.instructionsCard,
-              isPinching && styles.instructionsCardPinching,
+              isDraggingEdge && styles.instructionsCardDragging,
             ]}
           >
             {creationStep === "placing" ? (
@@ -532,12 +471,19 @@ export default function CreateRegionScreen() {
                   Tap anywhere on the map
                 </Text>
               </>
-            ) : (
+            ) : creationStep === "confirmCenter" ? (
+              <>
+                <Text style={styles.instructionsTitle}>✅ Confirm Center</Text>
+                <Text style={styles.instructionsText}>
+                  Center placed at selected location
+                </Text>
+              </>
+            ) : creationStep === "adjustingRadius" ? (
               <>
                 <Text
                   style={[
                     styles.instructionsTitle,
-                    isPinching && { color: "#FFFFFF" },
+                    isDraggingEdge && { color: "#FFFFFF" },
                   ]}
                 >
                   {regionName}
@@ -545,7 +491,7 @@ export default function CreateRegionScreen() {
                 <Text
                   style={[
                     styles.radiusDisplay,
-                    isPinching && styles.radiusDisplayActive,
+                    isDraggingEdge && styles.radiusDisplayActive,
                   ]}
                 >
                   {regionRadius}m
@@ -553,18 +499,20 @@ export default function CreateRegionScreen() {
                 <Text
                   style={[
                     styles.instructionsText,
-                    isPinching && { color: "#FFFFFF" },
+                    isDraggingEdge && { color: "#FFFFFF" },
                   ]}
                 >
-                  {isPinching ? "🤏 Pinching..." : "🤏 Pinch to resize"}
+                  {isDraggingEdge ? "🔵 Dragging..." : "🔵 Drag blue dot to resize"}
                 </Text>
-                {!isPinching && (
-                  <Text style={styles.instructionsSubtext}>
-                    Tap map to reposition center
-                  </Text>
-                )}
               </>
-            )}
+            ) : creationStep === "confirmRadius" ? (
+              <>
+                <Text style={styles.instructionsTitle}>✅ Confirm Region</Text>
+                <Text style={styles.instructionsText}>
+                  {regionName} - {regionRadius}m radius
+                </Text>
+              </>
+            ) : null}
           </View>
         </View>
       )}
@@ -577,8 +525,53 @@ export default function CreateRegionScreen() {
           <TouchableOpacity style={styles.createButton} onPress={startCreation}>
             <Text style={styles.createButtonText}>➕ Create Region</Text>
           </TouchableOpacity>
-        ) : creationStep === "adjusting" ? (
+        ) : creationStep === "placing" ? (
           <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={cancelCreation}
+            >
+              <Text style={styles.buttonText}>✕ Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        ) : creationStep === "confirmCenter" ? (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.backButton]}
+              onPress={() => setCreationStep("placing")}
+            >
+              <Text style={styles.buttonText}>← Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.confirmButton]}
+              onPress={confirmCenter}
+            >
+              <Text style={styles.buttonText}>✓ Confirm Center</Text>
+            </TouchableOpacity>
+          </View>
+        ) : creationStep === "adjustingRadius" ? (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.backButton]}
+              onPress={() => setCreationStep("confirmCenter")}
+            >
+              <Text style={styles.buttonText}>← Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.confirmButton]}
+              onPress={confirmRadius}
+            >
+              <Text style={styles.buttonText}>✓ Confirm Size</Text>
+            </TouchableOpacity>
+          </View>
+        ) : creationStep === "confirmRadius" ? (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.backButton]}
+              onPress={() => setCreationStep("adjustingRadius")}
+            >
+              <Text style={styles.buttonText}>← Back</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.saveButton]}
               onPress={finalizeRegion}
@@ -589,18 +582,11 @@ export default function CreateRegionScreen() {
                   style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
                 >
                   <ActivityIndicator size="small" color="#fff" />
-                  <Text style={styles.buttonText}>Saving...</Text>
+                  <Text style={styles.buttonText}>Creating...</Text>
                 </View>
               ) : (
-                <Text style={styles.buttonText}>✓ Create</Text>
+                <Text style={styles.buttonText}>🎉 Create Region</Text>
               )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={cancelCreation}
-              disabled={isCreatingRegion}
-            >
-              <Text style={styles.buttonText}>✕ Cancel</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -665,6 +651,39 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
+  // Edge marker styles
+  edgeMarker: {
+    width: 44,
+    height: 60,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  edgeDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#007AFF",
+    borderWidth: 4,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  edgeLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#007AFF",
+    marginTop: 2,
+    textAlign: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+
   // Instructions overlay
   instructionsOverlay: {
     position: "absolute",
@@ -684,9 +703,9 @@ const styles = StyleSheet.create({
     elevation: 8,
     maxWidth: 350,
   },
-  instructionsCardPinching: {
-    backgroundColor: "rgba(52, 199, 89, 0.95)",
-    shadowColor: "#34c759",
+  instructionsCardDragging: {
+    backgroundColor: "rgba(0, 122, 255, 0.95)",
+    shadowColor: "#007AFF",
     shadowOpacity: 0.4,
   },
   instructionsTitle: {
@@ -756,6 +775,22 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  confirmButton: {
+    backgroundColor: "#34c759",
+    shadowColor: "#34c759",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  backButton: {
+    backgroundColor: "#6c757d",
+    shadowColor: "#6c757d",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   saveButton: {
     backgroundColor: "#34c759",
