@@ -211,11 +211,11 @@ export default function CreateRegionScreen() {
 
     const coord = event.nativeEvent.coordinate;
 
-    // Only allow center placement/movement in placing state
+    // Allow center placement/movement in placing state
     if (creationStep === "placing") {
       setRegionCenter(coord);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setCreationStep("confirmCenter");
+      // Don't auto-advance - user can keep repositioning until they confirm
     }
   };
 
@@ -383,7 +383,14 @@ export default function CreateRegionScreen() {
       <MapView
         ref={mapRef}
         style={styles.map}
+        mapType={"satellite"}
         showsUserLocation={true}
+        showsPointsOfInterest={false}
+        showsBuildings={false}
+        showsTraffic={false}
+        showsIndoors={true}
+        showsCompass={false}
+        showsScale={false}
         scrollEnabled={creationStep === "idle" || creationStep === "placing"}
         zoomEnabled={true}
         rotateEnabled={creationStep === "idle"}
@@ -402,7 +409,7 @@ export default function CreateRegionScreen() {
         />
 
         {/* Live circle preview during creation */}
-        {regionCenter && (creationStep === "confirmCenter" || creationStep === "adjustingRadius" || creationStep === "confirmRadius") && (
+        {regionCenter && creationStep !== "idle" && creationStep !== "placing" && (
           <>
             {/* Circle region preview */}
             <Circle
@@ -446,6 +453,15 @@ export default function CreateRegionScreen() {
             )}
           </>
         )}
+
+        {/* Center marker only during placing state */}
+        {regionCenter && creationStep === "placing" && (
+          <Marker coordinate={regionCenter} anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={styles.centerMarker}>
+              <View style={styles.centerDot} />
+            </View>
+          </Marker>
+        )}
       </MapView>
 
 
@@ -468,7 +484,7 @@ export default function CreateRegionScreen() {
               <>
                 <Text style={styles.instructionsTitle}>📍 Place Center</Text>
                 <Text style={styles.instructionsText}>
-                  Tap anywhere on the map
+                  {regionCenter ? "Tap to reposition center" : "Tap anywhere on the map"}
                 </Text>
               </>
             ) : creationStep === "confirmCenter" ? (
@@ -533,6 +549,14 @@ export default function CreateRegionScreen() {
             >
               <Text style={styles.buttonText}>✕ Cancel</Text>
             </TouchableOpacity>
+            {regionCenter && (
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={() => setCreationStep("confirmCenter")}
+              >
+                <Text style={styles.buttonText}>✓ Confirm Center</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : creationStep === "confirmCenter" ? (
           <View style={styles.actionButtons}>
