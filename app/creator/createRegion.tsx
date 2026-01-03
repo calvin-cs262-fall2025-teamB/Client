@@ -16,13 +16,54 @@ import MapView, {
   LatLng,
   MapPressEvent,
   Marker,
-  UrlTile,
 } from "react-native-maps";
 
 // Import contexts for backend integration
 import { useAuth } from "@/contexts/AuthContext";
 import { useDatabase } from "@/contexts/DatabaseContext";
 import { CreateLandmark, CreateRegion, Point } from "@/types";
+
+// Custom map style to hide points of interest
+const customMapStyle = [
+  {
+    featureType: "poi",
+    elementType: "labels",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.business",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.government",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.medical",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.place_of_worship",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.school",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.sports_complex",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "transit",
+    elementType: "labels.icon",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "transit.station",
+    stylers: [{ visibility: "off" }]
+  }
+];
 
 // Cross-platform prompt function component
 const PromptModal = ({ 
@@ -403,10 +444,6 @@ export default function CreateRegionScreen() {
           longitudeDelta: 0.05,
         }}
       >
-        <UrlTile
-          urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maximumZ={19}
-        />
 
         {/* Live circle preview during creation */}
         {regionCenter && creationStep !== "idle" && creationStep !== "placing" && (
