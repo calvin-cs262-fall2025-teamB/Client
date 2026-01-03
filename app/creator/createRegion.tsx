@@ -146,7 +146,7 @@ export default function CreateRegionScreen() {
   const [regionRadius, setRegionRadius] = useState<number>(200); // Default 200m
   const [regionName, setRegionName] = useState<string>("");
   const [creationStep, setCreationStep] = useState<
-    "idle" | "placing" | "confirmCenter" | "adjustingRadius" | "confirmRadius"
+    "idle" | "placing" | "adjustingRadius" | "confirmRadius"
   >("idle");
 
   // Prompt modal state
@@ -446,7 +446,7 @@ export default function CreateRegionScreen() {
       >
 
         {/* Live circle preview during creation */}
-        {regionCenter && creationStep !== "idle" && creationStep !== "placing" && (
+        {regionCenter && (creationStep === "adjustingRadius" || creationStep === "confirmRadius") && (
           <>
             {/* Circle region preview */}
             <Circle
@@ -524,13 +524,6 @@ export default function CreateRegionScreen() {
                   {regionCenter ? "Tap to reposition center" : "Tap anywhere on the map"}
                 </Text>
               </>
-            ) : creationStep === "confirmCenter" ? (
-              <>
-                <Text style={styles.instructionsTitle}>✅ Confirm Center</Text>
-                <Text style={styles.instructionsText}>
-                  Center placed at selected location
-                </Text>
-              </>
             ) : creationStep === "adjustingRadius" ? (
               <>
                 <Text
@@ -589,32 +582,17 @@ export default function CreateRegionScreen() {
             {regionCenter && (
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
-                onPress={() => setCreationStep("confirmCenter")}
+                onPress={confirmCenter}
               >
                 <Text style={styles.buttonText}>✓ Confirm Center</Text>
               </TouchableOpacity>
             )}
           </View>
-        ) : creationStep === "confirmCenter" ? (
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.button, styles.backButton]}
-              onPress={() => setCreationStep("placing")}
-            >
-              <Text style={styles.buttonText}>← Back</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.confirmButton]}
-              onPress={confirmCenter}
-            >
-              <Text style={styles.buttonText}>✓ Confirm Center</Text>
-            </TouchableOpacity>
-          </View>
         ) : creationStep === "adjustingRadius" ? (
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.button, styles.backButton]}
-              onPress={() => setCreationStep("confirmCenter")}
+              onPress={() => setCreationStep("placing")}
             >
               <Text style={styles.buttonText}>← Back</Text>
             </TouchableOpacity>
