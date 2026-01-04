@@ -15,7 +15,7 @@ import {
 export default function Creator() {
   const router = useRouter();
 
-  const handleCreateRegion = () => router.push("/map");
+  const handleCreateRegion = () => router.push("/creator/createRegion");
   const handleCreateAdventure = () => router.push("/creator/adventure");
 
   return (

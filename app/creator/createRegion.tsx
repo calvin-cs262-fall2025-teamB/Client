@@ -1,0 +1,1142 @@
+import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  PanResponder,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+import MapView, {
+  Circle,
+  LatLng,
+  MapPressEvent,
+  Marker,
+} from "react-native-maps";
+
+// Import contexts for backend integration
+import { useAuth } from "@/contexts/AuthContext";
+import { useDatabase } from "@/contexts/DatabaseContext";
+import { CreateLandmark, CreateRegion, Point } from "@/types";
+
+// Custom map style to hide points of interest
+const customMapStyle = [
+  {
+    featureType: "poi",
+    elementType: "labels",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.business",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.government",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.medical",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.place_of_worship",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.school",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "poi.sports_complex",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "transit",
+    elementType: "labels.icon",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "transit.station",
+    stylers: [{ visibility: "off" }]
+  }
+];
+
+// Cross-platform prompt function component
+const PromptModal = ({ 
+  visible, 
+  title, 
+  message, 
+  onSubmit, 
+  onCancel, 
+  defaultValue = '' 
+}: {
+  visible: boolean;
+  title: string;
+  message: string;
+  onSubmit: (text: string) => void;
+  onCancel: () => void;
+  defaultValue?: string;
+}) => {
+  const [inputValue, setInputValue] = useState(defaultValue);
+  
+  const handleSubmit = () => {
+    onSubmit(inputValue.trim());
+    setInputValue('');
+  };
+  
+  const handleCancel = () => {
+    onCancel();
+    setInputValue('');
+  };
+  
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={handleCancel}
+    >
+      <View style={promptStyles.overlay}>
+        <View style={promptStyles.container}>
+          <Text style={promptStyles.title}>{title}</Text>
+          <Text style={promptStyles.message}>{message}</Text>
+          <TextInput
+            style={promptStyles.input}
+            value={inputValue}
+            onChangeText={setInputValue}
+            placeholder="Enter name..."
+            autoFocus
+            selectTextOnFocus
+          />
+          <View style={promptStyles.buttonContainer}>
+            <TouchableOpacity 
+              style={[promptStyles.button, promptStyles.cancelButton]} 
+              onPress={handleCancel}
+            >
+              <Text style={promptStyles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[promptStyles.button, promptStyles.submitButton]} 
+              onPress={handleSubmit}
+            >
+              <Text style={promptStyles.submitButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+export default function CreateRegionScreen() {
+  // Get contexts for backend integration
+  const { user } = useAuth();
+  const { createRegion, createLandmark, fetchRegions, fetchLandmarks } = useDatabase();
+  const router = useRouter();
+
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Circle-based region creation state
+  const [isCreatingRegion, setIsCreatingRegion] = useState(false);
+  const [regionCenter, setRegionCenter] = useState<LatLng | null>(null);
+  const [regionRadius, setRegionRadius] = useState<number>(200); // Default 200m
+  const [regionName, setRegionName] = useState<string>("");
+  const [creationStep, setCreationStep] = useState<
+    "idle" | "placing" | "adjustingRadius" | "addingLandmarks"
+  >("idle");
+
+  // Landmark creation state
+  const [landmarks, setLandmarks] = useState<Array<{id: string, coordinate: LatLng, name: string}>>([])
+  const [nextLandmarkId, setNextLandmarkId] = useState(1);
+
+  // Prompt modal state
+  const [promptVisible, setPromptVisible] = useState(false);
+  const [promptConfig, setPromptConfig] = useState<{
+    title: string;
+    message: string;
+    callback: (text?: string) => void;
+    defaultValue?: string;
+  } | null>(null);
+
+  // Cross-platform prompt helper
+  const showPromptDialog = (
+    title: string,
+    message: string,
+    callback: (text?: string) => void,
+    defaultValue?: string
+  ) => {
+    setPromptConfig({ title, message, callback, defaultValue });
+    setPromptVisible(true);
+  };
+
+  const mapRef = useRef<MapView>(null);
+  const [isDraggingRadius, setIsDraggingRadius] = useState(false);
+
+  // Calculate distance between two geographic points in meters
+  const calculateDistance = useCallback((point1: LatLng, point2: LatLng): number => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (point2.latitude - point1.latitude) * (Math.PI / 180);
+    const dLng = (point2.longitude - point1.longitude) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(point1.latitude * (Math.PI / 180)) *
+        Math.cos(point2.latitude * (Math.PI / 180)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }, []);
+
+  // Handle radius drag to resize circle
+  const handleRadiusDrag = useCallback((newCoord: LatLng) => {
+    if (!regionCenter) return;
+    
+    const distance = calculateDistance(regionCenter, newCoord);
+    const clampedRadius = Math.max(50, Math.min(5000, Math.round(distance)));
+    
+    setRegionRadius(clampedRadius);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [regionCenter, calculateDistance]);
+
+  // Location tracking
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Location access is required.");
+        setIsLoading(false);
+        return;
+      }
+
+      const current = await Location.getCurrentPositionAsync({});
+      setLocation(current);
+      setIsLoading(false);
+
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 2000,
+          distanceInterval: 1,
+        },
+        (pos) => setLocation(pos)
+      );
+
+      return () => subscription.remove();
+    })();
+  }, []);
+
+  // Pan responder for radius adjustment
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: (evt) => {
+      return creationStep === "adjustingRadius" && evt.nativeEvent.touches.length === 1;
+    },
+    onMoveShouldSetPanResponder: (evt) => {
+      return creationStep === "adjustingRadius" && evt.nativeEvent.touches.length === 1;
+    },
+    onPanResponderGrant: (evt) => {
+      if (creationStep === "adjustingRadius" && regionCenter && mapRef.current) {
+        setIsDraggingRadius(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        
+        // Convert touch coordinates to map coordinates and set initial radius
+        mapRef.current.coordinateForPoint({
+          x: evt.nativeEvent.locationX,
+          y: evt.nativeEvent.locationY,
+        }).then((coord) => {
+          if (coord) {
+            handleRadiusDrag(coord);
+          }
+        }).catch(() => {
+          // Fallback if coordinate conversion fails
+        });
+      }
+    },
+    onPanResponderMove: (evt) => {
+      if (creationStep === "adjustingRadius" && regionCenter && mapRef.current && isDraggingRadius) {
+        // Convert touch coordinates to map coordinates and update radius
+        mapRef.current.coordinateForPoint({
+          x: evt.nativeEvent.locationX,
+          y: evt.nativeEvent.locationY,
+        }).then((coord) => {
+          if (coord) {
+            handleRadiusDrag(coord);
+          }
+        }).catch(() => {
+          // Fallback if coordinate conversion fails
+        });
+      }
+    },
+    onPanResponderRelease: () => {
+      if (isDraggingRadius) {
+        setIsDraggingRadius(false);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    },
+  });
+
+  // Handle map press for center placement only
+  const handleMapPress = (event: MapPressEvent) => {
+    // Only handle center placement in placing state
+    if (creationStep === "placing") {
+      setRegionCenter(event.nativeEvent.coordinate);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+  const confirmCenter = () => {
+    if (!regionCenter) {
+      Alert.alert("No Location", "Please tap the map to place your region center.");
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setCreationStep("adjustingRadius");
+  };
+
+  // Handle radius confirmation - proceed to landmark creation
+  const confirmRadius = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setCreationStep("addingLandmarks");
+  };
+
+  // Add landmark at current location
+  const addLandmarkAtCurrentLocation = () => {
+    if (!location) {
+      Alert.alert("No Location", "Unable to get your current location.");
+      return;
+    }
+    
+    const landmarkCoord = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude
+    };
+
+    showPromptDialog(
+      "New Landmark",
+      "What would you like to name this landmark?",
+      (name) => {
+        if (!name || !name.trim()) {
+          Alert.alert("Name Required", "Please enter a valid landmark name.");
+          return;
+        }
+        
+        const newLandmark = {
+          id: `landmark_${nextLandmarkId}`,
+          coordinate: landmarkCoord,
+          name: name.trim()
+        };
+        
+        setLandmarks(prev => [...prev, newLandmark]);
+        setNextLandmarkId(prev => prev + 1);
+        
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    );
+  };
+
+  // Remove landmark
+  const removeLandmark = (landmarkId: string) => {
+    setLandmarks(prev => prev.filter(lm => lm.id !== landmarkId));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  // Confirm landmarks and create region
+  const confirmLandmarks = async () => {
+    if (landmarks.length === 0) {
+      Alert.alert(
+        "No Landmarks", 
+        "You must add at least one landmark. Would you like to add auto-generated landmarks instead?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Auto-generate", onPress: () => finalizeRegion() }
+        ]
+      );
+      return;
+    }
+    
+    await finalizeRegion();
+  };
+
+  // Finalize region creation
+  const finalizeRegion = async () => {
+    // Validation
+    if (!regionCenter) {
+      Alert.alert(
+        "No Location",
+        "Please tap the map to place your region center."
+      );
+      return;
+    }
+
+    if (!regionName.trim()) {
+      Alert.alert("Name Required", "Please enter a name for your region.");
+      return;
+    }
+
+    if (!user || !user.id) {
+      Alert.alert(
+        "Authentication Required",
+        "You must be logged in to create a region."
+      );
+      return;
+    }
+
+    setIsCreatingRegion(true);
+
+    try {
+      // Circle approach: Use proper database types
+      const location: Point = {
+        x: regionCenter.latitude,
+        y: regionCenter.longitude,
+      };
+
+      const regionData: CreateRegion = {
+        adventurerid: user.id,
+        name: regionName.trim(),
+        description: `Circular region with ${regionRadius}m radius`,
+        location,
+        radius: regionRadius,
+      };
+
+      console.log("Creating circular region:", regionData);
+      const savedRegion = await createRegion(regionData);
+      console.log("Region created successfully:", savedRegion);
+
+      if (!savedRegion || !savedRegion.id) {
+        throw new Error("Failed to create region - no region ID returned");
+      }
+
+      // Create user-defined landmarks or auto-generate if none exist
+      let landmarksToCreate = landmarks;
+      
+      if (landmarksToCreate.length === 0) {
+        // Auto-generate evenly-spaced landmarks on circle perimeter if none were added
+        const numLandmarks = 8;
+        landmarksToCreate = [];
+        
+        for (let i = 0; i < numLandmarks; i++) {
+          const angle = (i / numLandmarks) * 2 * Math.PI;
+
+          // Convert radius from meters to degrees (approximate)
+          const radiusInDegrees = regionRadius / 111320; // 1 degree ≈ 111.32 km
+
+          const lat = regionCenter.latitude + radiusInDegrees * Math.cos(angle);
+          const lng =
+            regionCenter.longitude +
+            (radiusInDegrees * Math.sin(angle)) /
+              Math.cos((regionCenter.latitude * Math.PI) / 180);
+
+          landmarksToCreate.push({
+            id: `auto_${i}`,
+            coordinate: { latitude: lat, longitude: lng },
+            name: `${regionName} - Perimeter ${i + 1}`
+          });
+        }
+      }
+
+      // Create landmarks in database
+      for (const landmark of landmarksToCreate) {
+        const landmarkData: CreateLandmark = {
+          regionid: savedRegion.id,
+          name: landmark.name,
+          location: { x: landmark.coordinate.latitude, y: landmark.coordinate.longitude },
+        };
+
+        await createLandmark(landmarkData);
+        console.log(`Landmark "${landmark.name}" created`);
+      }
+
+      // Refresh database data to include new region and landmarks
+      await fetchRegions();
+      await fetchLandmarks(savedRegion.id);
+
+      // Success feedback
+      Alert.alert(
+        "🎉 Region Created!",
+        `"${regionName}" created successfully!\n\n` +
+          `📍 Radius: ${regionRadius}m\n` +
+          `🏷️ Landmarks: ${landmarksToCreate.length} ${landmarks.length > 0 ? 'custom' : 'auto-generated'} points`,
+        [{ 
+          text: "Awesome!", 
+          style: "default",
+          onPress: () => {
+            // Reset state and navigate back to creation page
+            resetCreationState();
+            router.back();
+          }
+        }]
+      );
+    } catch (error) {
+      console.error("Error creating region:", error);
+      Alert.alert(
+        "Error",
+        `Failed to create region: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsCreatingRegion(false);
+    }
+  };
+
+  // Helper to reset creation state
+  const resetCreationState = () => {
+    setRegionCenter(null);
+    setRegionRadius(200);
+    setRegionName("");
+    setLandmarks([]);
+    setNextLandmarkId(1);
+    setCreationStep("idle");
+  };
+
+  // Cancel region creation
+  const cancelCreation = () => {
+    resetCreationState();
+    Alert.alert("Cancelled", "Region creation cancelled.");
+  };
+
+  // Start region creation flow
+  const startCreation = () => {
+    showPromptDialog(
+      "New Region",
+      "What would you like to name this region?",
+      (name) => {
+        if (!name || !name.trim()) {
+          Alert.alert("Name Required", "Please enter a valid region name.");
+          return;
+        }
+        setRegionName(name.trim());
+        setCreationStep("placing");
+      }
+    );
+  };
+
+  // Loading state
+  if (isLoading || !location) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading map...</Text>
+      </View>
+    );
+  }
+
+  // Render
+  return (
+    <View style={{ flex: 1 }}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        mapType={"standard"}
+        customMapStyle={customMapStyle}
+        showsUserLocation={true}
+        showsPointsOfInterest={false}
+        showsBuildings={false}
+        showsTraffic={false}
+        showsIndoors={false}
+        showsCompass={false}
+        showsScale={false}
+        scrollEnabled={creationStep === "idle" || creationStep === "placing"}
+        zoomEnabled={creationStep === "idle" || creationStep === "placing" || creationStep === "adjustingRadius"}
+        rotateEnabled={creationStep === "idle"}
+        pitchEnabled={creationStep === "idle"}
+        onPress={handleMapPress}
+        initialRegion={{
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+      >
+
+        {/* Live circle preview during creation */}
+        {regionCenter && creationStep === "adjustingRadius" && (
+          <>
+            {/* Circle region preview */}
+            <Circle
+              center={regionCenter}
+              radius={regionRadius}
+              fillColor="rgba(52, 199, 89, 0.25)"
+              strokeColor="rgba(52, 199, 89, 1)"
+              strokeWidth={3}
+            />
+            {/* Center marker */}
+            <Marker coordinate={regionCenter} anchor={{ x: 0.5, y: 0.5 }}>
+              <View style={styles.centerMarker}>
+                <View style={styles.centerDot} />
+              </View>
+            </Marker>
+          </>
+        )}
+
+        {/* Center marker only during placing state */}
+        {regionCenter && creationStep === "placing" && (
+          <Marker coordinate={regionCenter} anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={styles.centerMarker}>
+              <View style={styles.centerDot} />
+            </View>
+          </Marker>
+        )}
+
+        {/* Landmarks during landmark creation */}
+        {creationStep === "addingLandmarks" && landmarks.map((landmark) => (
+          <Marker
+            key={landmark.id}
+            coordinate={landmark.coordinate}
+            anchor={{ x: 0.5, y: 1 }}
+            onPress={() => {
+              Alert.alert(
+                landmark.name,
+                "Would you like to remove this landmark?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Remove", style: "destructive", onPress: () => removeLandmark(landmark.id) }
+                ]
+              );
+            }}
+          >
+            <View style={styles.landmarkMarker}>
+              <View style={styles.landmarkDot} />
+              <Text style={styles.landmarkLabel}>{landmark.name}</Text>
+            </View>
+          </Marker>
+        ))}
+
+        {/* Region preview during landmark creation */}
+        {regionCenter && creationStep === "addingLandmarks" && (
+          <>
+            <Circle
+              center={regionCenter}
+              radius={regionRadius}
+              fillColor="rgba(52, 199, 89, 0.15)"
+              strokeColor="rgba(52, 199, 89, 0.8)"
+              strokeWidth={2}
+            />
+            <Marker coordinate={regionCenter} anchor={{ x: 0.5, y: 0.5 }}>
+              <View style={styles.centerMarker}>
+                <View style={styles.centerDot} />
+              </View>
+            </Marker>
+          </>
+        )}
+      </MapView>
+
+      {/* Touch overlay for radius adjustment */}
+      {creationStep === "adjustingRadius" && (
+        <View
+          style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
+          {...panResponder.panHandlers}
+        />
+      )}
+
+
+
+      {/* Clean instruction overlay */}
+      {creationStep !== "idle" && (
+        <View
+          style={[
+            styles.instructionsOverlay,
+            { zIndex: 2000, pointerEvents: "none" },
+          ]}
+        >
+          <View
+            style={[
+              styles.instructionsCard,
+              isDraggingRadius && styles.instructionsCardDragging,
+            ]}
+          >
+            {creationStep === "placing" ? (
+              <>
+                <Text style={styles.instructionsTitle}>📍 Place Center</Text>
+                <Text style={styles.instructionsText}>
+                  {regionCenter ? "Tap to reposition center" : "Tap anywhere on the map"}
+                </Text>
+              </>
+            ) : creationStep === "adjustingRadius" ? (
+              <>
+                <Text
+                  style={[
+                    styles.instructionsTitle,
+                    isDraggingRadius && { color: "#FFFFFF" },
+                  ]}
+                >
+                  {regionName}
+                </Text>
+                <Text
+                  style={[
+                    styles.radiusDisplay,
+                    isDraggingRadius && styles.radiusDisplayActive,
+                  ]}
+                >
+                  {regionRadius}m
+                </Text>
+                <Text
+                  style={[
+                    styles.instructionsText,
+                    isDraggingRadius && { color: "#FFFFFF" },
+                  ]}
+                >
+                  {isDraggingRadius ? "📏 Setting radius..." : "📏 Click and drag to set radius"}
+                </Text>
+              </>
+            ) : creationStep === "addingLandmarks" ? (
+              <>
+                <Text style={styles.instructionsTitle}>🏷️ Add Landmarks</Text>
+                <Text style={styles.instructionsText}>
+                  {landmarks.length === 0 
+                    ? "Move to a landmark location and tap the + button"
+                    : `${landmarks.length} landmark${landmarks.length === 1 ? '' : 's'} added`
+                  }
+                </Text>
+                {landmarks.length > 0 && (
+                  <Text style={styles.instructionsSubtext}>
+                    Tap landmarks on map to remove them
+                  </Text>
+                )}
+              </>
+            ) : null}
+          </View>
+        </View>
+      )}
+
+      {/* Main Action Controls */}
+      <View
+        style={[styles.controls, { zIndex: 3000, pointerEvents: "box-none" }]}
+      >
+        {creationStep === "idle" ? (
+          <TouchableOpacity style={styles.createButton} onPress={startCreation}>
+            <Text style={styles.createButtonText}>➕ Create Region</Text>
+          </TouchableOpacity>
+        ) : creationStep === "placing" ? (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={cancelCreation}
+            >
+              <Text style={styles.buttonText}>✕ Cancel</Text>
+            </TouchableOpacity>
+            {regionCenter && (
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={confirmCenter}
+              >
+                <Text style={styles.buttonText}>✓ Confirm Center</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : creationStep === "adjustingRadius" ? (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.backButton]}
+              onPress={() => setCreationStep("placing")}
+            >
+              <Text style={styles.buttonText}>← Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.confirmButton]}
+              onPress={confirmRadius}
+              disabled={isCreatingRegion}
+            >
+              {isCreatingRegion ? (
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.buttonText}>Creating...</Text>
+                </View>
+              ) : (
+                <Text style={styles.buttonText}>🎉 Create Region</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : creationStep === "addingLandmarks" ? (
+          <View style={styles.landmarkControls}>
+            {/* Top row: Back and Add Landmark */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.backButton]}
+                onPress={() => setCreationStep("adjustingRadius")}
+              >
+                <Text style={styles.buttonText}>← Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.addButton]}
+                onPress={addLandmarkAtCurrentLocation}
+              >
+                <Text style={styles.buttonText}>📍 Add Here</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Bottom button: Create Region */}
+            <TouchableOpacity
+              style={[styles.createButton, { marginTop: 12 }]}
+              onPress={confirmLandmarks}
+              disabled={isCreatingRegion}
+            >
+              {isCreatingRegion ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.createButtonText}>Creating...</Text>
+                </View>
+              ) : (
+                <Text style={styles.createButtonText}>
+                  🎉 Create Region{landmarks.length > 0 ? ` with ${landmarks.length} landmark${landmarks.length === 1 ? '' : 's'}` : ''}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Prompt Modal */}
+      {promptConfig && (
+        <PromptModal
+          visible={promptVisible}
+          title={promptConfig.title}
+          message={promptConfig.message}
+          defaultValue={promptConfig.defaultValue}
+          onSubmit={(text) => {
+            promptConfig.callback(text);
+            setPromptVisible(false);
+            setPromptConfig(null);
+          }}
+          onCancel={() => {
+            promptConfig.callback(undefined);
+            setPromptVisible(false);
+            setPromptConfig(null);
+          }}
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  // Map and loading
+  map: { flex: 1 },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: "center", 
+    alignItems: "center",
+    backgroundColor: "#f8f9fa"
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#6B7280",
+  },
+
+  // Center marker styles
+  centerMarker: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  centerDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#34c759",
+    borderWidth: 3,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  // Landmark marker styles
+  landmarkMarker: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  landmarkDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#FF9500",
+    borderWidth: 3,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  landmarkLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#FF9500",
+    marginTop: 2,
+    textAlign: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    maxWidth: 100,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+
+  // Edge marker styles (keeping existing for any other uses)
+  edgeMarker: {
+    width: 44,
+    height: 60,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  edgeDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#007AFF",
+    borderWidth: 4,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  edgeLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#007AFF",
+    marginTop: 2,
+    textAlign: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+
+  // Instructions overlay
+  instructionsOverlay: {
+    position: "absolute",
+    top: 60,
+    left: 20,
+    right: 20,
+    alignItems: "center",
+  },
+  instructionsCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    maxWidth: 350,
+  },
+  instructionsCardDragging: {
+    backgroundColor: "rgba(0, 122, 255, 0.95)",
+    shadowColor: "#007AFF",
+    shadowOpacity: 0.4,
+  },
+  instructionsTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  instructionsSubtext: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    textAlign: "center",
+    marginTop: 6,
+    fontStyle: "italic",
+  },
+  radiusDisplay: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: "#34c759",
+    textAlign: "center",
+    marginVertical: 8,
+  },
+  radiusDisplayActive: {
+    color: "#FFFFFF",
+    fontSize: 40,
+  },
+
+  // Main action controls
+  controls: {
+    position: "absolute",
+    bottom: 30,
+    left: 20,
+    right: 20,
+    alignItems: "center",
+  },
+  createButton: {
+    backgroundColor: "#34c759",
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    shadowColor: "#34c759",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  createButtonText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmButton: {
+    backgroundColor: "#34c759",
+    shadowColor: "#34c759",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  backButton: {
+    backgroundColor: "#6c757d",
+    shadowColor: "#6c757d",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  saveButton: {
+    backgroundColor: "#34c759",
+    shadowColor: "#34c759",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cancelButton: {
+    backgroundColor: "#FF3B30",
+    shadowColor: "#FF3B30",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  addButton: {
+    backgroundColor: "#FF9500",
+    shadowColor: "#FF9500",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  landmarkControls: {
+    width: "100%",
+  },
+  buttonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+});
+
+// Prompt modal styles
+const promptStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  container: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: '100%',
+    maxWidth: 300,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+    color: '#333',
+  },
+  message: {
+    fontSize: 14,
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#666',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: '#fff',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  button: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  submitButton: {
+    backgroundColor: '#007AFF',
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
