@@ -147,8 +147,12 @@ export default function CreateRegionScreen() {
   const [regionRadius, setRegionRadius] = useState<number>(200); // Default 200m
   const [regionName, setRegionName] = useState<string>("");
   const [creationStep, setCreationStep] = useState<
-    "idle" | "placing" | "adjustingRadius"
+    "idle" | "placing" | "adjustingRadius" | "addingLandmarks"
   >("idle");
+
+  // Landmark creation state
+  const [landmarks, setLandmarks] = useState<Array<{id: string, coordinate: LatLng, name: string}>>([])
+  const [nextLandmarkId, setNextLandmarkId] = useState(1);
 
   // Prompt modal state
   const [promptVisible, setPromptVisible] = useState(false);
@@ -292,9 +296,67 @@ export default function CreateRegionScreen() {
     setCreationStep("adjustingRadius");
   };
 
-  // Handle radius confirmation - directly create the region
-  const confirmRadius = async () => {
+  // Handle radius confirmation - proceed to landmark creation
+  const confirmRadius = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setCreationStep("addingLandmarks");
+  };
+
+  // Add landmark at current location
+  const addLandmarkAtCurrentLocation = () => {
+    if (!location) {
+      Alert.alert("No Location", "Unable to get your current location.");
+      return;
+    }
+    
+    const landmarkCoord = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude
+    };
+
+    showPromptDialog(
+      "New Landmark",
+      "What would you like to name this landmark?",
+      (name) => {
+        if (!name || !name.trim()) {
+          Alert.alert("Name Required", "Please enter a valid landmark name.");
+          return;
+        }
+        
+        const newLandmark = {
+          id: `landmark_${nextLandmarkId}`,
+          coordinate: landmarkCoord,
+          name: name.trim()
+        };
+        
+        setLandmarks(prev => [...prev, newLandmark]);
+        setNextLandmarkId(prev => prev + 1);
+        
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    );
+  };
+
+  // Remove landmark
+  const removeLandmark = (landmarkId: string) => {
+    setLandmarks(prev => prev.filter(lm => lm.id !== landmarkId));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  // Confirm landmarks and create region
+  const confirmLandmarks = async () => {
+    if (landmarks.length === 0) {
+      Alert.alert(
+        "No Landmarks", 
+        "You must add at least one landmark. Would you like to add auto-generated landmarks instead?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Auto-generate", onPress: () => finalizeRegion() }
+        ]
+      );
+      return;
+    }
+    
     await finalizeRegion();
   };
 
@@ -347,29 +409,44 @@ export default function CreateRegionScreen() {
         throw new Error("Failed to create region - no region ID returned");
       }
 
-      // Auto-generate evenly-spaced landmarks on circle perimeter
-      const numLandmarks = 8;
+      // Create user-defined landmarks or auto-generate if none exist
+      let landmarksToCreate = landmarks;
+      
+      if (landmarksToCreate.length === 0) {
+        // Auto-generate evenly-spaced landmarks on circle perimeter if none were added
+        const numLandmarks = 8;
+        landmarksToCreate = [];
+        
+        for (let i = 0; i < numLandmarks; i++) {
+          const angle = (i / numLandmarks) * 2 * Math.PI;
 
-      for (let i = 0; i < numLandmarks; i++) {
-        const angle = (i / numLandmarks) * 2 * Math.PI;
+          // Convert radius from meters to degrees (approximate)
+          const radiusInDegrees = regionRadius / 111320; // 1 degree ≈ 111.32 km
 
-        // Convert radius from meters to degrees (approximate)
-        const radiusInDegrees = regionRadius / 111320; // 1 degree ≈ 111.32 km
+          const lat = regionCenter.latitude + radiusInDegrees * Math.cos(angle);
+          const lng =
+            regionCenter.longitude +
+            (radiusInDegrees * Math.sin(angle)) /
+              Math.cos((regionCenter.latitude * Math.PI) / 180);
 
-        const lat = regionCenter.latitude + radiusInDegrees * Math.cos(angle);
-        const lng =
-          regionCenter.longitude +
-          (radiusInDegrees * Math.sin(angle)) /
-            Math.cos((regionCenter.latitude * Math.PI) / 180);
+          landmarksToCreate.push({
+            id: `auto_${i}`,
+            coordinate: { latitude: lat, longitude: lng },
+            name: `${regionName} - Perimeter ${i + 1}`
+          });
+        }
+      }
 
+      // Create landmarks in database
+      for (const landmark of landmarksToCreate) {
         const landmarkData: CreateLandmark = {
           regionid: savedRegion.id,
-          name: `${regionName} - Perimeter ${i + 1}`,
-          location: { x: lat, y: lng },
+          name: landmark.name,
+          location: { x: landmark.coordinate.latitude, y: landmark.coordinate.longitude },
         };
 
         await createLandmark(landmarkData);
-        console.log(`Landmark ${i + 1} created on perimeter`);
+        console.log(`Landmark "${landmark.name}" created`);
       }
 
       // Refresh database data to include new region and landmarks
@@ -381,7 +458,7 @@ export default function CreateRegionScreen() {
         "🎉 Region Created!",
         `"${regionName}" created successfully!\n\n` +
           `📍 Radius: ${regionRadius}m\n` +
-          `🏷️ Landmarks: ${numLandmarks} evenly-spaced points`,
+          `🏷️ Landmarks: ${landmarksToCreate.length} ${landmarks.length > 0 ? 'custom' : 'auto-generated'} points`,
         [{ text: "Awesome!", style: "default" }]
       );
 
@@ -405,6 +482,8 @@ export default function CreateRegionScreen() {
     setRegionCenter(null);
     setRegionRadius(200);
     setRegionName("");
+    setLandmarks([]);
+    setNextLandmarkId(1);
     setCreationStep("idle");
   };
 
@@ -496,6 +575,48 @@ export default function CreateRegionScreen() {
             </View>
           </Marker>
         )}
+
+        {/* Landmarks during landmark creation */}
+        {creationStep === "addingLandmarks" && landmarks.map((landmark) => (
+          <Marker
+            key={landmark.id}
+            coordinate={landmark.coordinate}
+            anchor={{ x: 0.5, y: 1 }}
+            onPress={() => {
+              Alert.alert(
+                landmark.name,
+                "Would you like to remove this landmark?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Remove", style: "destructive", onPress: () => removeLandmark(landmark.id) }
+                ]
+              );
+            }}
+          >
+            <View style={styles.landmarkMarker}>
+              <View style={styles.landmarkDot} />
+              <Text style={styles.landmarkLabel}>{landmark.name}</Text>
+            </View>
+          </Marker>
+        ))}
+
+        {/* Region preview during landmark creation */}
+        {regionCenter && creationStep === "addingLandmarks" && (
+          <>
+            <Circle
+              center={regionCenter}
+              radius={regionRadius}
+              fillColor="rgba(52, 199, 89, 0.15)"
+              strokeColor="rgba(52, 199, 89, 0.8)"
+              strokeWidth={2}
+            />
+            <Marker coordinate={regionCenter} anchor={{ x: 0.5, y: 0.5 }}>
+              <View style={styles.centerMarker}>
+                <View style={styles.centerDot} />
+              </View>
+            </Marker>
+          </>
+        )}
       </MapView>
 
       {/* Touch overlay for radius adjustment */}
@@ -556,12 +677,20 @@ export default function CreateRegionScreen() {
                   {isDraggingRadius ? "📏 Setting radius..." : "📏 Click and drag to set radius"}
                 </Text>
               </>
-            ) : creationStep === "confirmRadius" ? (
+            ) : creationStep === "addingLandmarks" ? (
               <>
-                <Text style={styles.instructionsTitle}>✅ Confirm Region</Text>
+                <Text style={styles.instructionsTitle}>🏷️ Add Landmarks</Text>
                 <Text style={styles.instructionsText}>
-                  {regionName} - {regionRadius}m radius
+                  {landmarks.length === 0 
+                    ? "Move to a landmark location and tap the + button"
+                    : `${landmarks.length} landmark${landmarks.length === 1 ? '' : 's'} added`
+                  }
                 </Text>
+                {landmarks.length > 0 && (
+                  <Text style={styles.instructionsSubtext}>
+                    Tap landmarks on map to remove them
+                  </Text>
+                )}
               </>
             ) : null}
           </View>
@@ -618,28 +747,39 @@ export default function CreateRegionScreen() {
               )}
             </TouchableOpacity>
           </View>
-        ) : creationStep === "confirmRadius" ? (
-          <View style={styles.actionButtons}>
+        ) : creationStep === "addingLandmarks" ? (
+          <View style={styles.landmarkControls}>
+            {/* Top row: Back and Add Landmark */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.backButton]}
+                onPress={() => setCreationStep("adjustingRadius")}
+              >
+                <Text style={styles.buttonText}>← Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.addButton]}
+                onPress={addLandmarkAtCurrentLocation}
+              >
+                <Text style={styles.buttonText}>📍 Add Here</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Bottom button: Create Region */}
             <TouchableOpacity
-              style={[styles.button, styles.backButton]}
-              onPress={() => setCreationStep("adjustingRadius")}
-            >
-              <Text style={styles.buttonText}>← Back</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.saveButton]}
-              onPress={finalizeRegion}
+              style={[styles.createButton, { marginTop: 12 }]}
+              onPress={confirmLandmarks}
               disabled={isCreatingRegion}
             >
               {isCreatingRegion ? (
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <ActivityIndicator size="small" color="#fff" />
-                  <Text style={styles.buttonText}>Creating...</Text>
+                  <Text style={styles.createButtonText}>Creating...</Text>
                 </View>
               ) : (
-                <Text style={styles.buttonText}>🎉 Create Region</Text>
+                <Text style={styles.createButtonText}>
+                  🎉 Create Region{landmarks.length > 0 ? ` with ${landmarks.length} landmark${landmarks.length === 1 ? '' : 's'}` : ''}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -705,7 +845,44 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
-  // Edge marker styles
+  // Landmark marker styles
+  landmarkMarker: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  landmarkDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#FF9500",
+    borderWidth: 3,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  landmarkLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#FF9500",
+    marginTop: 2,
+    textAlign: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    maxWidth: 100,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+
+  // Edge marker styles (keeping existing for any other uses)
   edgeMarker: {
     width: 44,
     height: 60,
@@ -861,6 +1038,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  addButton: {
+    backgroundColor: "#FF9500",
+    shadowColor: "#FF9500",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  landmarkControls: {
+    width: "100%",
   },
   buttonText: {
     color: "#FFFFFF",
