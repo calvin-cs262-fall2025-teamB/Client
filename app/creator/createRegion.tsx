@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  PanResponder,
   StyleSheet,
   Text,
   TextInput,
@@ -146,7 +147,7 @@ export default function CreateRegionScreen() {
   const [regionRadius, setRegionRadius] = useState<number>(200); // Default 200m
   const [regionName, setRegionName] = useState<string>("");
   const [creationStep, setCreationStep] = useState<
-    "idle" | "placing" | "adjustingRadius" | "confirmRadius"
+    "idle" | "placing" | "adjustingRadius"
   >("idle");
 
   // Prompt modal state
@@ -170,8 +171,7 @@ export default function CreateRegionScreen() {
   };
 
   const mapRef = useRef<MapView>(null);
-  const [isDraggingEdge, setIsDraggingEdge] = useState(false);
-  const [edgeMarkerCoord, setEdgeMarkerCoord] = useState<LatLng | null>(null);
+  const [isDraggingRadius, setIsDraggingRadius] = useState(false);
 
   // Calculate distance between two geographic points in meters
   const calculateDistance = useCallback((point1: LatLng, point2: LatLng): number => {
@@ -188,31 +188,16 @@ export default function CreateRegionScreen() {
     return R * c;
   }, []);
 
-  // Calculate edge marker position based on center and radius
-  const calculateEdgePosition = useCallback((center: LatLng, radius: number): LatLng => {
-    console.log("calculateEdgePosition called with center:", center, "radius:", radius);
-    const radiusInDegrees = radius / 111320; // Convert meters to degrees
-    console.log("radiusInDegrees:", radiusInDegrees);
-    const result = {
-      latitude: center.latitude + radiusInDegrees,
-      longitude: center.longitude,
-    };
-    console.log("calculateEdgePosition returning:", result);
-    return result;
-  }, []);
-
-  // Handle edge marker drag to resize circle
-  const handleEdgeMarkerDrag = useCallback((newCoord: LatLng) => {
+  // Handle radius drag to resize circle
+  const handleRadiusDrag = useCallback((newCoord: LatLng) => {
     if (!regionCenter) return;
     
     const distance = calculateDistance(regionCenter, newCoord);
     const clampedRadius = Math.max(50, Math.min(5000, Math.round(distance)));
     
     setRegionRadius(clampedRadius);
-    setEdgeMarkerCoord(calculateEdgePosition(regionCenter, clampedRadius));
-    
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [regionCenter, calculateDistance, calculateEdgePosition]);
+  }, [regionCenter, calculateDistance]);
 
   // Location tracking
   useEffect(() => {
@@ -241,38 +226,63 @@ export default function CreateRegionScreen() {
     })();
   }, []);
 
-  // Update edge marker position when center or radius changes
-  useEffect(() => {
-    console.log("useEffect triggered - regionCenter:", regionCenter, "creationStep:", creationStep, "regionRadius:", regionRadius);
-    if (regionCenter && (creationStep === "adjustingRadius" || creationStep === "confirmRadius")) {
-      console.log("Conditions met, calling calculateEdgePosition with:", { center: regionCenter, radius: regionRadius });
-      const newEdgeCoord = calculateEdgePosition(regionCenter, regionRadius);
-      console.log("calculateEdgePosition returned:", newEdgeCoord);
-      console.log("Setting edge marker coordinate:", newEdgeCoord, "for step:", creationStep);
-      setEdgeMarkerCoord(newEdgeCoord);
-    } else {
-      console.log("Conditions not met, setting edgeMarkerCoord to null");
-      setEdgeMarkerCoord(null);
-    }
-  }, [regionCenter, regionRadius, creationStep, calculateEdgePosition]);
+  // Pan responder for radius adjustment
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: (evt) => {
+      return creationStep === "adjustingRadius" && evt.nativeEvent.touches.length === 1;
+    },
+    onMoveShouldSetPanResponder: (evt) => {
+      return creationStep === "adjustingRadius" && evt.nativeEvent.touches.length === 1;
+    },
+    onPanResponderGrant: (evt) => {
+      if (creationStep === "adjustingRadius" && regionCenter && mapRef.current) {
+        setIsDraggingRadius(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        
+        // Convert touch coordinates to map coordinates and set initial radius
+        mapRef.current.coordinateForPoint({
+          x: evt.nativeEvent.locationX,
+          y: evt.nativeEvent.locationY,
+        }).then((coord) => {
+          if (coord) {
+            handleRadiusDrag(coord);
+          }
+        }).catch(() => {
+          // Fallback if coordinate conversion fails
+        });
+      }
+    },
+    onPanResponderMove: (evt) => {
+      if (creationStep === "adjustingRadius" && regionCenter && mapRef.current && isDraggingRadius) {
+        // Convert touch coordinates to map coordinates and update radius
+        mapRef.current.coordinateForPoint({
+          x: evt.nativeEvent.locationX,
+          y: evt.nativeEvent.locationY,
+        }).then((coord) => {
+          if (coord) {
+            handleRadiusDrag(coord);
+          }
+        }).catch(() => {
+          // Fallback if coordinate conversion fails
+        });
+      }
+    },
+    onPanResponderRelease: () => {
+      if (isDraggingRadius) {
+        setIsDraggingRadius(false);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    },
+  });
 
-  // Handle map press
+  // Handle map press for center placement only
   const handleMapPress = (event: MapPressEvent) => {
-    if (isDraggingEdge) {
-      return;
-    }
-
-    const coord = event.nativeEvent.coordinate;
-
-    // Allow center placement/movement in placing state
+    // Only handle center placement in placing state
     if (creationStep === "placing") {
-      setRegionCenter(coord);
+      setRegionCenter(event.nativeEvent.coordinate);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      // Don't auto-advance - user can keep repositioning until they confirm
     }
   };
-
-  // Handle center confirmation
   const confirmCenter = () => {
     if (!regionCenter) {
       Alert.alert("No Location", "Please tap the map to place your region center.");
@@ -282,10 +292,10 @@ export default function CreateRegionScreen() {
     setCreationStep("adjustingRadius");
   };
 
-  // Handle radius confirmation
-  const confirmRadius = () => {
+  // Handle radius confirmation - directly create the region
+  const confirmRadius = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setCreationStep("confirmRadius");
+    await finalizeRegion();
   };
 
   // Finalize region creation
@@ -445,8 +455,8 @@ export default function CreateRegionScreen() {
         showsIndoors={false}
         showsCompass={false}
         showsScale={false}
-        scrollEnabled={creationStep === "idle" || creationStep === "placing" || isDraggingEdge}
-        zoomEnabled={true}
+        scrollEnabled={creationStep === "idle" || creationStep === "placing"}
+        zoomEnabled={creationStep === "idle" || creationStep === "placing" || creationStep === "adjustingRadius"}
         rotateEnabled={creationStep === "idle"}
         pitchEnabled={creationStep === "idle"}
         onPress={handleMapPress}
@@ -459,7 +469,7 @@ export default function CreateRegionScreen() {
       >
 
         {/* Live circle preview during creation */}
-        {regionCenter && (creationStep === "adjustingRadius" || creationStep === "confirmRadius") && (
+        {regionCenter && creationStep === "adjustingRadius" && (
           <>
             {/* Circle region preview */}
             <Circle
@@ -475,31 +485,6 @@ export default function CreateRegionScreen() {
                 <View style={styles.centerDot} />
               </View>
             </Marker>
-            {/* Edge marker for resizing - only in adjustingRadius state */}
-            {edgeMarkerCoord && creationStep === "adjustingRadius" && (
-              <Marker
-                coordinate={edgeMarkerCoord}
-                draggable={true}
-                onDragStart={() => {
-                  console.log("Edge marker drag started");
-                  setIsDraggingEdge(true);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                onDrag={(e) => {
-                  handleEdgeMarkerDrag(e.nativeEvent.coordinate);
-                }}
-                onDragEnd={() => {
-                  console.log("Edge marker drag ended");
-                  setIsDraggingEdge(false);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                }}
-              >
-                <View style={styles.edgeMarker}>
-                  <View style={styles.edgeDot} />
-                  <Text style={styles.edgeLabel}>Drag</Text>
-                </View>
-              </Marker>
-            )}
           </>
         )}
 
@@ -512,6 +497,14 @@ export default function CreateRegionScreen() {
           </Marker>
         )}
       </MapView>
+
+      {/* Touch overlay for radius adjustment */}
+      {creationStep === "adjustingRadius" && (
+        <View
+          style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
+          {...panResponder.panHandlers}
+        />
+      )}
 
 
 
@@ -526,7 +519,7 @@ export default function CreateRegionScreen() {
           <View
             style={[
               styles.instructionsCard,
-              isDraggingEdge && styles.instructionsCardDragging,
+              isDraggingRadius && styles.instructionsCardDragging,
             ]}
           >
             {creationStep === "placing" ? (
@@ -541,7 +534,7 @@ export default function CreateRegionScreen() {
                 <Text
                   style={[
                     styles.instructionsTitle,
-                    isDraggingEdge && { color: "#FFFFFF" },
+                    isDraggingRadius && { color: "#FFFFFF" },
                   ]}
                 >
                   {regionName}
@@ -549,7 +542,7 @@ export default function CreateRegionScreen() {
                 <Text
                   style={[
                     styles.radiusDisplay,
-                    isDraggingEdge && styles.radiusDisplayActive,
+                    isDraggingRadius && styles.radiusDisplayActive,
                   ]}
                 >
                   {regionRadius}m
@@ -557,10 +550,10 @@ export default function CreateRegionScreen() {
                 <Text
                   style={[
                     styles.instructionsText,
-                    isDraggingEdge && { color: "#FFFFFF" },
+                    isDraggingRadius && { color: "#FFFFFF" },
                   ]}
                 >
-                  {isDraggingEdge ? "🔵 Dragging..." : "🔵 Drag blue dot to resize"}
+                  {isDraggingRadius ? "📏 Setting radius..." : "📏 Click and drag to set radius"}
                 </Text>
               </>
             ) : creationStep === "confirmRadius" ? (
@@ -611,8 +604,18 @@ export default function CreateRegionScreen() {
             <TouchableOpacity
               style={[styles.button, styles.confirmButton]}
               onPress={confirmRadius}
+              disabled={isCreatingRegion}
             >
-              <Text style={styles.buttonText}>✓ Confirm Size</Text>
+              {isCreatingRegion ? (
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.buttonText}>Creating...</Text>
+                </View>
+              ) : (
+                <Text style={styles.buttonText}>🎉 Create Region</Text>
+              )}
             </TouchableOpacity>
           </View>
         ) : creationStep === "confirmRadius" ? (
