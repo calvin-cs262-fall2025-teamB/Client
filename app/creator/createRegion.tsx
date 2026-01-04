@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -137,6 +138,7 @@ export default function CreateRegionScreen() {
   // Get contexts for backend integration
   const { user } = useAuth();
   const { createRegion, createLandmark, fetchRegions, fetchLandmarks } = useDatabase();
+  const router = useRouter();
 
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -459,11 +461,16 @@ export default function CreateRegionScreen() {
         `"${regionName}" created successfully!\n\n` +
           `📍 Radius: ${regionRadius}m\n` +
           `🏷️ Landmarks: ${landmarksToCreate.length} ${landmarks.length > 0 ? 'custom' : 'auto-generated'} points`,
-        [{ text: "Awesome!", style: "default" }]
+        [{ 
+          text: "Awesome!", 
+          style: "default",
+          onPress: () => {
+            // Reset state and navigate back to creation page
+            resetCreationState();
+            router.back();
+          }
+        }]
       );
-
-      // Reset state
-      resetCreationState();
     } catch (error) {
       console.error("Error creating region:", error);
       Alert.alert(
