@@ -190,11 +190,15 @@ export default function CreateRegionScreen() {
 
   // Calculate edge marker position based on center and radius
   const calculateEdgePosition = useCallback((center: LatLng, radius: number): LatLng => {
+    console.log("calculateEdgePosition called with center:", center, "radius:", radius);
     const radiusInDegrees = radius / 111320; // Convert meters to degrees
-    return {
+    console.log("radiusInDegrees:", radiusInDegrees);
+    const result = {
       latitude: center.latitude + radiusInDegrees,
       longitude: center.longitude,
     };
+    console.log("calculateEdgePosition returning:", result);
+    return result;
   }, []);
 
   // Handle edge marker drag to resize circle
@@ -239,8 +243,16 @@ export default function CreateRegionScreen() {
 
   // Update edge marker position when center or radius changes
   useEffect(() => {
-    if (regionCenter && creationStep !== "idle") {
-      setEdgeMarkerCoord(calculateEdgePosition(regionCenter, regionRadius));
+    console.log("useEffect triggered - regionCenter:", regionCenter, "creationStep:", creationStep, "regionRadius:", regionRadius);
+    if (regionCenter && (creationStep === "adjustingRadius" || creationStep === "confirmRadius")) {
+      console.log("Conditions met, calling calculateEdgePosition with:", { center: regionCenter, radius: regionRadius });
+      const newEdgeCoord = calculateEdgePosition(regionCenter, regionRadius);
+      console.log("calculateEdgePosition returned:", newEdgeCoord);
+      console.log("Setting edge marker coordinate:", newEdgeCoord, "for step:", creationStep);
+      setEdgeMarkerCoord(newEdgeCoord);
+    } else {
+      console.log("Conditions not met, setting edgeMarkerCoord to null");
+      setEdgeMarkerCoord(null);
     }
   }, [regionCenter, regionRadius, creationStep, calculateEdgePosition]);
 
@@ -424,15 +436,16 @@ export default function CreateRegionScreen() {
       <MapView
         ref={mapRef}
         style={styles.map}
-        mapType={"satellite"}
+        mapType={"standard"}
+        customMapStyle={customMapStyle}
         showsUserLocation={true}
         showsPointsOfInterest={false}
         showsBuildings={false}
         showsTraffic={false}
-        showsIndoors={true}
+        showsIndoors={false}
         showsCompass={false}
         showsScale={false}
-        scrollEnabled={creationStep === "idle" || creationStep === "placing"}
+        scrollEnabled={creationStep === "idle" || creationStep === "placing" || isDraggingEdge}
         zoomEnabled={true}
         rotateEnabled={creationStep === "idle"}
         pitchEnabled={creationStep === "idle"}
@@ -465,11 +478,10 @@ export default function CreateRegionScreen() {
             {/* Edge marker for resizing - only in adjustingRadius state */}
             {edgeMarkerCoord && creationStep === "adjustingRadius" && (
               <Marker
-                key={`edge-${regionRadius}`}
                 coordinate={edgeMarkerCoord}
                 draggable={true}
-                tracksViewChanges={false}
                 onDragStart={() => {
+                  console.log("Edge marker drag started");
                   setIsDraggingEdge(true);
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }}
@@ -477,10 +489,10 @@ export default function CreateRegionScreen() {
                   handleEdgeMarkerDrag(e.nativeEvent.coordinate);
                 }}
                 onDragEnd={() => {
+                  console.log("Edge marker drag ended");
                   setIsDraggingEdge(false);
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 }}
-                anchor={{ x: 0.5, y: 0.5 }}
               >
                 <View style={styles.edgeMarker}>
                   <View style={styles.edgeDot} />
