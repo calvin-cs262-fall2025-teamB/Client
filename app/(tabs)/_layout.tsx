@@ -48,6 +48,23 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      {/* Hidden tab screens - these pages will have tabs but won't show in the tab bar */}
+      <Tabs.Screen
+        name="createRegion"
+        options={{
+          title: "Create Region",
+          href: null, // Hide from tab bar
+        }}
+      />
+
+      <Tabs.Screen
+        name="adventure"
+        options={{
+          title: "Create Adventure", 
+          href: null, // Hide from tab bar
+        }}
+      />
     </Tabs>
   );
 }
