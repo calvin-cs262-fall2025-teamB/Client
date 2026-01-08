@@ -42,13 +42,6 @@ export default function CreateAdventureScreen() {
   const [selectedRegionId, setSelectedRegionId] = useState<number | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Step 2: Token placement (will be implemented when token placement feature is added)
-  // For now, we initialize with empty array and will add tokens in future update
-  const tokens: any[] = [];
-
-  // Step 3: Saving state
-  const [isSaving, setIsSaving] = useState(false);
-
   // === LOAD REGIONS FROM DATABASE ===
   // Fetch regions when component mounts
   useEffect(() => {
@@ -81,75 +74,19 @@ export default function CreateAdventureScreen() {
     // Haptic feedback for progression
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // TODO: Move to token placement step
-    Alert.alert(
-      "Token Placement Coming Soon",
-      "Step 2 (token placement on map) will be implemented next.\n\nFor now, creating adventure with just name and region.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Create Anyway", onPress: handleCreateAdventure }
-      ]
-    );
-  };
+    // Get selected region name
+    const selectedRegion = regions.find((r: Region) => r.id === selectedRegionId);
+    const regionNameValue = selectedRegion?.name || "Unknown Region";
 
-  // === CREATE ADVENTURE (Temporary - will move to step 3) ===
-  const handleCreateAdventure = async () => {
-    if (!user || !user.id) {
-      Alert.alert("Authentication Required", "You must be logged in to create an adventure.");
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      // Get selected region data
-      const selectedRegion = regions.find((r: Region) => r.id === selectedRegionId);
-
-      if (!selectedRegion) {
-        throw new Error("Selected region not found");
-      }
-
-      // Create adventure data matching backend schema
-      const adventureData = {
-        adventurerid: user.id,
-        regionid: selectedRegionId,
-        name: adventureName.trim(),
-        numtokens: tokens.length, // Will be updated when tokens are added
-        location: selectedRegion.location, // Use region's center as adventure location
-      };
-
-      // if (__DEV__) {
-      //   console.log("Creating adventure:", adventureData);
-      // }
-      const savedAdventure = await createAdventure(adventureData);
-      // if (__DEV__) {
-      //   console.log("Adventure created successfully:", savedAdventure);
-      // }
-
-      // Refresh adventures data to include the new adventure
-      await fetchAdventures();
-
-      // Success feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      Alert.alert(
-        "🎉 Adventure Created!",
-        `"${adventureName}" has been created!\n\nToken placement will be added in the next update.`,
-        [{ text: "Great!", onPress: () => router.back() }]
-      );
-
-    } catch (error) {
-      if (__DEV__) {
-        console.error("Error creating adventure:", error);
-      }
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        "Error",
-        `Failed to create adventure: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
-    } finally {
-      setIsSaving(false);
-    }
+    // Navigate to token placement screen
+    router.push({
+      pathname: "/(tabs)/createAdventureMap",
+      params: {
+        adventureName: adventureName.trim(),
+        regionId: selectedRegionId.toString(),
+        regionName: regionNameValue,
+      },
+    });
   };
 
   // === LOADING STATE ===
@@ -279,21 +216,12 @@ export default function CreateAdventureScreen() {
       {/* === NEXT BUTTON === */}
       <View style={styles.buttonRow}>
         <Button
-          label={isSaving ? "Creating..." : "Next: Place Tokens"}
+          label="Next: Place Tokens"
           theme="primary"
           size="large"
           onPress={handleNextToTokens}
-          disabled={isSaving}
         />
       </View>
-
-      {/* === SAVING INDICATOR === */}
-      {isSaving && (
-        <View style={styles.savingIndicator}>
-          <ActivityIndicator size="small" color={themes.primaryColor} />
-          <Text style={styles.savingText}>Creating adventure...</Text>
-        </View>
-      )}
     </ScrollView>
   );
 }

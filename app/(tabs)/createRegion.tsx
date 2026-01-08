@@ -541,6 +541,7 @@ export default function CreateRegionScreen() {
         showsIndoors={false}
         showsCompass={false}
         showsScale={false}
+        toolbarEnabled={false}
         scrollEnabled={creationStep === "idle" || creationStep === "placing"}
         zoomEnabled={creationStep === "idle" || creationStep === "placing" || creationStep === "adjustingRadius"}
         rotateEnabled={creationStep === "idle"}

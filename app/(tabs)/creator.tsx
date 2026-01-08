@@ -15,8 +15,8 @@ import {
 export default function Creator() {
   const router = useRouter();
 
-  const handleCreateRegion = () => router.push("/creator/createRegion");
-  const handleCreateAdventure = () => router.push("/creator/adventure");
+  const handleCreateRegion = () => router.push("/(tabs)/createRegion");
+  const handleCreateAdventure = () => router.push("/(tabs)/createAdventure");
 
   return (
     <ScrollView style={styles.container}>
