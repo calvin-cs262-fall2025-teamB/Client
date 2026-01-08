@@ -59,9 +59,17 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="adventure"
+        name="createAdventure"
         options={{
-          title: "Create Adventure", 
+          title: "Create Adventure",
+          href: null, // Hide from tab bar
+        }}
+      />
+
+      <Tabs.Screen
+        name="createAdventureMap"
+        options={{
+          title: "Place Tokens",
           href: null, // Hide from tab bar
         }}
       />

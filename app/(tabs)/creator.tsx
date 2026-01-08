@@ -4,19 +4,19 @@ import Button from "@/components/home/Button";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 export default function Creator() {
   const router = useRouter();
 
   const handleCreateRegion = () => router.push("/(tabs)/createRegion");
-  const handleCreateAdventure = () => router.push("/(tabs)/adventure");
+  const handleCreateAdventure = () => router.push("/(tabs)/createAdventure");
 
   return (
     <ScrollView style={styles.container}>
