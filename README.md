@@ -36,27 +36,6 @@ Scan the QR code with Expo Go app (iOS/Android)
 
 ---
 
-## Features
-
-### ✅ Implemented
-- User authentication
-- Adventure browsing
-- View profile stats
-- GPS location tracking
-- Cross-platform support (iOS, Android)
-- Backend API integration
-- Adventure creation workflow
-- Offline mode with caching
-
-### 🚧 In Progress
-- Playing adventures
-
-### 📝 Planned
-- Social features (leaderboards, sharing)
-- Adventure ratings and reviews
-
----
-
 ## Key Technologies
 
 ### Frontend
