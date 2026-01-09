@@ -86,6 +86,7 @@ export default function MapScreen() {
   const [selectedAdventureId, setSelectedAdventureId] = useState<number | null>(null);
   const [allLandmarks, setAllLandmarks] = useState<Landmark[]>([]);
   const [regionLandmarks, setRegionLandmarks] = useState<Landmark[]>([]);
+  const [adventurePositions, setAdventurePositions] = useState<Map<number, LatLng>>(new Map());
 
   const mapRef = useRef<MapView>(null);
 
@@ -123,7 +124,7 @@ export default function MapScreen() {
   useEffect(() => {
     const loadData = async (): Promise<void> => {
       try {
-        const [, , landmarksData] = await Promise.all([
+        const [, adventuresData, landmarksData] = await Promise.all([
           fetchRegions(),
           fetchAdventures(),
           fetchLandmarks(null) // Fetch all landmarks
@@ -141,6 +142,23 @@ export default function MapScreen() {
     
     loadData();
   }, [fetchRegions, fetchAdventures, fetchLandmarks]);
+
+  // --- Calculate adventure positions when adventures or regions change ---
+  useEffect(() => {
+    if (adventures.length > 0 && regions.length > 0) {
+      const positions = new Map<number, LatLng>();
+      
+      adventures.forEach((adventure: Adventure) => {
+        const region: Region | undefined = regions.find((r: Region) => r.id === adventure.regionid);
+        if (region) {
+          const position = getRandomPointInRadius(region.location, region.radius * 0.8);
+          positions.set(adventure.id, position);
+        }
+      });
+      
+      setAdventurePositions(positions);
+    }
+  }, [adventures, regions]);
 
   // --- Filter landmarks when region is selected ---
   useEffect(() => {
@@ -269,12 +287,10 @@ export default function MapScreen() {
           />
         ))}
 
-        {/* Adventure Icons (when adventures mode and no selection) */}
-        {viewMode === 'adventures' && !selectedRegionId && !selectedAdventureId && adventures.map((adventure: Adventure) => {
-          const region: Region | undefined = regions.find((r: Region) => r.id === adventure.regionid);
-          if (!region) return null;
-          
-          const adventurePosition: LatLng = getRandomPointInRadius(region.location, region.radius * 0.8);
+        {/* Adventure Icons (when adventures mode) */}
+        {viewMode === 'adventures' && !selectedRegionId && adventures.map((adventure: Adventure) => {
+          const adventurePosition = adventurePositions.get(adventure.id);
+          if (!adventurePosition) return null;
           
           return (
             <Marker
