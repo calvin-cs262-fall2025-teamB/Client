@@ -17,13 +17,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useDatabase } from "../../contexts/DatabaseContext";
 import { Adventure, Landmark, Token } from "../../types/database";
 
-// type GeocodeResult = {
-//   id: string;
-//   name: string;
-//   lat: number;
-//   lon: number;
-// };
-
 // Haversine distance (in meters) between two lat/lng coordinates
 function getDistanceMeters(
   lat1: number,
@@ -47,7 +40,10 @@ function getDistanceMeters(
 
 export default function GameMap() {
   const { user } = useAuth();
-  const { adventureId } = useLocalSearchParams<{ adventureId: string }>();
+  const { adventureId, accuracy } = useLocalSearchParams<{ 
+    adventureId: string;
+    accuracy?: 'normal' | 'high';
+  }>();
   const router = useRouter();
   const {
     fetchAdventures,
@@ -79,11 +75,6 @@ export default function GameMap() {
   const [tokenNum, setTokenNum] = useState<number>(1);
   const [hasVibratedForCurrentToken, setHasVibratedForCurrentToken] = useState<boolean>(false);
 
-  // Search any location state
-  // const [searchQuery, setSearchQuery] = useState("");
-  // const [geoResults, setGeoResults] = useState<GeocodeResult[]>([]);
-  // const [isSearching, setIsSearching] = useState(false);
-
   // Floating landmark panel
   const [landmarksExpanded, setLandmarksExpanded] = useState(false);
   
@@ -95,6 +86,10 @@ export default function GameMap() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Adventure timing
+  const [adventureStartTime, setAdventureStartTime] = useState<Date | null>(null);
+  const [completionTimeFormatted, setCompletionTimeFormatted] = useState<string>("");
+
   // ✅ map center/region (this is what updates when you move the map)
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
 
@@ -102,6 +97,25 @@ export default function GameMap() {
     null
   );
   const mapRef = useRef<MapView | null>(null);
+
+  // Get location settings based on selected accuracy
+  const getLocationSettings = useCallback(() => {
+    if (accuracy === 'high') {
+      return {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 500,
+        distanceInterval: 0.5,
+        proximityRadius: 6
+      };
+    } else {
+      return {
+        accuracy: Location.Accuracy.High,
+        timeInterval: 2000,
+        distanceInterval: 1,
+        proximityRadius: 15
+      };
+    }
+  }, [accuracy]);
 
   // Load adventure data when component mounts or adventureId changes
   useEffect(() => {
@@ -124,6 +138,11 @@ export default function GameMap() {
         
         if (adventure) {
           setCurrentAdventure(adventure);
+          
+          // Start timing the adventure if not already started
+          if (!adventureStartTime) {
+            setAdventureStartTime(new Date());
+          }
           
           // Filter tokens for this specific adventure from the returned data
           const adventureTokensList = allTokensData ? 
@@ -153,6 +172,8 @@ export default function GameMap() {
     setCurrentAdventure(null);
     setAdventureLandmarks([]);
     setAdventureTokens([]);
+    setAdventureStartTime(null);
+    setCompletionTimeFormatted("");
   }, [adventureId]);
 
   // Reset vibration state when tokenNum changes
@@ -171,7 +192,7 @@ export default function GameMap() {
   // Define proximity check function for both landmarks and tokens
   const checkProximity = useCallback((loc: Location.LocationObject) => {
     const { latitude, longitude } = loc.coords;
-    const proximityRadius = 50; // meters
+    const { proximityRadius } = getLocationSettings();
 
     // Check tokens
     adventureTokens.forEach((token) => {
@@ -213,7 +234,7 @@ export default function GameMap() {
         }
       }
     });
-  }, [adventureLandmarks, adventureTokens, visitedLandmarks, tokenNum, hasVibratedForCurrentToken]);
+  }, [adventureLandmarks, adventureTokens, visitedLandmarks, tokenNum, hasVibratedForCurrentToken, getLocationSettings]);
 
   // Request user location & start watching
   useEffect(() => {
@@ -226,7 +247,7 @@ export default function GameMap() {
       }
 
       const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: getLocationSettings().accuracy,
       });
       setLocation(currentLocation);
 
@@ -238,11 +259,12 @@ export default function GameMap() {
         longitudeDelta: 0.01,
       });
 
+      const locationSettings = getLocationSettings();
       const subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 2000,
-          distanceInterval: 1,
+          accuracy: locationSettings.accuracy,
+          timeInterval: locationSettings.timeInterval,
+          distanceInterval: locationSettings.distanceInterval,
         },
         (loc) => {
           setLocation(loc);
@@ -297,11 +319,39 @@ export default function GameMap() {
     mapRef.current?.animateToRegion(region, 800);
   };
 
+  const formatDuration = (startTime: Date, endTime: Date): string => {
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const totalSeconds = Math.floor(durationMs / 1000);
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+  };
+
   const handleAdventureCompletion = async () => {
-    if (!user || !currentAdventure) {
+    if (!user || !currentAdventure || !adventureStartTime) {
       Alert.alert('Error', 'Unable to save adventure completion');
       return;
     }
+
+    const completionEndTime = new Date();
+    const durationMs = completionEndTime.getTime() - adventureStartTime.getTime();
+    const totalSeconds = Math.floor(durationMs / 1000);
+    
+    // Format as PostgreSQL interval string (e.g., "00:15:30" for 15 minutes 30 seconds)
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const completionTimeInterval = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Store formatted time for display in modal
+    setCompletionTimeFormatted(formatDuration(adventureStartTime, completionEndTime));
 
     setIsSaving(true);
     try {
@@ -309,8 +359,8 @@ export default function GameMap() {
       await completeAdventure({
         adventurerid: user.id,
         adventureid: currentAdventure.id,
-        completiondate: new Date().toISOString(),
-        completiontime: null // Could be calculated if needed
+        completiondate: completionEndTime.toISOString(),
+        completiontime: completionTimeInterval
       });
 
       // Close modal and navigate to profile
@@ -349,8 +399,6 @@ export default function GameMap() {
           {/* Landmarks */}
           {adventureLandmarks.map((lm) => {
             if (!lm.location) return null;
-            const proximityRadius = 50; // meters
-
             return (
               <View key={`landmark_${lm.id}`}>
                 <Marker
@@ -525,6 +573,11 @@ export default function GameMap() {
             <Text style={styles.modalMessage}>
               Congratulations! You've successfully completed the adventure "{currentAdventure?.name}" by collecting all {adventureTokens.length} tokens!
             </Text>
+            {completionTimeFormatted && (
+              <Text style={styles.completionTime}>
+                Completion Time: {completionTimeFormatted}
+              </Text>
+            )}
             <View style={styles.modalButtonContainer}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.completionButton]}
@@ -775,6 +828,17 @@ const styles = StyleSheet.create({
   },
   completionButton: {
     backgroundColor: "#22c55e",
+  },
+  completionTime: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#22c55e",
+    marginBottom: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
   },
   modalButtonText: {
     color: "white",
