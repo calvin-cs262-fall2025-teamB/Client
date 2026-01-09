@@ -24,6 +24,9 @@ export default function AdventurePageTemplate() {
   const [adventure, setAdventure] = useState<DbAdventure | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  
+  // Accuracy selection state
+  const [selectedAccuracy, setSelectedAccuracy] = useState<'normal' | 'high'>('normal');
 
   // Load adventure data from DatabaseContext
   useEffect(() => {
@@ -70,9 +73,8 @@ export default function AdventurePageTemplate() {
 
   const handlePlayPress = () => {
     if (adventure) {
-      console.log(`Starting adventure: ${adventure.name}`);
-      // TODO: Navigate to adventure gameplay
-      router.push(`/gameMap?adventureId=${adventureId}`);
+      console.log(`Starting adventure: ${adventure.name} with ${selectedAccuracy} accuracy`);
+      router.push(`/gameMap?adventureId=${adventureId}&accuracy=${selectedAccuracy}`);
     }
   };
 
@@ -130,6 +132,44 @@ export default function AdventurePageTemplate() {
         <View style={styles.descriptionContainer}>
           <Text style={styles.descriptionTitle}>About this Adventure</Text>
           <Text style={styles.description}>{adventure.name}</Text>
+        </View>
+
+        {/* Accuracy Selection */}
+        <View style={styles.accuracyContainer}>
+          <Text style={styles.accuracyTitle}>Location Accuracy</Text>
+          <View style={styles.accuracyOptions}>
+            <TouchableOpacity
+              style={[
+                styles.accuracyOption,
+                selectedAccuracy === 'normal' && styles.accuracyOptionSelected
+              ]}
+              onPress={() => setSelectedAccuracy('normal')}
+            >
+              <Text style={[
+                styles.accuracyOptionText,
+                selectedAccuracy === 'normal' && styles.accuracyOptionTextSelected
+              ]}>Normal</Text>
+              <Text style={styles.accuracyOptionSubtext}>
+                Balanced battery usage • ~15m precision
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.accuracyOption,
+                selectedAccuracy === 'high' && styles.accuracyOptionSelected
+              ]}
+              onPress={() => setSelectedAccuracy('high')}
+            >
+              <Text style={[
+                styles.accuracyOptionText,
+                selectedAccuracy === 'high' && styles.accuracyOptionTextSelected
+              ]}>High Precision</Text>
+              <Text style={styles.accuracyOptionSubtext}>
+                Higher battery usage • ~6m precision
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Play Button Section */}
@@ -311,5 +351,49 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     marginBottom: 20,
+  },
+  accuracyContainer: {
+    backgroundColor: "white",
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  accuracyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 15,
+  },
+  accuracyOptions: {
+    gap: 10,
+  },
+  accuracyOption: {
+    borderWidth: 2,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    padding: 15,
+    backgroundColor: "#f9fafb",
+  },
+  accuracyOptionSelected: {
+    borderColor: "#007AFF",
+    backgroundColor: "#eff6ff",
+  },
+  accuracyOptionText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 4,
+  },
+  accuracyOptionTextSelected: {
+    color: "#007AFF",
+  },
+  accuracyOptionSubtext: {
+    fontSize: 14,
+    color: "#6b7280",
   },
 });

@@ -1,9 +1,10 @@
 import * as Location from "expo-location";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
+  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,13 +16,6 @@ import MapView, { Marker, Region } from "react-native-maps";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDatabase } from "../../contexts/DatabaseContext";
 import { Adventure, Landmark, Token } from "../../types/database";
-
-// type GeocodeResult = {
-//   id: string;
-//   name: string;
-//   lat: number;
-//   lon: number;
-// };
 
 // Haversine distance (in meters) between two lat/lng coordinates
 function getDistanceMeters(
@@ -46,13 +40,18 @@ function getDistanceMeters(
 
 export default function GameMap() {
   const { user } = useAuth();
-  const { adventureId } = useLocalSearchParams<{ adventureId: string }>();
+  const { adventureId, accuracy } = useLocalSearchParams<{ 
+    adventureId: string;
+    accuracy?: 'normal' | 'high';
+  }>();
+  const router = useRouter();
   const {
     fetchAdventures,
     fetchTokens,
     fetchLandmarks,
     getTokensByAdventure,
     getLandmarksByRegion,
+    completeAdventure,
     adventures,
     tokens,
     landmarks,
@@ -76,16 +75,20 @@ export default function GameMap() {
   const [tokenNum, setTokenNum] = useState<number>(1);
   const [hasVibratedForCurrentToken, setHasVibratedForCurrentToken] = useState<boolean>(false);
 
-  // Search any location state
-  // const [searchQuery, setSearchQuery] = useState("");
-  // const [geoResults, setGeoResults] = useState<GeocodeResult[]>([]);
-  // const [isSearching, setIsSearching] = useState(false);
-
   // Floating landmark panel
   const [landmarksExpanded, setLandmarksExpanded] = useState(false);
   
   // Floating hint panel
   const [hintExpanded, setHintExpanded] = useState(false);
+
+  // Completion modal state
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Adventure timing
+  const [adventureStartTime, setAdventureStartTime] = useState<Date | null>(null);
+  const [completionTimeFormatted, setCompletionTimeFormatted] = useState<string>("");
 
   // ✅ map center/region (this is what updates when you move the map)
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
@@ -94,6 +97,25 @@ export default function GameMap() {
     null
   );
   const mapRef = useRef<MapView | null>(null);
+
+  // Get location settings based on selected accuracy
+  const getLocationSettings = useCallback(() => {
+    if (accuracy === 'high') {
+      return {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 500,
+        distanceInterval: 0.5,
+        proximityRadius: 6
+      };
+    } else {
+      return {
+        accuracy: Location.Accuracy.High,
+        timeInterval: 2000,
+        distanceInterval: 1,
+        proximityRadius: 15
+      };
+    }
+  }, [accuracy]);
 
   // Load adventure data when component mounts or adventureId changes
   useEffect(() => {
@@ -116,6 +138,11 @@ export default function GameMap() {
         
         if (adventure) {
           setCurrentAdventure(adventure);
+          
+          // Start timing the adventure if not already started
+          if (!adventureStartTime) {
+            setAdventureStartTime(new Date());
+          }
           
           // Filter tokens for this specific adventure from the returned data
           const adventureTokensList = allTokensData ? 
@@ -145,6 +172,8 @@ export default function GameMap() {
     setCurrentAdventure(null);
     setAdventureLandmarks([]);
     setAdventureTokens([]);
+    setAdventureStartTime(null);
+    setCompletionTimeFormatted("");
   }, [adventureId]);
 
   // Reset vibration state when tokenNum changes
@@ -152,38 +181,18 @@ export default function GameMap() {
     setHasVibratedForCurrentToken(false);
   }, [tokenNum]);
 
+  // Check for adventure completion
+  useEffect(() => {
+    if (adventureTokens.length > 0 && collectedTokens === adventureTokens.length && !isCompleted) {
+      setIsCompleted(true);
+      setShowCompletionModal(true);
+    }
+  }, [collectedTokens, adventureTokens.length, isCompleted]);
+
   // Define proximity check function for both landmarks and tokens
   const checkProximity = useCallback((loc: Location.LocationObject) => {
     const { latitude, longitude } = loc.coords;
-    const proximityRadius = 50; // meters
-
-    // Check landmarks
-    // adventureLandmarks.forEach((landmark) => {
-    //   if (!landmark.location) return;
-    //   if (visitedLandmarks.has(landmark.id)) return;
-
-    //   const distance = getDistanceMeters(
-    //     latitude,
-    //     longitude,
-    //     landmark.location.x,
-    //     landmark.location.y
-    //   );
-
-    //   if (distance <= proximityRadius) {
-    //     setVisitedLandmarks((prev) => {
-    //       const updated = new Set(prev);
-    //       updated.add(landmark.id);
-    //       return updated;
-    //     });
-
-    //     setScore((prev) => prev + 10); // Default 10 points for landmarks
-
-    //     Alert.alert(
-    //       "Landmark discovered!",
-    //       `You found ${landmark.name} and earned 10 points!`
-    //     );
-    //   }
-    // });
+    const { proximityRadius } = getLocationSettings();
 
     // Check tokens
     adventureTokens.forEach((token) => {
@@ -225,7 +234,7 @@ export default function GameMap() {
         }
       }
     });
-  }, [adventureLandmarks, adventureTokens, visitedLandmarks, tokenNum, hasVibratedForCurrentToken]);
+  }, [adventureLandmarks, adventureTokens, visitedLandmarks, tokenNum, hasVibratedForCurrentToken, getLocationSettings]);
 
   // Request user location & start watching
   useEffect(() => {
@@ -238,7 +247,7 @@ export default function GameMap() {
       }
 
       const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: getLocationSettings().accuracy,
       });
       setLocation(currentLocation);
 
@@ -250,11 +259,12 @@ export default function GameMap() {
         longitudeDelta: 0.01,
       });
 
+      const locationSettings = getLocationSettings();
       const subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 2000,
-          distanceInterval: 1,
+          accuracy: locationSettings.accuracy,
+          timeInterval: locationSettings.timeInterval,
+          distanceInterval: locationSettings.distanceInterval,
         },
         (loc) => {
           setLocation(loc);
@@ -280,69 +290,6 @@ export default function GameMap() {
       }
     };
   }, [checkProximity]);
-
-  // 🔎 Search any location using OpenStreetMap Nominatim
-  // const searchAnyLocation = async () => {
-  //   const q = searchQuery.trim();
-  //   if (!q) {
-  //     setGeoResults([]);
-  //     return;
-  //   }
-
-  //   setIsSearching(true);
-  //   try {
-  //     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-  //       q
-  //     )}&format=json&limit=5`;
-
-  //     const response = await fetch(url, {
-  //       headers: {
-  //         // Nominatim asks for an identifying header; replace with your app/email in real use
-  //         "User-Agent": "CalvinLandmarkApp/1.0 (your-email@calvin.edu)",
-  //       },
-  //     });
-
-  //     const data = await response.json();
-  //     const mapped: GeocodeResult[] = data.map((item: any) => ({
-  //       id: item.place_id.toString(),
-  //       name: item.display_name,
-  //       lat: parseFloat(item.lat),
-  //       lon: parseFloat(item.lon),
-  //     }));
-
-  //     setGeoResults(mapped);
-
-  //     if (mapped.length === 0) {
-  //       Alert.alert(
-  //         "No results",
-  //         "Could not find any locations for that search."
-  //       );
-  //     }
-  //   } catch (err) {
-  //     console.error(err);
-  //     Alert.alert(
-  //       "Search error",
-  //       "Something went wrong while searching for that location."
-  //     );
-  //   } finally {
-  //     setIsSearching(false);
-  //   }
-  // };
-
-  // const focusOnGeocodeResult = (place: GeocodeResult) => {
-  //   const region: Region = {
-  //     latitude: place.lat,
-  //     longitude: place.lon,
-  //     latitudeDelta: 0.01,
-  //     longitudeDelta: 0.01,
-  //   };
-
-  //   setMapRegion(region); // 👈 update map center
-  //   mapRef.current?.animateToRegion(region, 800);
-
-  //   setGeoResults([]);
-  //   setSearchQuery(place.name);
-  // };
 
   const focusOnLandmark = (lm: Landmark) => {
     if (!lm.location) return;
@@ -372,73 +319,67 @@ export default function GameMap() {
     mapRef.current?.animateToRegion(region, 800);
   };
 
-  // const handleSearchClear = () => {
-  //   setSearchQuery("");
-  //   setGeoResults([]);
-  // };
+  const formatDuration = (startTime: Date, endTime: Date): string => {
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const totalSeconds = Math.floor(durationMs / 1000);
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+  };
+
+  const handleAdventureCompletion = async () => {
+    if (!user || !currentAdventure || !adventureStartTime) {
+      Alert.alert('Error', 'Unable to save adventure completion');
+      return;
+    }
+
+    const completionEndTime = new Date();
+    const durationMs = completionEndTime.getTime() - adventureStartTime.getTime();
+    const totalSeconds = Math.floor(durationMs / 1000);
+    
+    // Format as PostgreSQL interval string (e.g., "00:15:30" for 15 minutes 30 seconds)
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const completionTimeInterval = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Store formatted time for display in modal
+    setCompletionTimeFormatted(formatDuration(adventureStartTime, completionEndTime));
+
+    setIsSaving(true);
+    try {
+      // Save the completed adventure
+      await completeAdventure({
+        adventurerid: user.id,
+        adventureid: currentAdventure.id,
+        completiondate: completionEndTime.toISOString(),
+        completiontime: completionTimeInterval
+      });
+
+      // Close modal and navigate to profile
+      setShowCompletionModal(false);
+      router.push('/(tabs)/profile');
+    } catch (error) {
+      console.error('Failed to save adventure completion:', error);
+      Alert.alert('Error', 'Failed to save adventure completion. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        {/* <Text style={styles.title}>
-          {loading.adventures || loading.landmarks || loading.tokens
-            ? "Loading..."
-            : currentAdventure
-            ? currentAdventure.name
-            : "Adventure"}
-        </Text> */}
         <Text style={styles.score}>Tokens Collected: {collectedTokens} / {adventureTokens.length}</Text>
       </View>
-
-      {/* Search bar for ANY location */}
-      {/* <View style={styles.searchContainer}>
-        <View style={styles.searchRow}>
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search any location..."
-            placeholderTextColor="#9ca3af"
-            style={styles.searchInput}
-            onSubmitEditing={searchAnyLocation}
-            returnKeyType="search"
-          />
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={searchAnyLocation}
-          >
-            {isSearching ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Text style={styles.searchButtonText}>Search</Text>
-            )}
-          </TouchableOpacity>
-        </View> */}
-
-        {/* Geocoding search results */}
-        {/* {geoResults.length > 0 && (
-          <View style={styles.searchResults}>
-            <FlatList
-              keyboardShouldPersistTaps="handled"
-              data={geoResults}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.searchResultItem}
-                  onPress={() => {
-                    focusOnGeocodeResult(item);
-                    handleSearchClear();
-                  }}
-                >
-                  <Text style={styles.searchResultText} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        )}
-      </View> */}
 
       {errorMsg && (
         <View style={styles.message}>
@@ -458,8 +399,6 @@ export default function GameMap() {
           {/* Landmarks */}
           {adventureLandmarks.map((lm) => {
             if (!lm.location) return null;
-            const proximityRadius = 50; // meters
-
             return (
               <View key={`landmark_${lm.id}`}>
                 <Marker
@@ -470,16 +409,6 @@ export default function GameMap() {
                   title={lm.name}
                   pinColor="Red"
                 />
-                {/* <Circle
-                  center={{
-                    latitude: lm.location.x,
-                    longitude: lm.location.y,
-                  }}
-                  radius={proximityRadius}
-                  strokeWidth={1}
-                  strokeColor="rgba(0, 150, 255, 0.8)"
-                  fillColor="rgba(0, 150, 255, 0.15)"
-                /> */}
               </View>
             );
           })}
@@ -530,16 +459,6 @@ export default function GameMap() {
                     }
                     pinColor={isCollected ? "green" : "blue"}
                   />
-                  {/* <Circle
-                    center={{
-                      latitude: token.location.x,
-                      longitude: token.location.y,
-                    }}
-                    radius={proximityRadius}
-                    strokeWidth={1}
-                    strokeColor="rgba(0, 0, 255, 0.8)"
-                    fillColor="rgba(0, 0, 255, 0.15)"
-                  /> */}
                 </View>
               );
             })}
@@ -640,6 +559,39 @@ export default function GameMap() {
           </View>
         )}
       </View>
+
+      {/* Completion Modal */}
+      <Modal
+        visible={showCompletionModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>🎉 Adventure Complete! 🎉</Text>
+            <Text style={styles.modalMessage}>
+              Congratulations! You've successfully completed the adventure "{currentAdventure?.name}" by collecting all {adventureTokens.length} tokens!
+            </Text>
+            {completionTimeFormatted && (
+              <Text style={styles.completionTime}>
+                Completion Time: {completionTimeFormatted}
+              </Text>
+            )}
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.completionButton]}
+                onPress={handleAdventureCompletion}
+                disabled={isSaving}
+              >
+                <Text style={styles.modalButtonText}>
+                  {isSaving ? 'Saving...' : 'Continue to Profile'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -828,5 +780,69 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: "italic",
     lineHeight: 20,
+  },
+  
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 30,
+    marginHorizontal: 20,
+    minWidth: 300,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#333",
+    marginBottom: 20,
+  },
+  modalMessage: {
+    fontSize: 16,
+    textAlign: "center",
+    color: "#666",
+    lineHeight: 24,
+    marginBottom: 30,
+  },
+  modalButtonContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  modalButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  completionButton: {
+    backgroundColor: "#22c55e",
+  },
+  completionTime: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#22c55e",
+    marginBottom: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
+  },
+  modalButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
