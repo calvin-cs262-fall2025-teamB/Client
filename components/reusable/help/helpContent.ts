@@ -8,16 +8,26 @@ export interface HelpContent {
 }
 
 export const helpContent: Record<string, HelpContent> = {
-  // Add help content for each page here
-  // Example structure:
-  // map: {
-  //   title: "Map Navigation Guide",
-  //   sections: [
-  //     {
-  //       heading: "View Modes",
-  //       content: "Toggle between different view modes...",
-  //       tips: ["Tip 1", "Tip 2"]
-  //     }
-  //   ]
-  // }
+  login: {
+    title: "Login Help",
+    sections: [
+      {
+        heading: "Getting Started",
+        content: "Enter your username and password to access your WayFind account. If you don't have an account yet, tap 'Sign Up' to create one.",
+        tips: [
+          "Usernames can only contain letters, numbers, underscores, and hyphens",
+          "Passwords must be at least 10 characters and contain letters and numbers"
+        ]
+      },
+      {
+        heading: "Security Notice",
+        content: "For demonstration purposes, passwords are not encrypted. Please do not use sensitive or reused passwords.",
+      },
+      {
+        heading: "Troubleshooting",
+        content: "If you're having trouble logging in, check that your username and password meet the requirements.",
+      }
+    ]
+  }
+  // Add more help content for other pages here
 };
