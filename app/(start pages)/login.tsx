@@ -23,6 +23,7 @@ import { useAuth } from "../../contexts/AuthContext";
 
 //Components
 import AppTitle from "../../components/reusable/AppTitle";
+import { HelpModal } from "../../components/reusable/help/HelpModal";
 
 export default function Login() {
   const router = useRouter();
@@ -71,6 +72,11 @@ export default function Login() {
 
   return (
     <>
+      <HelpModal 
+        pageId="login" 
+        position="top-left"
+        iconColor="#007AFF"
+      />
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: "padding", android: undefined })}
         style={styles.container}
