@@ -1,3 +1,4 @@
+import { HelpModal } from "@/components/reusable/help/HelpModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDatabase } from "@/contexts/DatabaseContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
@@ -134,6 +135,11 @@ export default function Profile() {
 
   return (
     <ProfileProvider>
+      <HelpModal 
+        pageId="profile" 
+        position="top-right"
+        iconColor="#4ed964"
+      />
       <ScrollView style={styles.container}>
         {/* Gradient Header */}
         <LinearGradient

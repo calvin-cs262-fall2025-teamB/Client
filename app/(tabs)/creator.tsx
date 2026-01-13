@@ -1,6 +1,7 @@
 //TODO: Work on the creat experience
 
 import Button from "@/components/home/Button";
+import { HelpModal } from "@/components/reusable/help/HelpModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
@@ -20,6 +21,11 @@ export default function Creator() {
 
   return (
     <ScrollView style={styles.container}>
+      <HelpModal 
+        pageId="creator" 
+        position="top-right"
+        iconColor="#007AFF"
+      />
       <View style={styles.content}>
         <View style={styles.centered}>
           <View style={styles.buttonWrapper}>

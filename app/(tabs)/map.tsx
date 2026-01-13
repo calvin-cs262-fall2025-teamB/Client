@@ -17,6 +17,7 @@ import MapView, {
 } from "react-native-maps";
 
 // Import contexts
+import { HelpModal } from "@/components/reusable/help/HelpModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDatabase } from "@/contexts/DatabaseContext";
 
@@ -233,6 +234,11 @@ export default function MapScreen() {
   // --- Render ---
   return (
     <View style={{ flex: 1 }}>
+      <HelpModal 
+        pageId="map" 
+        position="top-right"
+        iconColor="#007AFF"
+      />
       <MapView
         ref={mapRef}
         style={styles.map}

@@ -1,6 +1,7 @@
 import themes from "@/assets/utils/themes";
 import FilterChip from "@/components/home/FilterChip";
 import MapPlaceholder from "@/components/home/MapPlaceholder";
+import { HelpModal } from "@/components/reusable/help/HelpModal";
 import { Adventure as DbAdventure, Region } from "@/types";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -93,6 +94,11 @@ export default function HomePage() {
 
   return (
     <View style={styles.container}>
+      <HelpModal 
+        pageId="home" 
+        position="top-right"
+        iconColor="#4ed964"
+      />
       {/* Header */}
       <View style={styles.header}>
         {/* Search Bar */}
