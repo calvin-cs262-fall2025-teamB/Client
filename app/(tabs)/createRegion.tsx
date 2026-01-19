@@ -21,6 +21,7 @@ import MapView, {
 } from "react-native-maps";
 
 // Import contexts for backend integration
+import { HelpModal } from "@/components/reusable/help/HelpModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDatabase } from "@/contexts/DatabaseContext";
 import { CreateLandmark, CreateRegion, Point } from "@/types";
@@ -529,6 +530,11 @@ export default function CreateRegionScreen() {
   // Render
   return (
     <View style={{ flex: 1 }}>
+      <HelpModal 
+        pageId="createRegion" 
+        position="top-right"
+        iconColor="#34c759"
+      />
       <MapView
         ref={mapRef}
         style={styles.map}

@@ -31,6 +31,39 @@ export default function HelpScreen() {
         <Text style={styles.title}>Help & Support</Text>
       </View>
 
+      {/* App Terminology */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>📖 App Terminology</Text>
+        
+        <View style={styles.termItem}>
+          <Text style={styles.termTitle}>Region</Text>
+          <Text style={styles.termDescription}>
+            A geographical area where adventures take place. Regions are circular areas with defined boundaries created by users to establish playable zones.  Regions will contain landmarks, and adventures can be created "within" a region.
+          </Text>
+        </View>
+
+        <View style={styles.termItem}>
+          <Text style={styles.termTitle}>Adventure</Text>
+          <Text style={styles.termDescription}>
+            A location-based quest within a region that players can discover and complete. Adventures contain multiple tokens that must be collected in sequence.
+          </Text>
+        </View>
+
+        <View style={styles.termItem}>
+          <Text style={styles.termTitle}>Landmark</Text>
+          <Text style={styles.termDescription}>
+            Notable points of interest within a region that help orient players. Landmarks appear as orange pins on the map while playing an adventure, and serve as reference points for navigation.
+          </Text>
+        </View>
+
+        <View style={styles.termItem}>
+          <Text style={styles.termTitle}>Token</Text>
+          <Text style={styles.termDescription}>
+            Collectible items placed at specific locations within adventures. Tokens are hidden untill the player collects the token.  Players must physically visit token locations to collect them and progress through the adventure.
+          </Text>
+        </View>
+      </View>
+
       {/* How to Play Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>🎯 How to Play</Text>
@@ -75,31 +108,6 @@ export default function HelpScreen() {
         </View>
       </View>
 
-      {/* Creating Adventures Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🗺️ Creating Adventures</Text>
-        <View style={styles.card}>
-          <Text style={styles.cardText}>
-            <Text style={styles.bold}>Create a Region:</Text> Tap the Creator tab, choose &quot;Create Region&quot;,
-            name it, then tap the map to place the center point.
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardText}>
-            <Text style={styles.bold}>Adjust Size:</Text> Use two fingers to pinch and resize your region.
-            Tap again to reposition the center.
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardText}>
-            <Text style={styles.bold}>Build Adventures:</Text> Once you have a region, create adventures
-            within it and place tokens for others to find!
-          </Text>
-        </View>
-      </View>
-
       {/* Tips & Tricks Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>💡 Tips & Tricks</Text>
@@ -124,6 +132,8 @@ export default function HelpScreen() {
           </Text>
         </View>
       </View>
+
+      
 
       {/* FAQ Section */}
       <View style={styles.section}>
@@ -289,6 +299,28 @@ const styles = StyleSheet.create({
   faqAnswer: {
     fontSize: 14,
     color: "#6B7280",
+    lineHeight: 20,
+  },
+  termItem: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  termTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#007AFF",
+    marginBottom: 8,
+  },
+  termDescription: {
+    fontSize: 14,
+    color: "#374151",
     lineHeight: 20,
   },
   supportButton: {

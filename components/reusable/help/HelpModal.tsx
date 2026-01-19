@@ -32,9 +32,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({
     const baseStyle = { position: 'absolute' as const, zIndex: 1000 };
     switch (position) {
       case 'top-left':
-        return { ...baseStyle, top: 60, left: 20 };
+        return { ...baseStyle, top: 10, left: 20 };
       case 'top-right':
-        return { ...baseStyle, top: 60, right: 20 };
+        return { ...baseStyle, top: 10, right: 20 };
       case 'bottom-left':
         return { ...baseStyle, bottom: 40, left: 20 };
       case 'bottom-right':

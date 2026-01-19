@@ -20,6 +20,7 @@ import MapView, {
 } from "react-native-maps";
 
 // Import contexts for backend integration
+import { HelpModal } from "@/components/reusable/help/HelpModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDatabase } from "@/contexts/DatabaseContext";
 import { CreateToken, Point } from "@/types";
@@ -390,6 +391,11 @@ export default function CreateAdventureMapScreen() {
   // Render
   return (
     <View style={{ flex: 1 }}>
+      <HelpModal 
+        pageId="createAdventureMap" 
+        position="top-left"
+        iconColor="#007AFF"
+      />
       <MapView
         ref={mapRef}
         style={styles.map}
