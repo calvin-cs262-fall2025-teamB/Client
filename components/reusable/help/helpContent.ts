@@ -138,5 +138,107 @@ export const helpContent: Record<string, HelpContent> = {
         content: "Ensure your content is appropriate, safe, and accessible. Avoid private property or dangerous locations.",
       }
     ]
+  },
+  createAdventure: {
+    title: "Create Adventure Guide",
+    sections: [
+      {
+        heading: "Adventure Planning",
+        content: "Create engaging location-based adventures for other users to discover. Start by giving your adventure a name and selecting a region.",
+        tips: [
+          "Choose descriptive names that hint at the adventure's theme",
+          "Adventure names can be up to 100 characters long",
+          "Select regions you're familiar with for better content creation"
+        ]
+      },
+      {
+        heading: "Region Selection",
+        content: "Choose from available regions where your adventure will take place. Regions must be created first before you can create an adventure.",
+        tips: [
+          "If no regions are available, create one first from the Creator tab",
+          "Consider the region's size and landmarks when planning your adventure",
+          "Each adventure belongs to exactly one region"
+        ]
+      },
+      {
+        heading: "Next Steps",
+        content: "After completing the basic details, you'll proceed to the map where you can place tokens and add clues for players to discover.",
+      }
+    ]
+  },
+  createAdventureMap: {
+    title: "Adventure Map Guide",
+    sections: [
+      {
+        heading: "Token Placement",
+        content: "Place tokens at specific locations within your selected region. Players will need to physically visit these locations to progress through your adventure.",
+        tips: [
+          "Tokens will be collected in the order at which they are placed",
+          "Use the 'Add Token' button to place tokens at your current location",
+          "Add meaningful hints to help players find each token",
+          "Ensure tokens are placed in accessible, public locations"
+        ]
+      },
+      {
+        heading: "Adding Hints",
+        content: "Each token requires a hint that will guide players to its location. Good hints are specific enough to be helpful but not too obvious.",
+        tips: [
+          "Reference nearby landmarks or distinctive features",
+          "Consider what players will see when they arrive",
+          "Avoid hints that require special knowledge or access"
+        ]
+      },
+      {
+        heading: "Map Elements",
+        content: "The map shows your region boundary (green circle), landmarks (orange pins), and your placed tokens (blue pins). The green circle indicates the playable area.",
+      },
+      {
+        heading: "Safety Guidelines",
+        content: "Always place tokens in safe, publicly accessible locations. Avoid private property, dangerous areas, or locations that require special permissions.",
+      }
+    ]
+  },
+  createRegion: {
+    title: "Region Creation Guide",
+    sections: [
+      {
+        heading: "Region Basics",
+        content: "Regions define geographical areas containing landmarks where adventures can take place. Click the Create Region button to begin.",
+        tips: [
+          "Choose areas you know well for better region design",
+          "Consider accessibility for all potential players",
+          "Regions should be large enough for interesting adventures"
+        ]
+      },
+      {
+        heading: "Placing Your Region",
+        content: "After giving your region a name, tap the map to place your region's center point. This will be the focal point around which your circular region is defined.",
+        tips: [
+          "Choose central locations within your intended area",
+          "Consider parking and public transportation access",
+          "The center cannot be repositioned once confirmed"
+        ]
+      },
+      {
+        heading: "Adjusting Region Size",
+        content: "Drag on the map to adjust your region's radius. The circle shows the boundary where landmarks can be placed.",
+        tips: [
+          "Minimum radius: 50 meters",
+          "Maximum radius: 5000 meters (5km)",
+          "Larger regions allow for more diverse adventures",
+          "The map cannot be panned while adjusting the region size"
+        ]
+      },
+      {
+        heading: "Adding Landmarks",
+        content: "Place landmarks at notable points of interest within your region. These help orient players and can serve as reference points for adventures.",
+        tips: [
+          "Add landmarks at recognizable features",
+          "Include variety: buildings, natural features, public art",
+          "Auto-generation is available if you skip manual placement",
+          "Landmarks can be deleted by clicking and removing them"
+        ]
+      }
+    ]
   }
 };

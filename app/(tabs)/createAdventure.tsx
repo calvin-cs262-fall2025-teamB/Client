@@ -7,6 +7,7 @@
 import themes from "@/assets/utils/themes";
 import Button from "@/components/home/Button";
 import BackButton from "@/components/reusable/BackButton";
+import { HelpModal } from "@/components/reusable/help/HelpModal";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -115,6 +116,11 @@ export default function CreateAdventureScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <HelpModal 
+        pageId="createAdventure" 
+        position="top-right"
+        iconColor="#4ed964"
+      />
       {/* === BACK BUTTON === */}
       <View style={styles.topRow}>
         <BackButton onPress={() => router.back()} />
