@@ -169,6 +169,38 @@ class HybridDataService {
   }
 
   // ============================================================================
+  // AUTHENTICATION OPERATIONS
+  // ============================================================================
+
+  async authenticateUser(username: string, password: string): Promise<{ data: Adventurer; source: DataSource }> {
+    await this.initialize();
+
+    // Try Azure API first if available
+    if (this.azureAvailable) {
+      try {
+        const result = await this.makeApiCall<{ user: Adventurer }>('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ username, password }),
+        });
+        console.log('✅ Azure authentication successful');
+        return { data: result.data.user, source: 'azure' };
+      } catch (apiError) {
+        console.log('Azure authentication failed, trying local database');
+      }
+    }
+
+    // Try local SQLite database
+    try {
+      const user = await localDb.authenticateUser(username, password);
+      console.log('✅ Local SQLite authentication successful');
+      return { data: user, source: 'sqlite' };
+    } catch (sqliteError) {
+      console.log('SQLite authentication failed:', sqliteError);
+      throw new Error('Authentication failed');
+    }
+  }
+
+  // ============================================================================
   // ADVENTURER OPERATIONS
   // ============================================================================
 

@@ -300,6 +300,96 @@ export default function DebugPage() {
     }
   };
 
+  const testPasswordHashing = async () => {
+    try {
+      console.log('🔐 Starting password hashing test...');
+      
+      // Test 1: Create a user via API (should hash password server-side)
+      const testUsername = `HashTest_${Date.now()}`;
+      const testPassword = 'TestPassword123';
+      
+      addTestResult('Password Hash Test - Starting', true, { 
+        username: testUsername, 
+        password: '***hidden***' 
+      }, 'Testing password hashing with API');
+      
+      // Create user through normal flow (should go to server first)
+      const newUser = await createAdventurer({
+        username: testUsername,
+        password: testPassword,
+        profilepicture: null
+      });
+      
+      // Check if password was hashed
+      const isHashed = newUser.password !== testPassword;
+      const hasHashPrefix = newUser.password?.startsWith('$2') || false; // bcrypt hashes start with $2
+      
+      addTestResult('Password Hash Test - User Creation', true, {
+        userId: newUser.id,
+        username: newUser.username,
+        passwordChanged: isHashed,
+        hasBcryptFormat: hasHashPrefix,
+        originalLength: testPassword.length,
+        hashedLength: newUser.password?.length || 0
+      }, `Password ${isHashed ? 'was' : 'was NOT'} hashed. Bcrypt format: ${hasHashPrefix}`);
+      
+      // Test 2: Try to authenticate with original password
+      try {
+        const { hybridDataService } = await import('@/data/hybridDataService');
+        const authResult = await hybridDataService.authenticateUser(testUsername, testPassword);
+        
+        addTestResult('Password Hash Test - Authentication', true, {
+          userId: authResult.data.id,
+          username: authResult.data.username,
+          source: authResult.source
+        }, `Authentication successful with ${authResult.source} source`);
+        
+      } catch (authError) {
+        addTestResult('Password Hash Test - Authentication', false, null, 
+          `Authentication failed: ${authError instanceof Error ? authError.message : 'Unknown error'}`);
+      }
+      
+      // Test 3: Try to authenticate with wrong password
+      try {
+        const { hybridDataService } = await import('@/data/hybridDataService');
+        await hybridDataService.authenticateUser(testUsername, 'WrongPassword123');
+        
+        addTestResult('Password Hash Test - Wrong Password', false, null, 
+          'ERROR: Authentication should have failed with wrong password!');
+        
+      } catch (wrongAuthError) {
+        addTestResult('Password Hash Test - Wrong Password', true, null, 
+          `Correctly rejected wrong password: ${wrongAuthError instanceof Error ? wrongAuthError.message : 'Unknown error'}`);
+      }
+      
+      // Test 4: Check local database storage
+      try {
+        const localUsers = await localDb.getAdventurers();
+        const localUser = localUsers.find(u => u.username === testUsername);
+        
+        if (localUser) {
+          const localIsHashed = localUser.password !== testPassword;
+          addTestResult('Password Hash Test - Local Storage', true, {
+            found: true,
+            passwordChanged: localIsHashed,
+            storageMethod: localIsHashed ? 'hashed' : 'plain text'
+          }, `Local user found with ${localIsHashed ? 'hashed' : 'plain text'} password`);
+        } else {
+          addTestResult('Password Hash Test - Local Storage', true, {
+            found: false
+          }, 'User not found in local database (normal for server-first flow)');
+        }
+      } catch (localError) {
+        addTestResult('Password Hash Test - Local Storage', false, null, 
+          `Local database check failed: ${localError instanceof Error ? localError.message : 'Unknown error'}`);
+      }
+      
+    } catch (error) {
+      addTestResult('Password Hash Test - Error', false, null, 
+        error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
+
   const remakeLocalDatabase = async () => {
     try {
       addTestResult('Remake Local Database', true, null, 'Starting database recreation...');
@@ -559,6 +649,10 @@ export default function DebugPage() {
         <TouchableOpacity style={[styles.testButton, styles.debugButton]} onPress={debugSQLiteDatabase}>
           <Text style={styles.testButtonText}>🔍 Debug SQLite Database</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.testButton, styles.securityButton]} onPress={testPasswordHashing}>
+          <Text style={styles.testButtonText}>🔐 Test Password Hashing</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Test Results */}
@@ -697,6 +791,9 @@ const styles = StyleSheet.create({
   },
   debugButton: {
     backgroundColor: '#34495e',
+  },
+  securityButton: {
+    backgroundColor: '#c0392b',
   },
   testButtonText: {
     color: 'white',

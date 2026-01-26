@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { Alert } from "react-native";
+import { hybridDataService } from "@/data/hybridDataService";
 import { useDatabase } from "./DatabaseContext";
 
 // State interface
@@ -146,13 +147,25 @@ function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
 
     try {
+      // Validate inputs before creating adventurer
+      if (!username || typeof username !== 'string') {
+        throw new Error('Username is required');
+      }
+      if (!password || typeof password !== 'string') {
+        throw new Error('Password is required');
+      }
+
+      console.log('🔐 Starting signup process for user:', username);
+
       const adventurerData: CreateAdventurer = {
-        username,
-        password,
+        username: username.trim(),
+        password: password,
         profilepicture: null,
       };
 
       const user = await createAdventurer(adventurerData);
+
+      console.log('✅ User created successfully:', user.username);
 
       // User is now created (either from backend or as mock user)
       dispatch({
@@ -162,7 +175,7 @@ function AuthProvider({ children }: AuthProviderProps) {
 
       return user;
     } catch (error) {
-      console.error("Signup failed:", error);
+      console.error("❌ Signup failed:", error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -173,31 +186,26 @@ function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
 
     try {
-      const res = await fetchAdventurers();
-      const user = res?.find((el) => el.username === username);
-
-      if (user) {
-        if (user.password === password) {
-          dispatch({
-            type: "login",
-            payload: { user, username: user.username },
-          });
-          return true;
-        } else {
-          Alert.alert("Validation", "Invalid Password.");
-          return false;
-        }
+      // Use the new authentication method from hybridDataService
+      const { createAdventurer, fetchAdventurers } = useDatabase();
+      
+      // Try to authenticate using the hybrid service
+      const result = await hybridDataService.authenticateUser(username, password);
+      
+      if (result.data) {
+        dispatch({
+          type: "login",
+          payload: { user: result.data, username: result.data.username },
+        });
+        return true;
       } else {
-        Alert.alert(
-          "Validation",
-          "Account not found, sign up with the link below."
-        );
+        Alert.alert("Validation", "Invalid username or password.");
         return false;
       }
     } catch (error) {
       console.error("Login failed:", error);
-      Alert.alert("Error", "Login failed. Please try again.");
-      throw error;
+      Alert.alert("Error", "Login failed. Please check your credentials and try again.");
+      return false;
     } finally {
       setIsLoading(false);
     }

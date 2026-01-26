@@ -213,9 +213,9 @@ class LocalDatabaseService {
       
       console.log(`📊 Found ${result.length} adventurers in SQLite database`);
       
-      if (result.length > 0) {
-        console.log('👥 Sample adventurer data:', result[0]);
-      }
+      // if (result.length > 0) {
+      //   console.log('👥 Sample adventurer data:', result[0]);
+      // }
       
       return result.map((row: any) => ({
         id: row.id,
@@ -234,6 +234,29 @@ class LocalDatabaseService {
     if (!this.db) throw new Error('Database not initialized');
     
     try {
+      console.log('🔍 createAdventurer called with data:', JSON.stringify({
+        username: data.username,
+        password: '***hidden***',
+        profilepicture: data.profilepicture
+      }));
+      
+      // Validate input data
+      if (!data.password || typeof data.password !== 'string') {
+        console.error('❌ Password validation failed:', {
+          password: '***hidden***',
+          type: typeof data.password,
+          isString: typeof data.password === 'string'
+        });
+        throw new Error('Password is required and must be a string');
+      }
+      if (!data.username || typeof data.username !== 'string') {
+        throw new Error('Username is required and must be a string');
+      }
+      
+      console.log('💾 Storing user in local database (password will be hashed server-side)');
+      
+      // Store password as-is in local database (it will be hashed server-side)
+      // Local database is only used as offline fallback
       const result = await this.db.runAsync(
         `INSERT INTO Adventurer (username, password, profilepicture) VALUES (?, ?, ?)`,
         [data.username, data.password, data.profilepicture || null]
@@ -246,9 +269,14 @@ class LocalDatabaseService {
         profilepicture: data.profilepicture
       };
       
+      console.log('✅ Adventurer created successfully in local database');
       return newAdventurer;
     } catch (error) {
-      console.error('Error creating adventurer:', error);
+      console.error('❌ Error creating adventurer:', error);
+      console.error('❌ Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack
+      });
       throw error;
     }
   }
@@ -266,7 +294,12 @@ class LocalDatabaseService {
         values.push(data.username);
       }
       if (data.password !== undefined) {
+        // Validate password
+        if (typeof data.password !== 'string') {
+          throw new Error('Password must be a string');
+        }
         setParts.push('password = ?');
+        // Store password as-is (will be hashed server-side)
         values.push(data.password);
       }
       if (data.profilepicture !== undefined) {
@@ -294,6 +327,46 @@ class LocalDatabaseService {
       };
     } catch (error) {
       console.error('Error updating adventurer:', error);
+      throw error;
+    }
+  }
+
+  async authenticateUser(username: string, password: string): Promise<Adventurer> {
+    await this.ensureInitialized();
+    if (!this.db) throw new Error('Database not initialized');
+    
+    try {
+      // Validate inputs
+      if (!username || typeof username !== 'string') {
+        throw new Error('Username is required and must be a string');
+      }
+      if (!password || typeof password !== 'string') {
+        throw new Error('Password is required and must be a string');
+      }
+      
+      const user = await this.db.getFirstAsync(
+        `SELECT * FROM Adventurer WHERE username = ?`,
+        [username]
+      ) as any;
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+      
+      // For local database, we'll do simple password comparison
+      // since the local DB is only used as offline fallback
+      if (user.password !== password) {
+        throw new Error('Invalid password');
+      }
+      
+      return {
+        id: user.id,
+        username: user.username,
+        password: user.password,
+        profilepicture: user.profilepicture
+      };
+    } catch (error) {
+      console.error('Error authenticating user:', error);
       throw error;
     }
   }
@@ -711,19 +784,19 @@ class LocalDatabaseService {
       await this.ensureInitialized();
       if (!this.db) return false;
       
-      console.log('🔍 Checking if data is available in SQLite...');
+      // console.log('🔍 Checking if data is available in SQLite...');
     
       const adventurerCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Adventurer') as { count: number } | null;
       const regionCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Region') as { count: number } | null;
       const landmarkCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Landmark') as { count: number } | null;
       const adventureCount = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM Adventure') as { count: number } | null;
       
-      console.log(`📊 SQLite data counts:`, {
-        adventurers: adventurerCount?.count || 0,
-        regions: regionCount?.count || 0,
-        landmarks: landmarkCount?.count || 0,
-        adventures: adventureCount?.count || 0
-      });
+      // console.log(`📊 SQLite data counts:`, {
+      //   adventurers: adventurerCount?.count || 0,
+      //   regions: regionCount?.count || 0,
+      //   landmarks: landmarkCount?.count || 0,
+      //   adventures: adventureCount?.count || 0
+      // });
       
       const hasData = (adventurerCount?.count || 0) > 0 || 
                      (regionCount?.count || 0) > 0 || 
