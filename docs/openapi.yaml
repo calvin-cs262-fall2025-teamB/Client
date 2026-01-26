@@ -1,3 +1,32 @@
+# WayFind API Documentation - OpenAPI 3.0.3 Specification
+#
+# DOCUMENT USES:
+# - Defines the complete REST API contract for the WayFind mobile application
+# - Serves as the single source of truth for all API endpoints, request/response schemas
+# - Used by frontend developers to understand available endpoints and data structures
+# - Enables automatic API client generation using tools like OpenAPI Generator
+# - Provides interactive API documentation via Swagger UI for testing and exploration
+# - Used for API validation and contract testing in CI/CD pipelines
+# - Facilitates API-first development approach and cross-team collaboration
+#
+# IMPLEMENTATION:
+# - Written in OpenAPI 3.0.3 specification format (YAML)
+# - Defines authentication schemes (JWT Bearer tokens)
+# - Specifies all HTTP methods, paths, parameters, and response codes
+# - Includes comprehensive data schemas for request/response bodies
+# - Documents error handling patterns and status codes
+# - Can be rendered as interactive documentation using Swagger UI or Redoc
+# - Supports code generation for multiple programming languages
+# - Integrates with API development tools and testing frameworks
+# - Maintained alongside actual API implementation to ensure accuracy
+#
+# USAGE INSTRUCTIONS:
+# 1. View in Swagger Editor: https://editor.swagger.io/
+# 2. Generate client SDKs using OpenAPI Generator
+# 3. Use for API testing with tools like Postman (import OpenAPI spec)
+# 4. Reference during frontend development for correct API integration
+# 5. Validate API responses against defined schemas during testing
+
 openapi: 3.0.3
 info:
   title: WayFind API
@@ -74,7 +103,7 @@ paths:
                   example: SecurePass123!
                   description: Must contain uppercase, lowercase, and number
       responses:
-        '201':
+        "201":
           description: User created successfully
           content:
             application/json:
@@ -91,18 +120,18 @@ paths:
                     type: object
                     properties:
                       user:
-                        $ref: '#/components/schemas/User'
+                        $ref: "#/components/schemas/User"
                       token:
                         type: string
                         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '409':
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
           description: Email already exists
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 success: false
                 error:
@@ -134,7 +163,7 @@ paths:
                   type: string
                   example: SecurePass123!
       responses:
-        '200':
+        "200":
           description: Login successful
           content:
             application/json:
@@ -151,16 +180,16 @@ paths:
                     type: object
                     properties:
                       user:
-                        $ref: '#/components/schemas/User'
+                        $ref: "#/components/schemas/User"
                       token:
                         type: string
                         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        '401':
+        "401":
           description: Invalid credentials
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 success: false
                 error:
@@ -177,7 +206,7 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Logged out successfully
           content:
             application/json:
@@ -190,8 +219,8 @@ paths:
                   message:
                     type: string
                     example: Logged out successfully
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ==================== USER PROFILE ====================
   /api/users/{userId}:
@@ -204,9 +233,9 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdPath'
+        - $ref: "#/components/parameters/UserIdPath"
       responses:
-        '200':
+        "200":
           description: User profile retrieved successfully
           content:
             application/json:
@@ -217,11 +246,11 @@ paths:
                     type: boolean
                     example: true
                   data:
-                    $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                    $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     patch:
       tags:
@@ -232,7 +261,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdPath'
+        - $ref: "#/components/parameters/UserIdPath"
       requestBody:
         required: true
         content:
@@ -246,7 +275,7 @@ paths:
                   maxLength: 255
                   example: Jane Doe
       responses:
-        '200':
+        "200":
           description: Profile updated successfully
           content:
             application/json:
@@ -260,11 +289,11 @@ paths:
                     type: string
                     example: Profile updated successfully
                   data:
-                    $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                    $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /api/users/{userId}/stats:
     get:
@@ -276,9 +305,9 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdPath'
+        - $ref: "#/components/parameters/UserIdPath"
       responses:
-        '200':
+        "200":
           description: User statistics retrieved successfully
           content:
             application/json:
@@ -289,11 +318,11 @@ paths:
                     type: boolean
                     example: true
                   data:
-                    $ref: '#/components/schemas/UserStats'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                    $ref: "#/components/schemas/UserStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /api/users/{userId}/image:
     post:
@@ -305,7 +334,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdPath'
+        - $ref: "#/components/parameters/UserIdPath"
       requestBody:
         required: true
         content:
@@ -320,7 +349,7 @@ paths:
                   format: binary
                   description: Image file (JPEG, PNG)
       responses:
-        '200':
+        "200":
           description: Image uploaded successfully
           content:
             application/json:
@@ -340,10 +369,10 @@ paths:
                         type: string
                         format: uri
                         example: https://storage.blob.core.windows.net/profile-images/user-123.jpg
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/ValidationError"
 
   /api/users/{userId}/adventures:
     get:
@@ -355,7 +384,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdPath'
+        - $ref: "#/components/parameters/UserIdPath"
         - name: status
           in: query
           description: Filter by status
@@ -365,7 +394,7 @@ paths:
             enum: [completed, in-progress, all]
             default: all
       responses:
-        '200':
+        "200":
           description: User adventures retrieved successfully
           content:
             application/json:
@@ -378,9 +407,9 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/UserAdventure'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                      $ref: "#/components/schemas/UserAdventure"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ==================== ADVENTURES ====================
   /adventures:
@@ -417,7 +446,7 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Adventures retrieved successfully
           content:
             application/json:
@@ -491,7 +520,7 @@ paths:
             default: 20
             maximum: 100
       responses:
-        '200':
+        "200":
           description: Adventures retrieved successfully
           content:
             application/json:
@@ -504,7 +533,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Adventure'
+                      $ref: "#/components/schemas/Adventure"
                   meta:
                     type: object
                     properties:
@@ -566,7 +595,7 @@ paths:
                   format: uri
                   nullable: true
       responses:
-        '201':
+        "201":
           description: Adventure created successfully
           content:
             application/json:
@@ -580,11 +609,11 @@ paths:
                     type: string
                     example: Adventure created successfully
                   data:
-                    $ref: '#/components/schemas/Adventure'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/ValidationError'
+                    $ref: "#/components/schemas/Adventure"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/ValidationError"
 
   /api/adventures/{adventureId}:
     get:
@@ -594,12 +623,12 @@ paths:
       description: Get detailed information about a specific adventure
       operationId: getAdventureById
       parameters:
-        - $ref: '#/components/parameters/AdventureIdPath'
+        - $ref: "#/components/parameters/AdventureIdPath"
       security:
         - bearerAuth: []
         - {}
       responses:
-        '200':
+        "200":
           description: Adventure retrieved successfully
           content:
             application/json:
@@ -610,9 +639,9 @@ paths:
                     type: boolean
                     example: true
                   data:
-                    $ref: '#/components/schemas/AdventureDetailed'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                    $ref: "#/components/schemas/AdventureDetailed"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     patch:
       tags:
@@ -623,7 +652,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AdventureIdPath'
+        - $ref: "#/components/parameters/AdventureIdPath"
       requestBody:
         required: true
         content:
@@ -644,7 +673,7 @@ paths:
                   type: string
                   enum: [draft, published, archived]
       responses:
-        '200':
+        "200":
           description: Adventure updated successfully
           content:
             application/json:
@@ -658,11 +687,11 @@ paths:
                     type: string
                     example: Adventure updated successfully
                   data:
-                    $ref: '#/components/schemas/Adventure'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                    $ref: "#/components/schemas/Adventure"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     delete:
       tags:
@@ -673,9 +702,9 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AdventureIdPath'
+        - $ref: "#/components/parameters/AdventureIdPath"
       responses:
-        '200':
+        "200":
           description: Adventure deleted successfully
           content:
             application/json:
@@ -688,10 +717,10 @@ paths:
                   message:
                     type: string
                     example: Adventure deleted successfully
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ==================== REGIONS ====================
   /api/regions:
@@ -702,7 +731,7 @@ paths:
       description: Get all available geographical regions
       operationId: getRegions
       responses:
-        '200':
+        "200":
           description: Regions retrieved successfully
           content:
             application/json:
@@ -715,7 +744,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Region'
+                      $ref: "#/components/schemas/Region"
 
     post:
       tags:
@@ -771,7 +800,7 @@ paths:
                         type: number
                         format: double
       responses:
-        '201':
+        "201":
           description: Region created successfully
           content:
             application/json:
@@ -785,11 +814,11 @@ paths:
                     type: string
                     example: Region created successfully
                   data:
-                    $ref: '#/components/schemas/Region'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/ValidationError'
+                    $ref: "#/components/schemas/Region"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/ValidationError"
 
   /api/regions/{regionId}:
     get:
@@ -799,9 +828,9 @@ paths:
       description: Get detailed information about a specific region
       operationId: getRegionById
       parameters:
-        - $ref: '#/components/parameters/RegionIdPath'
+        - $ref: "#/components/parameters/RegionIdPath"
       responses:
-        '200':
+        "200":
           description: Region retrieved successfully
           content:
             application/json:
@@ -812,9 +841,9 @@ paths:
                     type: boolean
                     example: true
                   data:
-                    $ref: '#/components/schemas/RegionDetailed'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                    $ref: "#/components/schemas/RegionDetailed"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ==================== TOKENS ====================
   /api/adventures/{adventureId}/tokens:
@@ -825,9 +854,9 @@ paths:
       description: Get all tokens for a specific adventure
       operationId: getTokensByAdventure
       parameters:
-        - $ref: '#/components/parameters/AdventureIdPath'
+        - $ref: "#/components/parameters/AdventureIdPath"
       responses:
-        '200':
+        "200":
           description: Tokens retrieved successfully
           content:
             application/json:
@@ -840,7 +869,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Token'
+                      $ref: "#/components/schemas/Token"
 
     post:
       tags:
@@ -851,7 +880,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AdventureIdPath'
+        - $ref: "#/components/parameters/AdventureIdPath"
       requestBody:
         required: true
         content:
@@ -887,7 +916,7 @@ paths:
                   type: integer
                   example: 1
       responses:
-        '201':
+        "201":
           description: Token created successfully
           content:
             application/json:
@@ -901,11 +930,11 @@ paths:
                     type: string
                     example: Token created successfully
                   data:
-                    $ref: '#/components/schemas/Token'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/ValidationError'
+                    $ref: "#/components/schemas/Token"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/ValidationError"
 
   /api/tokens/{tokenId}:
     patch:
@@ -917,7 +946,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TokenIdPath'
+        - $ref: "#/components/parameters/TokenIdPath"
       requestBody:
         required: true
         content:
@@ -936,7 +965,7 @@ paths:
                   type: number
                   format: double
       responses:
-        '200':
+        "200":
           description: Token updated successfully
           content:
             application/json:
@@ -950,11 +979,11 @@ paths:
                     type: string
                     example: Token updated successfully
                   data:
-                    $ref: '#/components/schemas/Token'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                    $ref: "#/components/schemas/Token"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     delete:
       tags:
@@ -965,9 +994,9 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/TokenIdPath'
+        - $ref: "#/components/parameters/TokenIdPath"
       responses:
-        '200':
+        "200":
           description: Token deleted successfully
           content:
             application/json:
@@ -980,10 +1009,10 @@ paths:
                   message:
                     type: string
                     example: Token deleted successfully
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ==================== GAMEPLAY ====================
   /api/users/{userId}/adventures/{adventureId}/start:
@@ -996,10 +1025,10 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdPath'
-        - $ref: '#/components/parameters/AdventureIdPath'
+        - $ref: "#/components/parameters/UserIdPath"
+        - $ref: "#/components/parameters/AdventureIdPath"
       responses:
-        '201':
+        "201":
           description: Adventure started successfully
           content:
             application/json:
@@ -1013,9 +1042,9 @@ paths:
                     type: string
                     example: Adventure started
                   data:
-                    $ref: '#/components/schemas/UserAdventure'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                    $ref: "#/components/schemas/UserAdventure"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/users/{userId}/tokens/{tokenId}/collect:
     post:
@@ -1027,8 +1056,8 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdPath'
-        - $ref: '#/components/parameters/TokenIdPath'
+        - $ref: "#/components/parameters/UserIdPath"
+        - $ref: "#/components/parameters/TokenIdPath"
       requestBody:
         required: true
         content:
@@ -1052,7 +1081,7 @@ paths:
                   format: date-time
                   example: 2025-01-16T12:30:00Z
       responses:
-        '200':
+        "200":
           description: Token collected successfully
           content:
             application/json:
@@ -1086,14 +1115,14 @@ paths:
                       collectedAt:
                         type: string
                         format: date-time
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
           description: User too far from token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 success: false
                 error:
@@ -1110,8 +1139,8 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdPath'
-        - $ref: '#/components/parameters/AdventureIdPath'
+        - $ref: "#/components/parameters/UserIdPath"
+        - $ref: "#/components/parameters/AdventureIdPath"
       requestBody:
         required: true
         content:
@@ -1128,7 +1157,7 @@ paths:
                 completed:
                   type: boolean
       responses:
-        '200':
+        "200":
           description: Progress updated successfully
           content:
             application/json:
@@ -1142,9 +1171,9 @@ paths:
                     type: string
                     example: Progress updated
                   data:
-                    $ref: '#/components/schemas/UserAdventure'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                    $ref: "#/components/schemas/UserAdventure"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/users/{userId}/adventures/{adventureId}/complete:
     post:
@@ -1156,10 +1185,10 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdPath'
-        - $ref: '#/components/parameters/AdventureIdPath'
+        - $ref: "#/components/parameters/UserIdPath"
+        - $ref: "#/components/parameters/AdventureIdPath"
       responses:
-        '200':
+        "200":
           description: Adventure completed successfully
           content:
             application/json:
@@ -1202,8 +1231,8 @@ paths:
                           adventuresCompleted:
                             type: integer
                             example: 9
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
 # ==================== COMPONENTS ====================
 components:
@@ -1366,13 +1395,13 @@ components:
 
     AdventureDetailed:
       allOf:
-        - $ref: '#/components/schemas/Adventure'
+        - $ref: "#/components/schemas/Adventure"
         - type: object
           properties:
             tokens:
               type: array
               items:
-                $ref: '#/components/schemas/Token'
+                $ref: "#/components/schemas/Token"
             userProgress:
               type: object
               nullable: true
@@ -1427,7 +1456,7 @@ components:
 
     RegionDetailed:
       allOf:
-        - $ref: '#/components/schemas/Region'
+        - $ref: "#/components/schemas/Region"
         - type: object
           properties:
             adventures:
@@ -1541,7 +1570,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             success: false
             error:
@@ -1553,7 +1582,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             success: false
             error:
@@ -1565,7 +1594,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             success: false
             error:
