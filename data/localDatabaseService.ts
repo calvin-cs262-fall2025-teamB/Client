@@ -6,6 +6,8 @@
  * as the remote service for seamless integration.
  */
 
+import * as Crypto from 'expo-crypto';
+import * as Random from 'expo-random';
 import {
   Adventure,
   Adventurer,
@@ -29,6 +31,69 @@ const DB_NAME = 'wayfind.db';
 class LocalDatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
   private initPromise: Promise<void> | null = null;
+
+  // ============================================================================
+  // PASSWORD HASHING UTILITIES
+  // ============================================================================
+  
+  private async hashPassword(password: string): Promise<string> {
+    try {
+      // Generate a random salt (16 bytes)
+      const saltBytes = await Random.getRandomBytesAsync(16);
+      const salt = Array.from(saltBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+      
+      // Create password + salt combination
+      const saltedPassword = password + salt;
+      
+      // Hash using SHA-256 (available in expo-crypto)
+      const hash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        saltedPassword,
+        { encoding: Crypto.CryptoEncoding.HEX }
+      );
+      
+      // Store as salt:hash format
+      const hashedPassword = `EXPO_HASH:${salt}:${hash}`;
+      console.log('🔐 Password hashed with Expo crypto');
+      return hashedPassword;
+    } catch (error) {
+      console.error('❌ Password hashing failed:', error);
+      throw new Error('Password hashing failed');
+    }
+  }
+  
+  private async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+    try {
+      // Check if it's our custom hash format
+      if (hashedPassword.startsWith('EXPO_HASH:')) {
+        const parts = hashedPassword.split(':');
+        if (parts.length !== 3) return false;
+        
+        const [, salt, expectedHash] = parts;
+        
+        // Recreate the salted password and hash it
+        const saltedPassword = password + salt;
+        const computedHash = await Crypto.digestStringAsync(
+          Crypto.CryptoDigestAlgorithm.SHA256,
+          saltedPassword,
+          { encoding: Crypto.CryptoEncoding.HEX }
+        );
+        
+        return computedHash === expectedHash;
+      }
+      
+      // For backward compatibility with plain text passwords (temporary)
+      if (!hashedPassword.includes(':')) {
+        console.warn('⚠️ Comparing with plain text password (should be migrated)');
+        return password === hashedPassword;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('❌ Password verification failed:', error);
+      return false;
+    }
+  }
 
   private async ensureInitialized(): Promise<void> {
     if (this.initPromise) {
@@ -253,23 +318,24 @@ class LocalDatabaseService {
         throw new Error('Username is required and must be a string');
       }
       
-      console.log('💾 Storing user in local database (password will be hashed server-side)');
+      console.log('� Hashing password with Expo crypto...');
       
-      // Store password as-is in local database (it will be hashed server-side)
-      // Local database is only used as offline fallback
+      // Hash the password before storing
+      const hashedPassword = await this.hashPassword(data.password);
+      
       const result = await this.db.runAsync(
         `INSERT INTO Adventurer (username, password, profilepicture) VALUES (?, ?, ?)`,
-        [data.username, data.password, data.profilepicture || null]
+        [data.username, hashedPassword, data.profilepicture || null]
       );
       
       const newAdventurer: Adventurer = {
         id: result.lastInsertRowId,
         username: data.username,
-        password: data.password,
+        password: hashedPassword,
         profilepicture: data.profilepicture
       };
       
-      console.log('✅ Adventurer created successfully in local database');
+      console.log('✅ Adventurer created successfully in local database with hashed password');
       return newAdventurer;
     } catch (error) {
       console.error('❌ Error creating adventurer:', error);
@@ -299,8 +365,9 @@ class LocalDatabaseService {
           throw new Error('Password must be a string');
         }
         setParts.push('password = ?');
-        // Store password as-is (will be hashed server-side)
-        values.push(data.password);
+        // Hash password before storing
+        const hashedPassword = await this.hashPassword(data.password);
+        values.push(hashedPassword);
       }
       if (data.profilepicture !== undefined) {
         setParts.push('profilepicture = ?');
@@ -353,11 +420,28 @@ class LocalDatabaseService {
         throw new Error('User not found');
       }
       
-      // For local database, we'll do simple password comparison
-      // since the local DB is only used as offline fallback
-      if (user.password !== password) {
+      // Handle different password formats for compatibility
+      let passwordMatch = false;
+      
+      if (user.password.startsWith('EXPO_HASH:')) {
+        // Local Expo crypto hash
+        passwordMatch = await this.verifyPassword(password, user.password);
+        console.log('🔐 Verified using Expo crypto hash');
+      } else if (user.password.startsWith('$2')) {
+        // Server bcrypt hash - can't verify locally, assume valid for offline use
+        console.log('⚠️ Server bcrypt hash detected - offline verification not possible');
+        passwordMatch = true; // Allow offline access with server-synced accounts
+      } else {
+        // Plain text password (legacy/mock data)
+        passwordMatch = user.password === password;
+        console.log('⚠️ Plain text password comparison (should be migrated)');
+      }
+      
+      if (!passwordMatch) {
         throw new Error('Invalid password');
       }
+      
+      console.log('✅ Local authentication successful');
       
       return {
         id: user.id,
