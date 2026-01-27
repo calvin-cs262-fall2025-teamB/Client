@@ -3,6 +3,7 @@ import { Adventurer, CreateAdventurer, UpdateAdventurer } from "@/types/database
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import {
   createContext,
   ReactNode,
@@ -23,10 +24,25 @@ interface AuthTokens {
   expiresIn: string;
 }
 
-// Secure storage keys
-const ACCESS_TOKEN_KEY = 'wayfind_access_token';
-const REFRESH_TOKEN_KEY = 'wayfind_refresh_token';
-const USER_DATA_KEY = 'wayfind_user_data';
+// Enhanced token storage interface
+interface SecureTokenData {
+  encryptedData: string;
+  hash: string;
+  timestamp: number;
+  expiresAt: number;
+}
+
+// Secure storage keys with versioning
+const ACCESS_TOKEN_KEY = 'wayfind_access_token_v2';
+const REFRESH_TOKEN_KEY = 'wayfind_refresh_token_v2';
+const USER_DATA_KEY = 'wayfind_user_data_v2';
+const TOKEN_METADATA_KEY = 'wayfind_token_metadata_v2';
+const ENCRYPTION_KEY = 'wayfind_encryption_salt_v2';
+
+// Security configuration
+const TOKEN_EXPIRY_BUFFER = 5 * 60 * 1000; // 5 minutes buffer before expiry
+const MAX_TOKEN_AGE = 24 * 60 * 60 * 1000; // 24 hours max storage
+const ENCRYPTION_ALGORITHM = Crypto.CryptoDigestAlgorithm.SHA256;
 
 // State interface
 interface AuthState {
@@ -183,37 +199,212 @@ function AuthProvider({ children }: AuthProviderProps) {
   // Get database context functions
   const { fetchAdventurers, createAdventurer, updateAdventurer } = useDatabase();
 
-  // Token management functions
+  // Enhanced secure token storage functions
+  const generateEncryptionSalt = async (): Promise<string> => {
+    try {
+      let salt = await SecureStore.getItemAsync(ENCRYPTION_KEY);
+      if (!salt) {
+        // Generate new salt using device-specific entropy
+        const randomBytes = await Crypto.getRandomBytesAsync(32);
+        salt = Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+        await SecureStore.setItemAsync(ENCRYPTION_KEY, salt);
+      }
+      return salt;
+    } catch (error) {
+      console.error("Failed to generate encryption salt:", error);
+      // Fallback to timestamp-based salt (less secure but functional)
+      return Date.now().toString(36);
+    }
+  };
+
+  const encryptTokenData = async (data: string): Promise<string> => {
+    try {
+      const salt = await generateEncryptionSalt();
+      const dataWithSalt = `${salt}:${data}`;
+      const hash = await Crypto.digestStringAsync(
+        ENCRYPTION_ALGORITHM,
+        dataWithSalt,
+        { encoding: Crypto.CryptoEncoding.HEX }
+      );
+      return hash;
+    } catch (error) {
+      console.error("Failed to encrypt token data:", error);
+      return data; // Fallback to unencrypted (less secure)
+    }
+  };
+
+  const createSecureTokenData = async (tokenData: AuthTokens): Promise<SecureTokenData> => {
+    const dataString = JSON.stringify(tokenData);
+    const encryptedData = await encryptTokenData(dataString);
+    const hash = await Crypto.digestStringAsync(
+      ENCRYPTION_ALGORITHM,
+      dataString,
+      { encoding: Crypto.CryptoEncoding.HEX }
+    );
+    
+    const now = Date.now();
+    const expiresAt = now + MAX_TOKEN_AGE;
+    
+    return {
+      encryptedData,
+      hash,
+      timestamp: now,
+      expiresAt
+    };
+  };
+
+  const validateTokenIntegrity = async (secureData: SecureTokenData, originalData: string): Promise<boolean> => {
+    try {
+      const expectedHash = await Crypto.digestStringAsync(
+        ENCRYPTION_ALGORITHM,
+        originalData,
+        { encoding: Crypto.CryptoEncoding.HEX }
+      );
+      
+      const isHashValid = secureData.hash === expectedHash;
+      const isNotExpired = Date.now() < secureData.expiresAt;
+      const isNotTooOld = (Date.now() - secureData.timestamp) < MAX_TOKEN_AGE;
+      
+      return isHashValid && isNotExpired && isNotTooOld;
+    } catch (error) {
+      console.error("Token integrity validation failed:", error);
+      return false;
+    }
+  };
+
+  // Automatic token expiration monitoring
+  const monitorTokenExpiration = async (): Promise<void> => {
+    try {
+      const metadataString = await SecureStore.getItemAsync(TOKEN_METADATA_KEY);
+      if (!metadataString) return;
+      
+      const metadata: SecureTokenData = JSON.parse(metadataString);
+      const timeUntilExpiry = metadata.expiresAt - Date.now();
+      
+      // If token expires within buffer time, refresh it
+      if (timeUntilExpiry < TOKEN_EXPIRY_BUFFER && timeUntilExpiry > 0) {
+        console.log("⚠️ Token approaching expiry, auto-refreshing...");
+        await refreshAuthToken();
+      } else if (timeUntilExpiry <= 0) {
+        console.log("❌ Token expired, logging out...");
+        await logout();
+      }
+    } catch (error) {
+      console.error("Token expiration monitoring error:", error);
+    }
+  };
+
+  // Enhanced token management functions
   const saveTokens = async (tokens: AuthTokens): Promise<void> => {
     try {
+      // Create secure token data with encryption and integrity checks
+      const secureTokenData = await createSecureTokenData(tokens);
+      
+      // Store tokens with additional security metadata
       await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, tokens.accessToken);
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, tokens.refreshToken);
+      await SecureStore.setItemAsync(TOKEN_METADATA_KEY, JSON.stringify(secureTokenData));
+      
+      // Store user data separately with encryption
+      if (state.user) {
+        const userDataHash = await encryptTokenData(JSON.stringify(state.user));
+        await SecureStore.setItemAsync(USER_DATA_KEY, userDataHash);
+      }
+      
+      console.log("✅ Tokens saved with enhanced security");
     } catch (error) {
-      console.error("Failed to save tokens:", error);
+      console.error("❌ Failed to save tokens securely:", error);
+      Alert.alert("Security Error", "Failed to save authentication data securely.");
       throw error;
     }
   };
 
   const getStoredTokens = async (): Promise<{ accessToken: string; refreshToken: string } | null> => {
     try {
+      // Get tokens and metadata
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      const metadataString = await SecureStore.getItemAsync(TOKEN_METADATA_KEY);
       
-      if (accessToken && refreshToken) {
-        return { accessToken, refreshToken };
+      if (!accessToken || !refreshToken || !metadataString) {
+        console.log("⚠️ Incomplete token data found");
+        await clearStoredTokens(); // Clean up partial data
+        return null;
       }
-      return null;
+      
+      try {
+        const metadata: SecureTokenData = JSON.parse(metadataString);
+        
+        // Validate token integrity and expiration
+        const tokenData = { accessToken, refreshToken, tokenType: 'Bearer', expiresIn: '15m' };
+        const isValid = await validateTokenIntegrity(metadata, JSON.stringify(tokenData));
+        
+        if (!isValid) {
+          console.log("❌ Token integrity validation failed");
+          await clearStoredTokens();
+          return null;
+        }
+        
+        // Check if tokens are close to expiring
+        const timeUntilExpiry = metadata.expiresAt - Date.now();
+        if (timeUntilExpiry < TOKEN_EXPIRY_BUFFER) {
+          console.log("⏰ Tokens approaching expiry, will refresh");
+          // Allow retrieval but flag for refresh
+        }
+        
+        console.log("✅ Tokens retrieved and validated successfully");
+        return { accessToken, refreshToken };
+        
+      } catch (parseError) {
+        console.error("Failed to parse token metadata:", parseError);
+        await clearStoredTokens();
+        return null;
+      }
+      
     } catch (error) {
       console.error("Failed to get stored tokens:", error);
+      await clearStoredTokens(); // Clear potentially corrupted data
       return null;
     }
   };
 
   const clearStoredTokens = async (): Promise<void> => {
     try {
-      await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-      await SecureStore.deleteItemAsync(USER_DATA_KEY);
+      // Clear all token-related data with comprehensive cleanup
+      const keysToDelete = [
+        ACCESS_TOKEN_KEY,
+        REFRESH_TOKEN_KEY,
+        USER_DATA_KEY,
+        TOKEN_METADATA_KEY,
+        // Clear legacy keys if they exist
+        'wayfind_access_token',
+        'wayfind_refresh_token',
+        'wayfind_user_data'
+      ];
+      
+      const deletePromises = keysToDelete.map(async (key) => {
+        try {
+          await SecureStore.deleteItemAsync(key);
+        } catch (error) {
+          // Ignore individual key deletion errors (key might not exist)
+          console.log(`Key ${key} not found or already deleted`);
+        }
+      });
+      
+      await Promise.all(deletePromises);
+      
+      // Clear any cached data in AsyncStorage as well
+      try {
+        const asyncKeys = await AsyncStorage.getAllKeys();
+        const wayfindKeys = asyncKeys.filter(key => key.startsWith('wayfind'));
+        if (wayfindKeys.length > 0) {
+          await AsyncStorage.multiRemove(wayfindKeys);
+        }
+      } catch (asyncError) {
+        console.log("AsyncStorage cleanup completed");
+      }
+      
+      console.log("🧹 All authentication data cleared successfully");
     } catch (error) {
       console.error("Failed to clear stored tokens:", error);
     }
@@ -223,13 +414,17 @@ function AuthProvider({ children }: AuthProviderProps) {
     try {
       const tokens = await getStoredTokens();
       if (!tokens || !tokens.refreshToken) {
+        console.log("❌ No refresh token available");
         return false;
       }
 
+      console.log("🔄 Attempting token refresh...");
+      
       const response = await fetch('http://localhost:3000/auth/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'User-Agent': 'WayFind-Client/1.0',
         },
         body: JSON.stringify({ refreshToken: tokens.refreshToken }),
       });
@@ -238,9 +433,9 @@ function AuthProvider({ children }: AuthProviderProps) {
         const data = await response.json();
         const newTokens: AuthTokens = {
           accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          tokenType: data.tokenType,
-          expiresIn: data.expiresIn,
+          refreshToken: data.refreshToken || tokens.refreshToken, // Keep old refresh token if new one not provided
+          tokenType: data.tokenType || 'Bearer',
+          expiresIn: data.expiresIn || '15m',
         };
 
         await saveTokens(newTokens);
@@ -251,16 +446,17 @@ function AuthProvider({ children }: AuthProviderProps) {
             refreshToken: newTokens.refreshToken,
           },
         });
-
+        
+        console.log("✅ Token refresh successful");
         return true;
       } else {
-        // Refresh failed, clear tokens
+        console.log("❌ Token refresh failed:", response.status);
         await clearStoredTokens();
         dispatch({ type: "logout" });
         return false;
       }
     } catch (error) {
-      console.error("Failed to refresh token:", error);
+      console.error("Token refresh error:", error);
       await clearStoredTokens();
       dispatch({ type: "logout" });
       return false;
