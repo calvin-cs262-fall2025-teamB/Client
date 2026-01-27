@@ -6,8 +6,8 @@
  * as the remote service for seamless integration.
  */
 
-import * as Crypto from 'expo-crypto';
 import * as Random from 'expo-random';
+import { digestStringAsync, CryptoDigestAlgorithm } from 'expo-crypto';
 import {
   Adventure,
   Adventurer,
@@ -46,10 +46,9 @@ class LocalDatabaseService {
       const saltedPassword = password + salt;
       
       // Hash using SHA-256 (available in expo-crypto)
-      const hash = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        saltedPassword,
-        { encoding: Crypto.CryptoEncoding.HEX }
+      const hash = await digestStringAsync(
+        CryptoDigestAlgorithm.SHA256,
+        saltedPassword
       );
       
       // Store as salt:hash format
@@ -73,10 +72,9 @@ class LocalDatabaseService {
         
         // Recreate the salted password and hash it
         const saltedPassword = password + salt;
-        const computedHash = await Crypto.digestStringAsync(
-          Crypto.CryptoDigestAlgorithm.SHA256,
-          saltedPassword,
-          { encoding: Crypto.CryptoEncoding.HEX }
+        const computedHash = await digestStringAsync(
+          CryptoDigestAlgorithm.SHA256,
+          saltedPassword
         );
         
         return computedHash === expectedHash;
