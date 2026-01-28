@@ -48,6 +48,60 @@ class HybridDataService {
   private initialized = false;
   private lastSyncTime: Date | null = null;
   private azureAvailable = true; // Default to trying Azure
+  private accessToken: string | null = null;
+  private tokenExpiryTime: Date | null = null;
+
+  // Token management methods
+  setAccessToken(token: string | null, expiresIn?: string): void {
+    this.accessToken = token;
+    
+    if (token && expiresIn) {
+      // Parse expiration time (e.g., "15m", "1h", "7d")
+      const match = expiresIn.match(/^(\d+)([mhd])$/);
+      if (match) {
+        const value = parseInt(match[1]);
+        const unit = match[2];
+        const now = new Date();
+        
+        switch (unit) {
+          case 'm':
+            this.tokenExpiryTime = new Date(now.getTime() + value * 60 * 1000);
+            break;
+          case 'h':
+            this.tokenExpiryTime = new Date(now.getTime() + value * 60 * 60 * 1000);
+            break;
+          case 'd':
+            this.tokenExpiryTime = new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
+            break;
+        }
+      }
+    } else {
+      this.tokenExpiryTime = null;
+    }
+  }
+
+  isTokenValid(): boolean {
+    if (!this.accessToken) return false;
+    if (!this.tokenExpiryTime) return true; // Local session tokens don't expire
+    return new Date() < this.tokenExpiryTime;
+  }
+
+  getAuthHeaders(): { [key: string]: string } {
+    const headers: { [key: string]: string } = {
+      'Content-Type': 'application/json',
+    };
+
+    if (this.accessToken && this.isTokenValid()) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    return headers;
+  }
+
+  clearToken(): void {
+    this.accessToken = null;
+    this.tokenExpiryTime = null;
+  }
 
   setAzureAvailable(available: boolean): void {
     this.azureAvailable = available;
@@ -86,7 +140,7 @@ class HybridDataService {
         ...options,
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
+          ...this.getAuthHeaders(),
           ...options?.headers,
         },
       });
@@ -166,6 +220,38 @@ class HybridDataService {
         console.log(`Background sync failed for ${entityName}:`, error);
       }
     }, 100);
+  }
+
+  // ============================================================================
+  // AUTHENTICATION OPERATIONS
+  // ============================================================================
+
+  async authenticateUser(username: string, password: string): Promise<{ data: Adventurer; source: DataSource }> {
+    await this.initialize();
+
+    // Try Azure API first if available
+    if (this.azureAvailable) {
+      try {
+        const result = await this.makeApiCall<{ user: Adventurer }>('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ username, password }),
+        });
+        console.log('✅ Azure authentication successful');
+        return { data: result.data.user, source: 'azure' };
+      } catch (apiError) {
+        console.log('Azure authentication failed, trying local database');
+      }
+    }
+
+    // Try local SQLite database
+    try {
+      const user = await localDb.authenticateUser(username, password);
+      console.log('✅ Local SQLite authentication successful');
+      return { data: user, source: 'sqlite' };
+    } catch (sqliteError) {
+      console.log('SQLite authentication failed:', sqliteError);
+      throw new Error('Authentication failed');
+    }
   }
 
   // ============================================================================

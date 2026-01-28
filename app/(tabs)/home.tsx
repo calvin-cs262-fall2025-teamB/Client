@@ -181,7 +181,7 @@ export default function HomePage() {
             <Text style={styles.errorText}>{errors.adventures}</Text>
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={fetchAdventures}
+              onPress={() => fetchAdventures()}
             >
               <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
